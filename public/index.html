@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARCADEFACE — Play Strangers</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- SCREEN 1: Home -->
+  <div id="screen-home" class="screen active">
+    <div class="scanlines"></div>
+    <div class="home-content">
+      <div class="logo-block">
+        <div class="logo-eyebrow">INSERT COIN</div>
+        <h1 class="logo">ARCADE<span class="logo-accent">FACE</span></h1>
+        <p class="tagline">Play Pong. Face to face. With a stranger.</p>
+      </div>
+      <button class="btn-primary" id="btn-find-match">
+        <span class="btn-icon">&#9654;</span> FIND OPPONENT
+      </button>
+      <p class="home-sub">No account needed &mdash; just show up and play</p>
+    </div>
+    <div class="home-deco">
+      <div class="pixel-ball"></div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: Waiting / matchmaking -->
+  <div id="screen-waiting" class="screen">
+    <div class="scanlines"></div>
+    <div class="waiting-content">
+      <div class="waiting-animation">
+        <div class="dot-row">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+      </div>
+      <h2 class="waiting-title">SCANNING FOR<br>OPPONENTS</h2>
+      <p class="waiting-sub">Challenging players worldwide&hellip;</p>
+      <button class="btn-ghost" id="btn-cancel-wait">CANCEL</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: Game -->
+  <div id="screen-game" class="screen">
+    <div class="game-layout">
+
+      <!-- Top bar: scores -->
+      <div class="score-bar">
+        <div class="score-block left">
+          <span class="score-label">YOU</span>
+          <span class="score-value" id="score-left">0</span>
+        </div>
+        <div class="score-center">
+          <span class="score-divider">:</span>
+          <span class="game-status" id="game-status">GET READY</span>
+        </div>
+        <div class="score-block right">
+          <span class="score-label">THEM</span>
+          <span class="score-value" id="score-right">0</span>
+        </div>
+      </div>
+
+      <!-- Main game area -->
+      <div class="game-area">
+
+        <!-- Video: local player (bottom-left) -->
+        <div class="video-pip" id="pip-local">
+          <video id="video-local" autoplay muted playsinline></video>
+          <div class="pip-label">YOU</div>
+        </div>
+
+        <!-- Pong canvas -->
+        <canvas id="pong-canvas" width="800" height="400"></canvas>
+
+        <!-- Video: remote player (bottom-right) -->
+        <div class="video-pip" id="pip-remote">
+          <video id="video-remote" autoplay playsinline></video>
+          <div class="pip-label">THEM</div>
+        </div>
+      </div>
+
+      <!-- Controls hint -->
+      <div class="controls-hint">
+        <span>W / S &nbsp;&mdash;&nbsp; move paddle</span>
+        <span class="hint-sep">&nbsp;|&nbsp;</span>
+        <span>Or drag on mobile</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: Game over -->
+  <div id="screen-gameover" class="screen">
+    <div class="scanlines"></div>
+    <div class="gameover-content">
+      <div class="result-badge" id="result-badge">YOU WIN</div>
+      <div class="final-score" id="final-score">3 — 5</div>
+
+      <div class="gameover-actions">
+        <button class="btn-primary" id="btn-rematch">
+          &#8635; REMATCH
+        </button>
+        <button class="btn-ghost" id="btn-next-stranger">
+          NEXT STRANGER &#8594;
+        </button>
+      </div>
+
+      <div class="rematch-status" id="rematch-status"></div>
+
+      <button class="btn-text" id="btn-home">Back to home</button>
+    </div>
+  </div>
+
+  <!-- Camera permission overlay -->
+  <div id="overlay-camera" class="overlay hidden">
+    <div class="overlay-box">
+      <div class="overlay-icon">&#128247;</div>
+      <h3>Camera access needed</h3>
+      <p>ArcadeFace needs your camera so your opponent can see your reactions.</p>
+      <button class="btn-primary" id="btn-allow-camera">Allow camera</button>
+      <button class="btn-text" id="btn-skip-camera">Play without camera</button>
+    </div>
+  </div>
+
+  <!-- Opponent left overlay -->
+  <div id="overlay-left" class="overlay hidden">
+    <div class="overlay-box">
+      <div class="overlay-icon">&#128128;</div>
+      <h3>Opponent disconnected</h3>
+      <p>They rage-quit. Find someone tougher.</p>
+      <button class="btn-primary" id="btn-left-home">Find new opponent</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
