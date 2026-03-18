@@ -626,6 +626,125 @@ body {
 .dpad-left  { top: 42px; left: 0; }
 .dpad-right { top: 42px; right: 0; }
 
+/* ── Reaction card ─────────────────────────────────────── */
+.reaction-card .game-card-icon { color: #00ff88; font-size: 32px; }
+.reaction-card:hover { border-color: #00ff88; }
+
+/* ── Reaction game UI ──────────────────────────────────── */
+.reaction-ui {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
+  padding: 24px 0;
+}
+
+.reaction-round {
+  font-family: var(--pixel);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 3px;
+}
+
+.reaction-scores {
+  display: flex;
+  gap: 40px;
+}
+
+.reaction-score-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.reaction-score-label {
+  font-family: var(--pixel);
+  font-size: 9px;
+  letter-spacing: 2px;
+}
+
+.reaction-score-label.them { color: var(--accent2); }
+.reaction-score-label.you  { color: var(--accent); }
+
+.reaction-score-val {
+  font-family: var(--pixel);
+  font-size: 36px;
+  line-height: 1;
+  color: var(--text);
+}
+
+.reaction-light {
+  width: 200px;
+  height: 200px;
+  border: 3px solid var(--border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg2);
+  transition: border-color 0.1s;
+}
+
+.reaction-light.red   { border-color: var(--accent2); background: rgba(255,51,102,0.08); }
+.reaction-light.green { border-color: var(--accent);  background: rgba(0,255,136,0.15); }
+
+.reaction-light-inner {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: var(--surface);
+  transition: background 0.05s;
+}
+
+.reaction-light.green .reaction-light-inner { background: var(--accent); }
+.reaction-light.red   .reaction-light-inner { background: var(--accent2); }
+
+.reaction-instruction {
+  font-family: var(--pixel);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  text-align: center;
+  min-height: 20px;
+}
+
+.reaction-tap-btn {
+  font-family: var(--pixel);
+  font-size: 18px;
+  padding: 20px 60px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  letter-spacing: 4px;
+  transition: background 0.05s, border-color 0.05s, transform 0.05s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.reaction-tap-btn.armed {
+  border-color: var(--accent);
+  color: var(--accent);
+  animation: tap-pulse 0.6s ease-in-out infinite;
+}
+
+.reaction-tap-btn:active { transform: scale(0.96); }
+
+@keyframes tap-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,136,0); }
+  50%       { box-shadow: 0 0 0 8px rgba(0,255,136,0.15); }
+}
+
+.reaction-result {
+  font-family: var(--pixel);
+  font-size: 13px;
+  letter-spacing: 2px;
+  min-height: 24px;
+  text-align: center;
+}
+
 /* ── Mobile footer ─────────────────────────────────────── */
 .mobile-footer {
   display: none;
