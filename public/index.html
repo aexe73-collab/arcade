@@ -17,14 +17,94 @@
       <div class="logo-block">
         <div class="logo-eyebrow">INSERT COIN</div>
         <h1 class="logo">ARCADE<span class="logo-accent">FACE</span></h1>
-        <p class="tagline">Play face to face with a stranger.</p>
+        <p class="tagline">Play face to face. Strangers welcome.</p>
       </div>
-      <button class="btn-primary" id="btn-find-match">
-        <span class="btn-icon">&#9654;</span> FIND OPPONENT
-      </button>
-      <p class="home-sub">No account needed &mdash; just show up and play</p>
+
+      <!-- Signed-in state (hidden until auth) -->
+      <div class="home-signed-in hidden" id="home-signed-in">
+        <div class="home-user-row">
+          <span class="home-username" id="home-username">PLAYER</span>
+          <button class="btn-text-small" id="btn-signout">sign out</button>
+        </div>
+        <button class="btn-primary" id="btn-play-modes">
+          <span class="btn-icon">&#9654;</span> PLAY
+        </button>
+      </div>
+
+      <!-- Guest state -->
+      <div class="home-guest" id="home-guest">
+        <button class="btn-primary" id="btn-find-match">
+          <span class="btn-icon">&#9654;</span> PLAY A STRANGER
+        </button>
+        <div class="home-divider"><span>or</span></div>
+        <button class="btn-ghost" id="btn-goto-signin">
+          SIGN IN &mdash; PLAY FRIENDS &amp; GROUPS
+        </button>
+        <p class="home-sub">No account needed to play strangers</p>
+      </div>
     </div>
     <div class="home-deco"><div class="pixel-ball"></div></div>
+  </div>
+
+  <!-- SCREEN 1b: Sign in -->
+  <div id="screen-signin" class="screen">
+    <div class="scanlines"></div>
+    <div class="signin-content">
+      <div class="signin-logo">ARCADE<span>FACE</span></div>
+      <div class="signin-title">SIGN IN / SIGN UP</div>
+      <p class="signin-sub">Enter your email — we'll send you a magic link.<br>No password needed.</p>
+
+      <div class="signin-form" id="signin-form">
+        <input type="email" id="signin-email" placeholder="your@email.com" autocomplete="email"/>
+        <button class="btn-primary" id="btn-send-link">SEND MAGIC LINK</button>
+      </div>
+
+      <div class="signin-sent hidden" id="signin-sent">
+        <div class="signin-sent-icon">&#10003;</div>
+        <p>Check your email — link sent!</p>
+        <p class="signin-sent-sub">Click the link in your inbox to sign in.<br>You can close this tab.</p>
+      </div>
+
+      <div class="signin-divider"><span>or</span></div>
+      <button class="btn-ghost" id="btn-google-signin">
+        <span style="font-size:14px">G</span> &nbsp;CONTINUE WITH GOOGLE
+      </button>
+
+      <button class="btn-text" id="btn-back-home">&#8592; Back</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 1c: Mode selector (signed in) -->
+  <div id="screen-mode" class="screen">
+    <div class="scanlines"></div>
+    <div class="mode-content">
+      <div class="mode-title">WHO DO YOU WANT TO PLAY?</div>
+      <div class="mode-grid">
+
+        <button class="mode-card" id="mode-stranger">
+          <div class="mode-card-icon">&#63;</div>
+          <div class="mode-card-name">STRANGER</div>
+          <div class="mode-card-sub">Random opponent</div>
+          <div class="mode-card-tag free">FREE</div>
+        </button>
+
+        <button class="mode-card" id="mode-friend">
+          <div class="mode-card-icon">&#8594;</div>
+          <div class="mode-card-name">FRIEND</div>
+          <div class="mode-card-sub">Send a challenge link</div>
+          <div class="mode-card-tag free">FREE</div>
+        </button>
+
+        <button class="mode-card mode-card-pro" id="mode-group">
+          <div class="mode-card-icon">&#9632;&#9632;&#9632;</div>
+          <div class="mode-card-name">GROUP</div>
+          <div class="mode-card-sub">Private leaderboard</div>
+          <div class="mode-card-tag pro">PRO</div>
+        </button>
+
+      </div>
+      <button class="btn-text" id="btn-mode-back">&#8592; Back</button>
+    </div>
   </div>
 
   <!-- SCREEN 2: Game picker (before matchmaking) -->
@@ -290,6 +370,8 @@
     </div>
   </div>
 
+  <script src="/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="game.js"></script>
 </body>
