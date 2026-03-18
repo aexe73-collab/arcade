@@ -43,7 +43,7 @@ async function getCamera() {
 // ── Countdown ────────────────────────────────────────────────────
 function startCountdown(onComplete) {
   showScreen("screen-faceoff");
-  let count = 3;
+  let count = 10;
   const el = document.getElementById("countdown-number");
 
   el.textContent = count;
