@@ -1060,6 +1060,42 @@ body {
   min-height: 20px;
 }
 
+.postgame-videos {
+  display: flex;
+  gap: 2px;
+  height: 140px;
+  border-bottom: 1px solid var(--border);
+}
+
+.postgame-pip {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.postgame-pip video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.postgame-pip.pip-you   { border-right: 2px solid var(--accent); }
+.postgame-pip.pip-you video { transform: scaleX(-1); }
+.postgame-pip.pip-them  { border-left: 2px solid var(--accent2); }
+
+.postgame-pip span {
+  position: absolute;
+  bottom: 5px;
+  left: 8px;
+  font-family: var(--pixel);
+  font-size: 7px;
+  letter-spacing: 1px;
+}
+
+.postgame-pip.pip-you  span { color: var(--accent); }
+.postgame-pip.pip-them span { color: var(--accent2); }
+
 /* ── Post-game chat ────────────────────────────────────── */
 .postgame-chat {
   width: 100%;
