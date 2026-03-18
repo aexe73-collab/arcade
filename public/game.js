@@ -40,7 +40,7 @@ function initSupabase() {
 
   // Listen for auth state changes
   sbClient.auth.onAuthStateChange((event, session) => {
-    console.log("Auth event:", event);
+    console.log("Auth event:", event, "session:", session, "user:", session?.user?.email);
     if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
       setUser(session.user);
       showScreen("screen-home");
