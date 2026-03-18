@@ -26,14 +26,27 @@ function initSupabase() {
     auth: { detectSessionInUrl: true, persistSession: true, flowType: "pkce" }
   });
 
+  // Explicitly handle PKCE code in URL
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("code");
+  if (code) {
+    console.log("Found OAuth code in URL, exchanging...");
+    sbClient.auth.exchangeCodeForSession(code).then(({ data, error }) => {
+      console.log("Exchange result:", data?.session?.user?.email || error?.message);
+      if (data?.session) {
+        setUser(data.session.user);
+        showScreen("screen-home");
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    });
+    return;
+  }
+
   sbClient.auth.getSession().then(({ data: { session } }) => {
     console.log("getSession:", session?.user?.email || "no session");
     if (session) {
       setUser(session.user);
       showScreen("screen-home");
-      if (window.location.hash || window.location.search.includes("code=")) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
     }
   });
 
