@@ -22,19 +22,29 @@ let sbClient = null;
 
 function initSupabase() {
   if (!SUPABASE_URL || !SUPABASE_KEY) return;
-  sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-  // Check for existing session
-  sbClient.auth.getSession().then(({ data: { session } }) => {
-    if (session) setUser(session.user);
+  sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { detectSessionInUrl: true, persistSession: true }
   });
 
-  // Listen for auth state changes (including magic link callback)
-  sbClient.auth.onAuthStateChange((event, session) => {
+  // Check for existing session on load (also handles OAuth redirect token in URL)
+  sbClient.auth.getSession().then(({ data: { session } }) => {
     if (session) {
       setUser(session.user);
+      // Clean up URL after OAuth redirect
+      if (window.location.hash || window.location.search.includes("code=")) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
       showScreen("screen-home");
-    } else {
+    }
+  });
+
+  // Listen for auth state changes
+  sbClient.auth.onAuthStateChange((event, session) => {
+    console.log("Auth event:", event);
+    if (event === "SIGNED_IN" && session) {
+      setUser(session.user);
+      showScreen("screen-home");
+    } else if (event === "SIGNED_OUT") {
       setUser(null);
     }
   });
