@@ -495,8 +495,44 @@ body {
   .desktop-score     { display: none; }
   .score-bar         { display: flex; }
   .canvas-wrap       { justify-content: flex-start; padding-top: 8px; }
+  .mobile-pips {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    padding: 0 8px;
+  }
+  
+  .mobile-pip {
+    flex: 1;
+    height: 120px;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg2);
+  }
+  
+  .mobile-pip video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .mobile-pip.pip-you video { transform: scaleX(-1); }
+  
+  .mobile-pip span {
+    position: absolute;
+    bottom: 4px;
+    left: 6px;
+    font-family: var(--pixel);
+    font-size: 7px;
+    letter-spacing: 1px;
+  }
+  
+  .mobile-pip.pip-them { border: 1px solid var(--accent2); }
+  .mobile-pip.pip-them span { color: var(--accent2); }
+  .mobile-pip.pip-you  { border: 1px solid var(--accent); }
+  .mobile-pip.pip-you  span { color: var(--accent); }
 }
-
+.mobile-pips { display: none; }
 /* ── Game over screen ──────────────────────────────────── */
 .gameover-content {
   display: flex;
