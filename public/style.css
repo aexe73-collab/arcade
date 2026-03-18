@@ -355,7 +355,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
 }
 
 .score-block.left  { align-items: flex-start; }
@@ -454,7 +454,7 @@ body {
 .desktop-score {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
 }
 
 .ds-score {
@@ -491,7 +491,7 @@ body {
   .faceoff-layout    { flex-direction: column; }
   .faceoff-panel.faceoff-them { border-right: none; border-bottom: 3px solid var(--accent2); }
   .faceoff-panel.faceoff-you  { border-left: none;  border-top:    3px solid var(--accent); }
-  .faceoff-centre    { flex-direction: row; min-width: unset; min-height: 64px; padding: 8px 16px; gap: 16px; }
+  .faceoff-centre    { flex-direction: row; min-width: unset; min-height: 64px; padding: 8px 16px; gap: 10px; }
   .faceoff-hint      { display: none; }
   .side-panel        { display: none; }
   .desktop-score     { display: none; }
@@ -510,6 +510,16 @@ body {
   .picker-grid       { gap: 12px; }
   .game-card         { width: 140px; padding: 20px 12px; }
   .dpad              { display: grid; }
+  .game-banner       { height: 48px; padding: 0 12px; }
+  .banner-tag        { display: none; }
+  .banner-url        { display: none; }
+  .banner-game       { display: none; }
+  .game-banner-left  { min-width: unset; }
+  .game-banner-right { display: none; }
+  .banner-logo       { font-size: 11px; }
+  .banner-score-them,
+  .banner-score-you  { font-size: 20px; }
+  .banner-status     { font-size: 9px; padding: 3px 6px; }
 }
 
 /* ── Game picker screen ────────────────────────────────── */
@@ -808,7 +818,7 @@ body {
 .game-banner-centre {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   flex: 1;
   justify-content: center;
 }
@@ -824,12 +834,12 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
 }
 
 .banner-logo {
   font-family: var(--pixel);
-  font-size: clamp(14px, 2vw, 22px);
+  font-size: clamp(12px, 1.5vw, 18px);
   color: var(--text);
   letter-spacing: 1px;
   line-height: 1;
@@ -936,9 +946,27 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 28px;
+  gap: 20px;
   text-align: center;
 }
+
+.gameover-brand-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.gameover-brand-logo {
+  font-family: var(--pixel);
+  font-size: clamp(18px, 3vw, 32px);
+  color: var(--text);
+  letter-spacing: 2px;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.gameover-brand-logo span { color: var(--accent2); }
 
 .result-badge {
   font-family: var(--pixel);
@@ -965,11 +993,12 @@ body {
   font-size: clamp(28px, 5vw, 52px);
   color: var(--text);
   letter-spacing: 8px;
+  margin-top: 8px;
 }
 
 .gameover-actions {
   display: flex;
-  gap: 16px;
+  gap: 10px;
   flex-wrap: wrap;
   justify-content: center;
 }
@@ -1077,7 +1106,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
 }
 
 .overlay-icon {
