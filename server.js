@@ -42,7 +42,7 @@ function generateRoomId() {
 function createPongState() {
   return {
     game: "pong",
-    ball: { x: 400, y: 200, vx: 4, vy: 3 },
+    ball: { x: 400, y: 200, vx: 7, vy: 5 },
     paddles: { left: 160, right: 160 },
     scores: { left: 0, right: 0 },
     running: false,
@@ -259,7 +259,7 @@ function startPongLoop(roomId) {
   if (!room) return;
   if (room.gameLoop) clearInterval(room.gameLoop);
 
-  const W = 800, H = 400, PH = 80, BS = 10, WIN = 5, INC = 0.15;
+  const W = 800, H = 400, PH = 80, BS = 10, WIN = 5, INC = 0.6, MAX_SPEED = 18;
 
   room.gameLoop = setInterval(() => {
     if (!room.gameState.running) return;
@@ -271,22 +271,22 @@ function startPongLoop(roomId) {
     if (b.y <= 0 || b.y >= H - BS) { b.vy *= -1; b.y = b.y <= 0 ? 0 : H - BS; }
 
     if (b.x <= 42 && b.x >= 30 && b.y + BS >= gs.paddles.left && b.y <= gs.paddles.left + PH) {
-      b.vx = Math.abs(b.vx) + INC;
-      b.vy = ((b.y - gs.paddles.left) / PH - 0.5) * 8;
+      b.vx = Math.min(Math.abs(b.vx) + INC, MAX_SPEED);
+      b.vy = ((b.y - gs.paddles.left) / PH - 0.5) * 10;
     }
     if (b.x >= W-42 && b.x <= W-30 && b.y + BS >= gs.paddles.right && b.y <= gs.paddles.right + PH) {
-      b.vx = -(Math.abs(b.vx) + INC);
-      b.vy = ((b.y - gs.paddles.right) / PH - 0.5) * 8;
+      b.vx = -Math.min(Math.abs(b.vx) + INC, MAX_SPEED);
+      b.vy = ((b.y - gs.paddles.right) / PH - 0.5) * 10;
     }
     if (b.x < 0) {
       gs.scores.right++;
       if (gs.scores.right >= WIN) { endGame(roomId, "right"); return; }
-      gs.ball = { x:400, y:200, vx:4, vy:(Math.random()-0.5)*4 };
+      gs.ball = { x:400, y:200, vx:7, vy:(Math.random()-0.5)*6 };
     }
     if (b.x > W) {
       gs.scores.left++;
       if (gs.scores.left >= WIN) { endGame(roomId, "left"); return; }
-      gs.ball = { x:400, y:200, vx:-4, vy:(Math.random()-0.5)*4 };
+      gs.ball = { x:400, y:200, vx:-7, vy:(Math.random()-0.5)*6 };
     }
     io.to(roomId).emit("game_state", { gameState: gs });
   }, 1000 / 30);
