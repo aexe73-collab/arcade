@@ -293,7 +293,8 @@ body {
   padding: 0 28px;
   background: var(--bg);
   z-index: 2;
-  min-width: 150px;
+  min-width: 200px;
+  max-width: 300px;
   flex-shrink: 0;
 }
 
@@ -306,7 +307,7 @@ body {
 
 .countdown-number {
   font-family: var(--pixel);
-  font-size: clamp(52px, 8vw, 88px);
+  font-size: clamp(120px, 20vw, 220px);
   color: var(--accent);
   line-height: 1;
   animation: count-pulse 0.9s ease-out;
