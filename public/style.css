@@ -391,9 +391,9 @@ body {
   overflow: hidden;
 }
 
-/* Side video panels */
+/* Side video panels — big face energy */
 .side-panel {
-  width: 220px;
+  width: clamp(200px, 22vw, 340px);
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
@@ -406,8 +406,8 @@ body {
   object-fit: cover;
 }
 
-.panel-them { border-right: 3px solid var(--accent2); }
-.panel-you  { border-left:  3px solid var(--accent); }
+.panel-them { border-right: 4px solid var(--accent2); }
+.panel-you  { border-left:  4px solid var(--accent); }
 .panel-you video { transform: scaleX(-1); }
 
 .panel-label {
@@ -416,10 +416,10 @@ body {
   left: 50%;
   transform: translateX(-50%);
   font-family: var(--pixel);
-  font-size: 9px;
-  letter-spacing: 2px;
-  padding: 5px 12px;
-  background: rgba(10,10,15,0.8);
+  font-size: 10px;
+  letter-spacing: 3px;
+  padding: 6px 16px;
+  background: rgba(0,0,0,0.75);
   white-space: nowrap;
 }
 
@@ -428,11 +428,11 @@ body {
 
 .panel-score {
   position: absolute;
-  top: 14px;
+  top: 16px;
   left: 50%;
   transform: translateX(-50%);
   font-family: var(--pixel);
-  font-size: 36px;
+  font-size: clamp(40px, 5vw, 64px);
   line-height: 1;
 }
 
@@ -785,15 +785,15 @@ body {
   50%       { opacity: 1;   transform: scale(1.4); }
 }
 
-/* ── Branded game banner (Kick-style top bar) ──────────── */
+/* ── Branded game banner ───────────────────────────────── */
 .game-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  height: 40px;
+  padding: 0 24px;
+  height: 64px;
   background: #000;
-  border-bottom: 2px solid var(--accent2);
+  border-bottom: 3px solid var(--accent2);
   flex-shrink: 0;
   z-index: 10;
 }
@@ -801,74 +801,96 @@ body {
 .game-banner-left {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
+  min-width: 120px;
+}
+
+.game-banner-centre {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  justify-content: center;
+}
+
+.game-banner-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 120px;
+}
+
+.banner-logo-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 
 .banner-logo {
   font-family: var(--pixel);
-  font-size: 11px;
+  font-size: clamp(14px, 2vw, 22px);
   color: var(--text);
   letter-spacing: 1px;
+  line-height: 1;
 }
 
 .banner-logo span { color: var(--accent2); }
 
 .banner-tag {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 10px;
   color: var(--muted);
   letter-spacing: 1px;
 }
 
-.game-banner-centre {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
 .banner-score-them {
   font-family: var(--pixel);
-  font-size: 16px;
+  font-size: clamp(24px, 3vw, 36px);
   color: var(--accent2);
-  min-width: 20px;
+  min-width: 32px;
   text-align: center;
+  line-height: 1;
 }
 
 .banner-score-you {
   font-family: var(--pixel);
-  font-size: 16px;
+  font-size: clamp(24px, 3vw, 36px);
   color: var(--accent);
-  min-width: 20px;
+  min-width: 32px;
   text-align: center;
+  line-height: 1;
 }
 
 .banner-sep {
   font-family: var(--pixel);
-  font-size: 16px;
+  font-size: 20px;
   color: var(--border);
-}
-
-.game-banner-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  line-height: 1;
 }
 
 .banner-game {
   font-family: var(--pixel);
-  font-size: 9px;
+  font-size: 10px;
   color: var(--muted);
   letter-spacing: 2px;
 }
 
 .banner-status {
   font-family: var(--pixel);
-  font-size: 9px;
+  font-size: 11px;
   color: var(--accent2);
-  letter-spacing: 2px;
+  letter-spacing: 3px;
   animation: blink 1s step-end infinite;
-  padding: 3px 8px;
-  border: 1px solid var(--accent2);
+  padding: 5px 12px;
+  border: 2px solid var(--accent2);
+}
+
+.banner-url {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 1px;
 }
 
 /* ── Share card ────────────────────────────────────────── */
@@ -959,6 +981,79 @@ body {
   letter-spacing: 2px;
   min-height: 20px;
 }
+
+/* ── Email capture ─────────────────────────────────────── */
+.email-capture {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 380px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+.email-capture-label {
+  font-family: var(--pixel);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.email-capture-row {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+}
+
+.email-capture-row input {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  outline: none;
+  min-width: 0;
+}
+
+.email-capture-row input:focus {
+  border-color: var(--accent);
+}
+
+.email-capture-row input::placeholder {
+  color: var(--muted);
+}
+
+.btn-email {
+  font-family: var(--pixel);
+  font-size: 9px;
+  padding: 10px 14px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  cursor: pointer;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  transition: transform 0.1s;
+  flex-shrink: 0;
+}
+
+.btn-email:hover  { transform: translateY(-1px); }
+.btn-email:active { transform: translateY(1px); }
+
+.email-capture-done {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+  letter-spacing: 1px;
+}
+
+.hidden { display: none !important; }
 
 /* ── Overlays ──────────────────────────────────────────── */
 .overlay {
