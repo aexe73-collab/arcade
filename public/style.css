@@ -949,22 +949,24 @@ body {
   align-items: center;
   gap: 20px;
   text-align: center;
+  padding: 16px;
+  width: 100%;
+  max-width: 600px;
 }
 
 .gameover-brand-block {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0;
+  gap: 8px;
 }
 
 .gameover-brand-logo {
   font-family: var(--pixel);
-  font-size: clamp(18px, 3vw, 32px);
+  font-size: clamp(20px, 4vw, 36px);
   color: var(--text);
   letter-spacing: 2px;
   line-height: 1.2;
-  margin-bottom: 8px;
 }
 
 .gameover-brand-logo span { color: var(--accent2); }
@@ -989,12 +991,51 @@ body {
   100% { transform: scale(1); opacity: 1; }
 }
 
-.final-score {
+/* Score layout — opponent left, you right */
+.gameover-scores {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  width: 100%;
+}
+
+.gameover-score-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.gameover-score-block.you  { align-items: flex-end; }
+.gameover-score-block.them { align-items: flex-start; }
+
+.gameover-score-label {
   font-family: var(--pixel);
-  font-size: clamp(28px, 5vw, 52px);
-  color: var(--text);
-  letter-spacing: 8px;
-  margin-top: 8px;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--muted);
+}
+
+.gameover-score-block.them .gameover-score-label { color: var(--accent2); }
+.gameover-score-block.you  .gameover-score-label { color: var(--accent); }
+
+.gameover-score-val {
+  font-family: var(--pixel);
+  font-size: clamp(36px, 6vw, 64px);
+  line-height: 1;
+}
+
+.gameover-score-block.them .gameover-score-val { color: var(--accent2); }
+.gameover-score-block.you  .gameover-score-val { color: var(--accent); }
+
+.gameover-score-sep {
+  font-family: var(--pixel);
+  font-size: clamp(24px, 4vw, 48px);
+  color: var(--border);
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .gameover-actions {
@@ -1031,6 +1072,7 @@ body {
   color: var(--muted);
   letter-spacing: 2px;
   text-align: center;
+  white-space: nowrap;
 }
 
 .email-capture-row {
