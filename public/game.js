@@ -8,20 +8,157 @@ let currentGame = null;
 let localStream = null;
 let peerConn    = null;
 let animFrameId = null;
+let currentUser = null;   // Supabase user object
+let playMode    = "stranger"; // stranger | friend | group
 
 const canvas = document.getElementById("pong-canvas");
 const ctx    = canvas.getContext("2d");
 const keys   = {};
 
+// ── Supabase auth ─────────────────────────────────────────────────
+const SUPABASE_URL = window.SUPABASE_URL || "";
+const SUPABASE_KEY = window.SUPABASE_ANON_KEY || "";
+let supabase = null;
+
+function initSupabase() {
+  if (!SUPABASE_URL || !SUPABASE_KEY) return;
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // Check for existing session
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) setUser(session.user);
+  });
+
+  // Listen for auth state changes (including magic link callback)
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (session) {
+      setUser(session.user);
+      showScreen("screen-home");
+    } else {
+      setUser(null);
+    }
+  });
+}
+
+function setUser(user) {
+  currentUser = user;
+  const guestEl    = document.getElementById("home-guest");
+  const signedinEl = document.getElementById("home-signed-in");
+  const usernameEl = document.getElementById("home-username");
+
+  if (user) {
+    const name = user.user_metadata?.username
+      || user.email?.split("@")[0]?.toUpperCase()
+      || "PLAYER";
+    if (usernameEl) usernameEl.textContent = name;
+    guestEl?.classList.add("hidden");
+    signedinEl?.classList.remove("hidden");
+  } else {
+    guestEl?.classList.remove("hidden");
+    signedinEl?.classList.add("hidden");
+  }
+}
+
+// ── Sign in screen handlers ───────────────────────────────────────
+document.getElementById("btn-goto-signin").addEventListener("click", () => {
+  showScreen("screen-signin");
+});
+
+document.getElementById("btn-back-home").addEventListener("click", () => {
+  showScreen("screen-home");
+});
+
+document.getElementById("btn-send-link").addEventListener("click", async () => {
+  const email = document.getElementById("signin-email").value.trim();
+  if (!email || !email.includes("@")) {
+    document.getElementById("signin-email").style.borderColor = "var(--accent2)";
+    return;
+  }
+  if (!supabase) {
+    alert("Auth not configured — add SUPABASE_URL and SUPABASE_ANON_KEY.");
+    return;
+  }
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.origin }
+  });
+  if (error) { console.error(error); return; }
+  document.getElementById("signin-form").classList.add("hidden");
+  document.getElementById("signin-sent").classList.remove("hidden");
+});
+
+document.getElementById("btn-google-signin").addEventListener("click", async () => {
+  if (!supabase) { alert("Auth not configured."); return; }
+  await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: window.location.origin }
+  });
+});
+
+document.getElementById("btn-signout").addEventListener("click", async () => {
+  if (supabase) await supabase.auth.signOut();
+  setUser(null);
+});
+
+// ── Mode selector ─────────────────────────────────────────────────
+document.getElementById("btn-play-modes").addEventListener("click", () => {
+  showScreen("screen-mode");
+});
+
+document.getElementById("btn-mode-back").addEventListener("click", () => {
+  showScreen("screen-home");
+});
+
+document.getElementById("mode-stranger").addEventListener("click", () => {
+  playMode = "stranger";
+  showScreen("screen-picker");
+});
+
+document.getElementById("mode-friend").addEventListener("click", () => {
+  playMode = "friend";
+  showFriendChallenge();
+});
+
+document.getElementById("mode-group").addEventListener("click", () => {
+  playMode = "group";
+  // Groups coming soon — show nudge for now
+  alert("Group rooms coming soon! You'll be able to create a private group and challenge your friends to a leaderboard.");
+});
+
+// ── Friend challenge ──────────────────────────────────────────────
+function showFriendChallenge() {
+  // Generate a unique challenge room ID
+  const challengeId = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const link = `${window.location.origin}?challenge=${challengeId}`;
+  showScreen("screen-picker");
+  // Store challenge ID so matchmaking uses it
+  window._challengeId = challengeId;
+  // Show copy link nudge
+  setTimeout(() => {
+    const copied = confirm(`Share this link with your friend:\n\n${link}\n\nClick OK to copy it.`);
+    if (copied) navigator.clipboard?.writeText(link).catch(() => {});
+  }, 100);
+}
+
+// Check if arriving via challenge link
+function checkChallengeLink() {
+  const params = new URLSearchParams(window.location.search);
+  const challenge = params.get("challenge");
+  if (challenge) {
+    window._challengeId = challenge;
+    playMode = "friend";
+    // Go straight to game picker
+    setTimeout(() => showScreen("screen-picker"), 500);
+  }
+}
+
 // ── Screen helpers ────────────────────────────────────────────────
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
-  // Show/hide mobile fixed labels only during game
   const onGame = id === "screen-game";
   const fixedGame = document.getElementById("banner-game-fixed");
-  const fixedStatus = document.getElementById("banner-status");
-  if (fixedGame)   fixedGame.style.display   = onGame ? "block" : "none";
+  if (fixedGame) fixedGame.style.display = onGame ? "block" : "none";
 }
 function showOverlay(id) { document.getElementById(id).classList.remove("hidden"); }
 function hideOverlay(id) { document.getElementById(id).classList.add("hidden"); }
@@ -735,3 +872,7 @@ document.getElementById("btn-left-home").addEventListener("click", () => {
   roomId = null; myRole = null; gameState = null;
   showScreen("screen-picker");
 });
+
+// ── Init ──────────────────────────────────────────────────────────
+initSupabase();
+checkChallengeLink();
