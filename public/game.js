@@ -23,24 +23,22 @@ let sbClient = null;
 function initSupabase() {
   if (!SUPABASE_URL || !SUPABASE_KEY) return;
   sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { detectSessionInUrl: true, persistSession: true }
+    auth: { detectSessionInUrl: true, persistSession: true, flowType: "pkce" }
   });
 
-  // Check for existing session on load (also handles OAuth redirect token in URL)
   sbClient.auth.getSession().then(({ data: { session } }) => {
+    console.log("getSession:", session?.user?.email || "no session");
     if (session) {
       setUser(session.user);
-      // Clean up URL after OAuth redirect
+      showScreen("screen-home");
       if (window.location.hash || window.location.search.includes("code=")) {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
-      showScreen("screen-home");
     }
   });
 
-  // Listen for auth state changes
   sbClient.auth.onAuthStateChange((event, session) => {
-    console.log("Auth event:", event, "session:", session, "user:", session?.user?.email);
+    console.log("Auth event:", event, "user:", session?.user?.email || "none");
     if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
       setUser(session.user);
       showScreen("screen-home");
@@ -101,7 +99,7 @@ document.getElementById("btn-google-signin").addEventListener("click", async () 
   if (!sbClient) { alert("Auth not configured."); return; }
   await sbClient.auth.signInWithOAuth({
     provider: "google",
-    options: { redirectTo: window.location.origin }
+    options: { redirectTo: "https://www.arcadeface.com" }
   });
 });
 
