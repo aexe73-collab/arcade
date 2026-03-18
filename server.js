@@ -14,8 +14,9 @@ app.use(express.json());
 // Config endpoint — must be before static middleware
 app.get("/config.js", (req, res) => {
   res.setHeader("Content-Type", "application/javascript");
-  res.send(`window.SUPABASE_URL = "${process.env.SUPABASE_URL || ""}";
-window.SUPABASE_ANON_KEY = "${process.env.SUPABASE_ANON_KEY || ""}";`);
+  const url = process.env.SUPABASE_URL || "https://hyukljrbaijdlcstrlhq.supabase.co";
+  const key = process.env.SUPABASE_ANON_KEY || "";
+  res.send(`window.SUPABASE_URL = "${url}";\nwindow.SUPABASE_ANON_KEY = "${key}";`);
 });
 
 // Temp debug endpoint — remove after fixing
