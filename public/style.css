@@ -512,6 +512,7 @@ body {
   .game-banner-centre  { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; }
   .banner-logo         { font-size: clamp(16px, 5vw, 22px); }
   .banner-tag          { font-size: 9px; letter-spacing: 1px; }
+  .banner-game         { color: var(--accent2); font-size: 8px; }
   .banner-status {
     position: fixed;
     bottom: 12px;
@@ -896,6 +897,11 @@ body {
   font-size: clamp(9px, 1vw, 12px);
   color: var(--muted);
   letter-spacing: 3px;
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
 
 .banner-status {
