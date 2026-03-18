@@ -104,6 +104,16 @@
 
         <!-- Centre: canvas + mobile score -->
         <div class="canvas-wrap">
+          <div class="mobile-pips">
+            <div class="mobile-pip pip-them">
+              <video id="video-mobile-remote" autoplay playsinline></video>
+              <span>OPPONENT</span>
+            </div>
+            <div class="mobile-pip pip-you">
+              <video id="video-mobile-local" autoplay muted playsinline></video>
+              <span>YOU</span>
+            </div>
+          </div>
           <div class="desktop-score">
             <span class="ds-score them" id="ds-score-them">0</span>
             <span class="ds-sep">:</span>
