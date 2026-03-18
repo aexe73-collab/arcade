@@ -553,6 +553,7 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
   roomId      = rid;
   myRole      = role;
   currentGame = game;
+  clearChat();
   await startPeerConnection(role === "left");
   startCountdown(() => {
     setupGameUI(game);
@@ -613,6 +614,39 @@ socket.on("game_over", ({ winner, scores }) => {
   setTimeout(() => generateShareCard(scores, winner), 200);
   showScreen("screen-gameover");
 });
+
+// ── Post-game chat ────────────────────────────────────────────────
+function clearChat() {
+  const box = document.getElementById("postgame-messages");
+  box.innerHTML = '<div class="postgame-empty">No messages yet — say something!</div>';
+}
+
+function appendChatMsg(who, text) {
+  const box = document.getElementById("postgame-messages");
+  const empty = box.querySelector(".postgame-empty");
+  if (empty) empty.remove();
+  const msg = document.createElement("div");
+  msg.className = "postgame-msg";
+  msg.innerHTML = `<span class="postgame-msg-who ${who}">${who === "you" ? "YOU" : "THEM"}</span><span class="postgame-msg-text">${text.replace(/</g,"&lt;")}</span>`;
+  box.appendChild(msg);
+  box.scrollTop = box.scrollHeight;
+}
+
+function sendChatMsg() {
+  const input = document.getElementById("postgame-input");
+  const text  = input.value.trim();
+  if (!text || !roomId) return;
+  input.value = "";
+  appendChatMsg("you", text);
+  socket.emit("chat_msg", { roomId, text });
+}
+
+document.getElementById("postgame-send").addEventListener("click", sendChatMsg);
+document.getElementById("postgame-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); sendChatMsg(); }
+});
+
+socket.on("chat_msg", ({ text }) => { appendChatMsg("them", text); });
 
 // ── Email capture ─────────────────────────────────────────────────
 document.getElementById("btn-email").addEventListener("click", async () => {
