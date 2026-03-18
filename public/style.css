@@ -393,7 +393,7 @@ body {
 
 /* Side video panels */
 .side-panel {
-  width: 280px;
+  width: 420px;
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
