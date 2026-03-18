@@ -54,6 +54,160 @@ body {
   );
 }
 
+/* ── Home screen auth states ───────────────────────────── */
+.home-guest { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; max-width: 320px; }
+.home-signed-in { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; max-width: 320px; }
+.home-user-row { display: flex; align-items: center; gap: 12px; }
+.home-username { font-family: var(--pixel); font-size: 11px; color: var(--accent); letter-spacing: 2px; }
+.btn-text-small { font-family: var(--mono); font-size: 11px; color: var(--muted); background: none; border: none; cursor: pointer; text-decoration: underline; }
+.btn-text-small:hover { color: var(--text); }
+.home-divider { display: flex; align-items: center; gap: 12px; width: 100%; color: var(--muted); font-family: var(--mono); font-size: 11px; }
+.home-divider::before, .home-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ── Sign in screen ────────────────────────────────────── */
+#screen-signin { background: var(--bg); }
+.signin-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+  padding: 40px 24px;
+  width: 100%;
+  max-width: 380px;
+}
+.signin-logo {
+  font-family: var(--pixel);
+  font-size: clamp(18px, 4vw, 28px);
+  color: var(--text);
+  letter-spacing: 2px;
+}
+.signin-logo span { color: var(--accent2); }
+.signin-title {
+  font-family: var(--pixel);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 3px;
+}
+.signin-sub {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.signin-form { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.signin-form input {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 12px 16px;
+  font-family: var(--mono);
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+}
+.signin-form input:focus { border-color: var(--accent); }
+.signin-form input::placeholder { color: var(--muted); }
+.signin-sent { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.signin-sent-icon { font-size: 32px; color: var(--accent); }
+.signin-sent p { font-family: var(--mono); font-size: 14px; color: var(--text); line-height: 1.6; }
+.signin-sent-sub { color: var(--muted); font-size: 12px; }
+.signin-divider { display: flex; align-items: center; gap: 12px; width: 100%; color: var(--muted); font-family: var(--mono); font-size: 11px; }
+.signin-divider::before, .signin-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ── Mode selector screen ──────────────────────────────── */
+#screen-mode { background: var(--bg); flex-direction: column; }
+.mode-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  text-align: center;
+  padding: 40px 24px;
+}
+.mode-title {
+  font-family: var(--pixel);
+  font-size: clamp(10px, 2vw, 14px);
+  color: var(--text);
+  letter-spacing: 3px;
+}
+.mode-grid {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 20px;
+  width: 160px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+  position: relative;
+}
+.mode-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+.mode-card:active { transform: translateY(0); }
+.mode-card-pro { border-color: var(--accent2); }
+.mode-card-pro:hover { border-color: var(--accent2); box-shadow: 0 0 0 1px var(--accent2); }
+.mode-card-icon { font-size: 28px; color: var(--accent); line-height: 1; }
+.mode-card-pro .mode-card-icon { color: var(--accent2); }
+.mode-card-name { font-family: var(--pixel); font-size: 12px; color: var(--text); letter-spacing: 2px; }
+.mode-card-sub { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.mode-card-tag {
+  font-family: var(--pixel);
+  font-size: 8px;
+  padding: 3px 8px;
+  letter-spacing: 2px;
+}
+.mode-card-tag.free { color: var(--accent); border: 1px solid var(--accent); }
+.mode-card-tag.pro  { color: var(--accent2); border: 1px solid var(--accent2); }
+
+/* ── Friend challenge screen ───────────────────────────── */
+#screen-challenge { background: var(--bg); flex-direction: column; }
+.challenge-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+  padding: 40px 24px;
+  max-width: 400px;
+}
+.challenge-title { font-family: var(--pixel); font-size: 12px; color: var(--text); letter-spacing: 3px; }
+.challenge-link-box {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.challenge-link-box input {
+  flex: 1;
+  background: var(--bg2);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 10px 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  outline: none;
+  min-width: 0;
+}
+.btn-copy {
+  font-family: var(--pixel);
+  font-size: 9px;
+  padding: 10px 14px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  cursor: pointer;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
 /* ── Home screen ───────────────────────────────────────── */
 #screen-home {
   background: var(--bg);
