@@ -46,6 +46,12 @@
           <div class="game-card-sub">Last one alive wins</div>
           <div class="game-card-controls">Arrow keys / swipe to steer</div>
         </button>
+        <button class="game-card reaction-card" id="pick-reaction">
+          <div class="game-card-icon">&#9654;</div>
+          <div class="game-card-name">REFLEX</div>
+          <div class="game-card-sub">First to 3 taps wins</div>
+          <div class="game-card-controls">Tap when it turns green!</div>
+        </button>
       </div>
     </div>
   </div>
@@ -147,6 +153,27 @@
             <span class="ds-score you" id="ds-score-you">0</span>
           </div>
           <canvas id="pong-canvas" width="800" height="400"></canvas>
+
+          <!-- Reaction game UI (shown instead of canvas for reaction game) -->
+          <div class="reaction-ui" id="reaction-ui">
+            <div class="reaction-round" id="reaction-round">ROUND 1 OF 5</div>
+            <div class="reaction-scores">
+              <div class="reaction-score-block">
+                <span class="reaction-score-label them">THEM</span>
+                <span class="reaction-score-val" id="reaction-score-them">0</span>
+              </div>
+              <div class="reaction-score-block">
+                <span class="reaction-score-label you">YOU</span>
+                <span class="reaction-score-val" id="reaction-score-you">0</span>
+              </div>
+            </div>
+            <div class="reaction-light" id="reaction-light">
+              <div class="reaction-light-inner" id="reaction-light-inner"></div>
+            </div>
+            <div class="reaction-instruction" id="reaction-instruction">Get ready...</div>
+            <button class="reaction-tap-btn" id="reaction-tap-btn">TAP!</button>
+            <div class="reaction-result" id="reaction-result"></div>
+          </div>
           <div class="dpad" id="dpad">
             <button class="dpad-btn dpad-up"    id="dpad-up">&#9650;</button>
             <button class="dpad-btn dpad-left"  id="dpad-left">&#9664;</button>
