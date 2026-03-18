@@ -486,6 +486,7 @@ body {
 .hint-sep { color: var(--border); }
 
 /* ── Responsive: narrow screens ────────────────────────── */
+.mobile-pips { display: none; }
 @media (max-width: 768px) {
   .faceoff-layout    { flex-direction: column; }
   .faceoff-panel.faceoff-them { border-right: none; border-bottom: 3px solid var(--accent2); }
@@ -533,7 +534,7 @@ body {
   .mobile-pip.pip-you  { border: 1px solid var(--accent); }
   .mobile-pip.pip-you  span { color: var(--accent); }
 }
-.mobile-pips { display: none; }
+
 /* ── Game over screen ──────────────────────────────────── */
 .gameover-content {
   display: flex;
