@@ -451,11 +451,7 @@ body {
   min-width: 0;
 }
 
-.desktop-score {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+.desktop-score { display: none; }
 
 .ds-score {
   font-family: var(--pixel);
@@ -510,10 +506,10 @@ body {
   .picker-grid       { gap: 12px; }
   .game-card         { width: 140px; padding: 20px 12px; }
   .dpad              { display: grid; }
-  .game-banner         { height: 56px; padding: 0 16px; border-bottom: 2px solid var(--accent2); }
+  .game-banner         { height: 56px; padding: 0 16px; border-bottom: 2px solid var(--accent2); position: relative; }
   .game-banner-left    { display: none; }
   .game-banner-right   { display: none; }
-  .game-banner-centre  { flex: 1; }
+  .game-banner-centre  { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; }
   .banner-logo         { font-size: clamp(16px, 5vw, 22px); }
   .banner-tag          { font-size: 9px; letter-spacing: 1px; }
   .banner-status {
@@ -973,10 +969,11 @@ body {
 
 .gameover-brand-logo {
   font-family: var(--pixel);
-  font-size: clamp(20px, 4vw, 36px);
+  font-size: clamp(14px, 4vw, 36px);
   color: var(--text);
   letter-spacing: 2px;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .gameover-brand-logo span { color: var(--accent2); }
