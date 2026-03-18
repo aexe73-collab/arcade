@@ -18,19 +18,19 @@ const keys   = {};
 // ── Supabase auth ─────────────────────────────────────────────────
 const SUPABASE_URL = window.SUPABASE_URL || "";
 const SUPABASE_KEY = window.SUPABASE_ANON_KEY || "";
-let supabase = null;
+let sbClient = null;
 
 function initSupabase() {
   if (!SUPABASE_URL || !SUPABASE_KEY) return;
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   // Check for existing session
-  supabase.auth.getSession().then(({ data: { session } }) => {
+  sbClient.auth.getSession().then(({ data: { session } }) => {
     if (session) setUser(session.user);
   });
 
   // Listen for auth state changes (including magic link callback)
-  supabase.auth.onAuthStateChange((event, session) => {
+  sbClient.auth.onAuthStateChange((event, session) => {
     if (session) {
       setUser(session.user);
       showScreen("screen-home");
@@ -74,11 +74,11 @@ document.getElementById("btn-send-link").addEventListener("click", async () => {
     document.getElementById("signin-email").style.borderColor = "var(--accent2)";
     return;
   }
-  if (!supabase) {
+  if (!sbClient) {
     alert("Auth not configured — add SUPABASE_URL and SUPABASE_ANON_KEY.");
     return;
   }
-  const { error } = await supabase.auth.signInWithOtp({
+  const { error } = await sbClient.auth.signInWithOtp({
     email,
     options: { emailRedirectTo: window.location.origin }
   });
@@ -88,15 +88,15 @@ document.getElementById("btn-send-link").addEventListener("click", async () => {
 });
 
 document.getElementById("btn-google-signin").addEventListener("click", async () => {
-  if (!supabase) { alert("Auth not configured."); return; }
-  await supabase.auth.signInWithOAuth({
+  if (!sbClient) { alert("Auth not configured."); return; }
+  await sbClient.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo: window.location.origin }
   });
 });
 
 document.getElementById("btn-signout").addEventListener("click", async () => {
-  if (supabase) await supabase.auth.signOut();
+  if (sbClient) await sbClient.auth.signOut();
   setUser(null);
 });
 
