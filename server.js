@@ -18,6 +18,17 @@ app.get("/config.js", (req, res) => {
 window.SUPABASE_ANON_KEY = "${process.env.SUPABASE_ANON_KEY || ""}";`);
 });
 
+// Temp debug endpoint — remove after fixing
+app.get("/debug-env", (req, res) => {
+  res.json({
+    has_url: !!process.env.SUPABASE_URL,
+    has_key: !!process.env.SUPABASE_ANON_KEY,
+    url_preview: process.env.SUPABASE_URL ? process.env.SUPABASE_URL.substring(0, 20) + "..." : "MISSING",
+    node_env: process.env.NODE_ENV,
+    port: process.env.PORT
+  });
+});
+
 app.use(express.static(path.join(__dirname, "public")));
 
 // ── Email subscription endpoint ───────────────────────────────────
