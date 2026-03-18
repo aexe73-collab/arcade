@@ -222,7 +222,7 @@ function startGameLoop(roomId) {
     // Broadcast state to both players
     io.to(roomId).emit("game_state", { gameState: gs });
 
-  }, 1000 / 60);
+  }, 1000 / 30);
 
   room.gameLoop = room.gameLoop;
 }
