@@ -50,26 +50,40 @@
   <div id="screen-faceoff" class="screen">
     <div class="scanlines"></div>
     <div class="faceoff-layout">
-
-      <!-- Opponent video panel -->
       <div class="faceoff-panel faceoff-them">
         <video id="video-faceoff-remote" autoplay playsinline></video>
         <div class="faceoff-name them">OPPONENT</div>
       </div>
-
-      <!-- Centre countdown -->
       <div class="faceoff-centre">
         <div class="faceoff-vs">VS</div>
-        <div class="countdown-number" id="countdown-number">3</div>
+        <div class="countdown-number" id="countdown-number">10</div>
         <div class="faceoff-hint">Say hi. Trash talk.<br>Game starts in&hellip;</div>
       </div>
-
-      <!-- Your video panel -->
       <div class="faceoff-panel faceoff-you">
         <video id="video-faceoff-local" autoplay muted playsinline></video>
         <div class="faceoff-name you">YOU</div>
       </div>
+    </div>
+  </div>
 
+  <!-- SCREEN 3b: Game picker -->
+  <div id="screen-picker" class="screen">
+    <div class="scanlines"></div>
+    <div class="picker-content">
+      <div class="picker-title">CHOOSE YOUR GAME</div>
+      <div class="picker-hint" id="picker-hint">Pick a game &mdash; if you disagree, Pong wins</div>
+      <div class="picker-grid">
+        <button class="game-card" id="pick-pong">
+          <div class="game-card-icon">&#9646;&#9646;</div>
+          <div class="game-card-name">PONG</div>
+          <div class="game-card-sub">Classic paddle battle</div>
+        </button>
+        <button class="game-card" id="pick-snake">
+          <div class="game-card-icon">&#9632;&#9632;&#9632;</div>
+          <div class="game-card-name">SNAKE</div>
+          <div class="game-card-sub">Last one slithering wins</div>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -104,26 +118,24 @@
 
         <!-- Centre: canvas + mobile score -->
         <div class="canvas-wrap">
-          <div class="mobile-pips">
-            <div class="mobile-pip pip-them">
-              <video id="video-mobile-remote" autoplay playsinline></video>
-              <span>OPPONENT</span>
-            </div>
-            <div class="mobile-pip pip-you">
-              <video id="video-mobile-local" autoplay muted playsinline></video>
-              <span>YOU</span>
-            </div>
-          </div>
           <div class="desktop-score">
             <span class="ds-score them" id="ds-score-them">0</span>
             <span class="ds-sep">:</span>
             <span class="ds-score you" id="ds-score-you">0</span>
           </div>
           <canvas id="pong-canvas" width="800" height="400"></canvas>
-          <div class="controls-hint">
+          <div class="controls-hint" id="controls-hint">
             <span>W / S &nbsp;&mdash;&nbsp; move paddle</span>
             <span class="hint-sep">&nbsp;|&nbsp;</span>
             <span>Or drag on mobile</span>
+          </div>
+          <div class="mobile-footer">
+            <div class="mobile-footer-logo">ARCADE<span>FACE</span></div>
+            <div class="mobile-footer-balls">
+              <div class="mf-ball b1"></div>
+              <div class="mf-ball b2"></div>
+              <div class="mf-ball b3"></div>
+            </div>
           </div>
         </div>
 
