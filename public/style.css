@@ -666,6 +666,130 @@ body {
   50%       { opacity: 1;   transform: scale(1.4); }
 }
 
+/* ── Branded game banner (Kick-style top bar) ──────────── */
+.game-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: 40px;
+  background: #000;
+  border-bottom: 2px solid var(--accent2);
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.game-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.banner-logo {
+  font-family: var(--pixel);
+  font-size: 11px;
+  color: var(--text);
+  letter-spacing: 1px;
+}
+
+.banner-logo span { color: var(--accent2); }
+
+.banner-tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
+.game-banner-centre {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.banner-score-them {
+  font-family: var(--pixel);
+  font-size: 16px;
+  color: var(--accent2);
+  min-width: 20px;
+  text-align: center;
+}
+
+.banner-score-you {
+  font-family: var(--pixel);
+  font-size: 16px;
+  color: var(--accent);
+  min-width: 20px;
+  text-align: center;
+}
+
+.banner-sep {
+  font-family: var(--pixel);
+  font-size: 16px;
+  color: var(--border);
+}
+
+.game-banner-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.banner-game {
+  font-family: var(--pixel);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 2px;
+}
+
+.banner-status {
+  font-family: var(--pixel);
+  font-size: 9px;
+  color: var(--accent2);
+  letter-spacing: 2px;
+  animation: blink 1s step-end infinite;
+  padding: 3px 8px;
+  border: 1px solid var(--accent2);
+}
+
+/* ── Share card ────────────────────────────────────────── */
+.share-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+#share-canvas {
+  display: block;
+  max-width: 100%;
+  border: 1px solid var(--border);
+}
+
+.btn-share {
+  font-family: var(--pixel);
+  font-size: 10px;
+  padding: 12px 24px;
+  background: var(--accent2);
+  color: var(--bg);
+  border: none;
+  cursor: pointer;
+  letter-spacing: 2px;
+  transition: transform 0.1s;
+}
+
+.btn-share:hover  { transform: translateY(-2px); }
+.btn-share:active { transform: translateY(1px); }
+
+.share-hint {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
+.share-hint strong { color: var(--accent); }
+
 /* ── Game over screen ──────────────────────────────────── */
 .gameover-content {
   display: flex;
