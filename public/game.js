@@ -217,17 +217,20 @@ function stopRenderLoop() {
 
 // ── Game UI helpers ───────────────────────────────────────────────
 function setupGameUI(game) {
-  const hint  = document.getElementById("controls-hint");
-  const dpad  = document.getElementById("dpad");
+  const hint   = document.getElementById("controls-hint");
+  const dpad   = document.getElementById("dpad");
   const status = document.getElementById("game-status");
+  const bannerGame = document.getElementById("banner-game");
 
   if (game === "snake") {
     hint.innerHTML = '<span>Arrow keys / WASD &nbsp;&mdash;&nbsp; steer</span>';
-    status.textContent = "FIRST TO 3 ROUNDS";
-    dpad.style.display = "grid"; // shown on all screens for snake so mobile gets it
+    status.textContent   = "FIRST TO 3 ROUNDS";
+    bannerGame.textContent = "SNAKE";
+    dpad.style.display = "grid";
   } else {
     hint.innerHTML = '<span>W / S &nbsp;&mdash;&nbsp; move paddle</span><span class="hint-sep"> | </span><span>Or drag</span>';
-    status.textContent = "FIRST TO 5";
+    status.textContent   = "FIRST TO 5";
+    bannerGame.textContent = "PONG";
     dpad.style.display = "none";
   }
 }
@@ -235,12 +238,126 @@ function setupGameUI(game) {
 function updateScoreDisplay(scores) {
   const my   = myRole === "left" ? scores.left  : scores.right;
   const them = myRole === "left" ? scores.right : scores.left;
-  document.getElementById("score-left").textContent       = my;
-  document.getElementById("score-right").textContent      = them;
+
+  // Mobile score bar
+  document.getElementById("score-left").textContent  = my;
+  document.getElementById("score-right").textContent = them;
+
+  // Desktop side panels
   document.getElementById("panel-score-you").textContent  = my;
   document.getElementById("panel-score-them").textContent = them;
-  document.getElementById("ds-score-you").textContent     = my;
-  document.getElementById("ds-score-them").textContent    = them;
+
+  // Desktop canvas score
+  document.getElementById("ds-score-you").textContent  = my;
+  document.getElementById("ds-score-them").textContent = them;
+
+  // Top branded banner
+  document.getElementById("banner-score-you").textContent  = my;
+  document.getElementById("banner-score-them").textContent = them;
+}
+
+// ── Share card generator ──────────────────────────────────────────
+function generateShareCard(scores, winner) {
+  const sc  = document.getElementById("share-canvas");
+  const ctx = sc.getContext("2d");
+  const W   = 800, H = 420;
+
+  // Background
+  ctx.fillStyle = "#0a0a0f";
+  ctx.fillRect(0, 0, W, H);
+
+  // Top banner strip
+  ctx.fillStyle = "#ff3366";
+  ctx.fillRect(0, 0, W, 6);
+
+  // Bottom banner strip
+  ctx.fillStyle = "#00ff88";
+  ctx.fillRect(0, H - 6, W, 6);
+
+  // Draw video frames if available — them on left, you on right
+  const vidThem = document.getElementById("video-remote");
+  const vidYou  = document.getElementById("video-local");
+  const faceW   = 240, faceH = 200, faceY = 50;
+
+  // Face frame backgrounds
+  ctx.fillStyle = "#1a1a26";
+  ctx.fillRect(40, faceY, faceW, faceH);
+  ctx.fillRect(W - 40 - faceW, faceY, faceW, faceH);
+
+  // Draw video frames (if stream is live)
+  try {
+    if (vidThem && vidThem.readyState >= 2) {
+      ctx.save();
+      ctx.rect(40, faceY, faceW, faceH);
+      ctx.clip();
+      ctx.drawImage(vidThem, 40, faceY, faceW, faceH);
+      ctx.restore();
+    }
+    if (vidYou && vidYou.readyState >= 2) {
+      ctx.save();
+      ctx.rect(W - 40 - faceW, faceY, faceW, faceH);
+      ctx.clip();
+      // Mirror local video
+      ctx.translate(W - 40 - faceW + faceW, faceY);
+      ctx.scale(-1, 1);
+      ctx.drawImage(vidYou, 0, 0, faceW, faceH);
+      ctx.restore();
+    }
+  } catch (e) {
+    console.warn("Share card video draw:", e.message);
+  }
+
+  // Face borders
+  ctx.strokeStyle = "#ff3366";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(40, faceY, faceW, faceH);
+  ctx.strokeStyle = "#00ff88";
+  ctx.strokeRect(W - 40 - faceW, faceY, faceW, faceH);
+
+  // OPPONENT / YOU labels under faces
+  ctx.font = "bold 11px 'Courier New', monospace";
+  ctx.fillStyle = "#ff3366";
+  ctx.textAlign = "center";
+  ctx.fillText("OPPONENT", 40 + faceW / 2, faceY + faceH + 22);
+  ctx.fillStyle = "#00ff88";
+  ctx.fillText("YOU", W - 40 - faceW / 2, faceY + faceH + 22);
+
+  // Centre score
+  const myScore   = myRole === "left" ? scores.left  : scores.right;
+  const themScore = myRole === "left" ? scores.right : scores.left;
+
+  ctx.font = "bold 64px 'Courier New', monospace";
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#ff3366";
+  ctx.fillText(themScore, W / 2 - 50, faceY + faceH / 2 + 20);
+  ctx.fillStyle = "#2a2a3e";
+  ctx.fillText(":", W / 2, faceY + faceH / 2 + 20);
+  ctx.fillStyle = "#00ff88";
+  ctx.fillText(myScore, W / 2 + 50, faceY + faceH / 2 + 20);
+
+  // Result text
+  const resultText = winner === "draw" ? "DRAW" : winner === myRole ? "WIN" : "LOSS";
+  const resultColour = resultText === "WIN" ? "#00ff88" : resultText === "LOSS" ? "#ff3366" : "#ffffff";
+  ctx.font = "bold 28px 'Courier New', monospace";
+  ctx.fillStyle = resultColour;
+  ctx.fillText(resultText, W / 2, faceY + faceH / 2 + 58);
+
+  // Game type label
+  ctx.font = "12px 'Courier New', monospace";
+  ctx.fillStyle = "#6666aa";
+  ctx.fillText(currentGame ? currentGame.toUpperCase() : "PONG", W / 2, faceY + faceH / 2 + 82);
+
+  // ARCADEFACE branding — bottom centre
+  ctx.font = "bold 18px 'Courier New', monospace";
+  ctx.fillStyle = "#e8e8f0";
+  ctx.fillText("ARCADE", W / 2 - 46, H - 22);
+  ctx.fillStyle = "#ff3366";
+  ctx.fillText("FACE", W / 2 + 46, H - 22);
+
+  // Hashtag
+  ctx.font = "11px 'Courier New', monospace";
+  ctx.fillStyle = "#6666aa";
+  ctx.fillText("#ArcadeFace", W / 2 + 120, H - 22);
 }
 
 // ── Keyboard controls ─────────────────────────────────────────────
@@ -379,9 +496,22 @@ socket.on("game_over", ({ winner, scores }) => {
   }
   const my   = myRole === "left" ? scores.left  : scores.right;
   const them = myRole === "left" ? scores.right : scores.left;
-  document.getElementById("final-score").textContent     = `${my} \u2014 ${them}`;
-  document.getElementById("rematch-status").textContent  = "";
+  document.getElementById("final-score").textContent    = `${my} \u2014 ${them}`;
+  document.getElementById("rematch-status").textContent = "";
+
+  // Generate the share card after a short delay so video frames are current
+  setTimeout(() => generateShareCard(scores, winner), 200);
+
   showScreen("screen-gameover");
+});
+
+// ── Share button ──────────────────────────────────────────────────
+document.getElementById("btn-share").addEventListener("click", () => {
+  const sc = document.getElementById("share-canvas");
+  const link = document.createElement("a");
+  link.download = "arcadeface-result.png";
+  link.href = sc.toDataURL("image/png");
+  link.click();
 });
 
 socket.on("go_to_picker", () => {
