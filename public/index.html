@@ -95,20 +95,24 @@
   <div id="screen-game" class="screen">
     <div class="game-layout">
 
-      <!-- Branded top banner — always visible, Kick-style -->
+      <!-- Branded top banner — logo centre, scores either side -->
       <div class="game-banner">
         <div class="game-banner-left">
-          <span class="banner-logo">ARCADE<span>FACE</span></span>
-          <span class="banner-tag">#ArcadeFace</span>
+          <span class="banner-status" id="banner-status">LIVE</span>
+          <span class="banner-game" id="banner-game">PONG</span>
         </div>
         <div class="game-banner-centre">
           <span class="banner-score-them" id="banner-score-them">0</span>
           <span class="banner-sep">:</span>
+          <div class="banner-logo-block">
+            <span class="banner-logo">ARCADE<span>FACE</span></span>
+            <span class="banner-tag">#ArcadeFace</span>
+          </div>
+          <span class="banner-sep">:</span>
           <span class="banner-score-you" id="banner-score-you">0</span>
         </div>
         <div class="game-banner-right">
-          <span class="banner-game" id="banner-game">PONG</span>
-          <span class="banner-status" id="banner-status">LIVE</span>
+          <span class="banner-url">arcadeface.com</span>
         </div>
       </div>
 
@@ -222,6 +226,17 @@
         <button class="btn-ghost"   id="btn-next-stranger">NEXT STRANGER &#8594;</button>
       </div>
       <div class="rematch-status" id="rematch-status"></div>
+
+      <!-- Email capture -->
+      <div class="email-capture" id="email-capture">
+        <p class="email-capture-label">Get notified when new games drop</p>
+        <div class="email-capture-row">
+          <input type="email" id="email-input" placeholder="your@email.com" autocomplete="email"/>
+          <button class="btn-email" id="btn-email">NOTIFY ME</button>
+        </div>
+        <p class="email-capture-done hidden" id="email-done">&#10003; You're in — new games coming soon</p>
+      </div>
+
       <button class="btn-text" id="btn-home">Back to home</button>
     </div>
   </div>
