@@ -9,7 +9,8 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.static(path.join(__dirname, "public")));
 
-let waitingPlayer = null;
+// Separate waiting queues per game
+const waitingQueues = { pong: null, snake: null };
 const rooms = new Map();
 
 function generateRoomId() {
@@ -29,15 +30,12 @@ function createPongState() {
 }
 
 // ── Snake state ───────────────────────────────────────────────────
-const GRID = 20;       // cells across and down
-const CELL = 20;       // px per cell (800/20 = 40, 400/20 = 20)
-
 function createSnakeState() {
   return {
     game: "snake",
     snakes: {
-      left:  { body: [{x:5, y:10},{x:4,y:10},{x:3,y:10}], dir: {x:1,y:0}, alive: true },
-      right: { body: [{x:35,y:10},{x:36,y:10},{x:37,y:10}], dir: {x:-1,y:0}, alive: true }
+      left:  { body: [{x:5,y:10},{x:4,y:10},{x:3,y:10}], dir: {x:1,y:0},  nextDir: {x:1,y:0},  alive: true },
+      right: { body: [{x:34,y:10},{x:35,y:10},{x:36,y:10}], dir: {x:-1,y:0}, nextDir: {x:-1,y:0}, alive: true }
     },
     food: { x: 20, y: 10 },
     scores: { left: 0, right: 0 },
@@ -47,8 +45,9 @@ function createSnakeState() {
 }
 
 function spawnFood(gs) {
-  const occupied = new Set();
-  [...gs.snakes.left.body, ...gs.snakes.right.body].forEach(s => occupied.add(`${s.x},${s.y}`));
+  const occupied = new Set(
+    [...gs.snakes.left.body, ...gs.snakes.right.body].map(s => `${s.x},${s.y}`)
+  );
   let x, y;
   do {
     x = Math.floor(Math.random() * 40);
@@ -60,31 +59,35 @@ function spawnFood(gs) {
 io.on("connection", (socket) => {
   console.log("Player connected:", socket.id);
 
-  socket.on("find_match", () => {
-    if (waitingPlayer && waitingPlayer !== socket.id) {
+  // Player selects a game and joins that queue
+  socket.on("find_match", ({ game }) => {
+    const queue = waitingQueues[game];
+
+    if (queue && queue !== socket.id) {
+      // Match found
       const roomId = generateRoomId();
-      const player1 = waitingPlayer;
+      const player1 = queue;
       const player2 = socket.id;
-      waitingPlayer = null;
+      waitingQueues[game] = null;
 
       io.sockets.sockets.get(player1)?.join(roomId);
       socket.join(roomId);
 
+      const gameState = game === "snake" ? createSnakeState() : createPongState();
       rooms.set(roomId, {
         players: [player1, player2],
-        gameState: null,
+        gameState,
         gameLoop: null,
         readyCount: 0,
-        rematchCount: 0,
-        voteCounts: {}
+        rematchCount: 0
       });
 
-      io.to(player1).emit("match_found", { roomId, role: "left",  opponentId: player2 });
-      io.to(player2).emit("match_found", { roomId, role: "right", opponentId: player1 });
-      console.log(`Room ${roomId}: ${player1} vs ${player2}`);
+      io.to(player1).emit("match_found", { roomId, role: "left",  game });
+      io.to(player2).emit("match_found", { roomId, role: "right", game });
+      console.log(`Room ${roomId} [${game}]: ${player1} vs ${player2}`);
     } else {
-      waitingPlayer = socket.id;
-      socket.emit("waiting");
+      waitingQueues[game] = socket.id;
+      socket.emit("waiting", { game });
     }
   });
 
@@ -93,26 +96,7 @@ io.on("connection", (socket) => {
   socket.on("webrtc_answer", ({ roomId, answer })    => socket.to(roomId).emit("webrtc_answer", { answer }));
   socket.on("webrtc_ice",    ({ roomId, candidate }) => socket.to(roomId).emit("webrtc_ice",    { candidate }));
 
-  // ── Game vote: both players pick a game, majority wins ──────────
-  socket.on("vote_game", ({ roomId, game }) => {
-    const room = rooms.get(roomId);
-    if (!room) return;
-    if (!room.voteCounts) room.voteCounts = {};
-    room.voteCounts[socket.id] = game;
-
-    const votes = Object.values(room.voteCounts);
-    if (votes.length === 2) {
-      // Pick the most voted; tie = pong
-      const chosen = votes[0] === votes[1] ? votes[0] : "pong";
-      room.gameState = chosen === "snake" ? createSnakeState() : createPongState();
-      room.voteCounts = {};
-      io.to(roomId).emit("game_chosen", { game: chosen });
-    } else {
-      socket.to(roomId).emit("opponent_voted");
-    }
-  });
-
-  // ── Both ready → start ───────────────────────────────────────────
+  // Both players ready — start
   socket.on("player_ready", ({ roomId }) => {
     const room = rooms.get(roomId);
     if (!room) return;
@@ -125,7 +109,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  // ── Pong: paddle move ────────────────────────────────────────────
+  // Pong paddle
   socket.on("paddle_move", ({ roomId, role, y }) => {
     const room = rooms.get(roomId);
     if (!room || !room.gameState) return;
@@ -133,19 +117,19 @@ io.on("connection", (socket) => {
     if (role === "right") room.gameState.paddles.right = y;
   });
 
-  // ── Snake: direction change ───────────────────────────────────────
+  // Snake direction — queued as nextDir to apply on next tick
   socket.on("snake_dir", ({ roomId, role, dir }) => {
     const room = rooms.get(roomId);
     if (!room || !room.gameState || room.gameState.game !== "snake") return;
     const snake = room.gameState.snakes[role];
     if (!snake || !snake.alive) return;
-    // Prevent reversing
+    // Prevent 180 reversal
     if (dir.x !== -snake.dir.x || dir.y !== -snake.dir.y) {
-      snake.dir = dir;
+      snake.nextDir = dir;
     }
   });
 
-  // ── Rematch ───────────────────────────────────────────────────────
+  // Rematch — go back to game picker on client
   socket.on("request_rematch", ({ roomId }) => {
     const room = rooms.get(roomId);
     if (!room) return;
@@ -153,16 +137,18 @@ io.on("connection", (socket) => {
     if (room.rematchCount === 2) {
       room.rematchCount = 0;
       room.readyCount = 0;
-      room.voteCounts = {};
       if (room.gameLoop) clearInterval(room.gameLoop);
-      io.to(roomId).emit("show_game_picker");
+      io.to(roomId).emit("go_to_picker");
     } else {
       socket.to(roomId).emit("opponent_wants_rematch");
     }
   });
 
   socket.on("disconnect", () => {
-    if (waitingPlayer === socket.id) waitingPlayer = null;
+    // Clear from any waiting queue
+    for (const game of ["pong", "snake"]) {
+      if (waitingQueues[game] === socket.id) waitingQueues[game] = null;
+    }
     for (const [roomId, room] of rooms.entries()) {
       if (room.players.includes(socket.id)) {
         if (room.gameLoop) clearInterval(room.gameLoop);
@@ -180,38 +166,34 @@ function startPongLoop(roomId) {
   if (!room) return;
   if (room.gameLoop) clearInterval(room.gameLoop);
 
-  const W = 800, H = 400, PADDLE_H = 80, BALL_SIZE = 10;
-  const WIN_SCORE = 5, SPEED_INC = 0.15;
+  const W = 800, H = 400, PH = 80, BS = 10, WIN = 5, INC = 0.15;
 
   room.gameLoop = setInterval(() => {
     if (!room.gameState.running) return;
     const gs = room.gameState;
-    const ball = gs.ball;
+    const b  = gs.ball;
 
-    ball.x += ball.vx;
-    ball.y += ball.vy;
+    b.x += b.vx; b.y += b.vy;
 
-    if (ball.y <= 0 || ball.y >= H - BALL_SIZE) {
-      ball.vy *= -1;
-      ball.y = ball.y <= 0 ? 0 : H - BALL_SIZE;
+    if (b.y <= 0 || b.y >= H - BS) { b.vy *= -1; b.y = b.y <= 0 ? 0 : H - BS; }
+
+    if (b.x <= 42 && b.x >= 30 && b.y + BS >= gs.paddles.left && b.y <= gs.paddles.left + PH) {
+      b.vx = Math.abs(b.vx) + INC;
+      b.vy = ((b.y - gs.paddles.left) / PH - 0.5) * 8;
     }
-    if (ball.x <= 42 && ball.x >= 30 && ball.y + BALL_SIZE >= gs.paddles.left && ball.y <= gs.paddles.left + PADDLE_H) {
-      ball.vx = Math.abs(ball.vx) + SPEED_INC;
-      ball.vy = ((ball.y - gs.paddles.left) / PADDLE_H - 0.5) * 8;
+    if (b.x >= W-42 && b.x <= W-30 && b.y + BS >= gs.paddles.right && b.y <= gs.paddles.right + PH) {
+      b.vx = -(Math.abs(b.vx) + INC);
+      b.vy = ((b.y - gs.paddles.right) / PH - 0.5) * 8;
     }
-    if (ball.x >= W - 42 && ball.x <= W - 30 && ball.y + BALL_SIZE >= gs.paddles.right && ball.y <= gs.paddles.right + PADDLE_H) {
-      ball.vx = -(Math.abs(ball.vx) + SPEED_INC);
-      ball.vy = ((ball.y - gs.paddles.right) / PADDLE_H - 0.5) * 8;
-    }
-    if (ball.x < 0) {
+    if (b.x < 0) {
       gs.scores.right++;
-      if (gs.scores.right >= WIN_SCORE) { endGame(roomId, "right"); return; }
-      gs.ball = { x: 400, y: 200, vx: 4, vy: (Math.random() - 0.5) * 4 };
+      if (gs.scores.right >= WIN) { endGame(roomId, "right"); return; }
+      gs.ball = { x:400, y:200, vx:4, vy:(Math.random()-0.5)*4 };
     }
-    if (ball.x > W) {
+    if (b.x > W) {
       gs.scores.left++;
-      if (gs.scores.left >= WIN_SCORE) { endGame(roomId, "left"); return; }
-      gs.ball = { x: 400, y: 200, vx: -4, vy: (Math.random() - 0.5) * 4 };
+      if (gs.scores.left >= WIN) { endGame(roomId, "left"); return; }
+      gs.ball = { x:400, y:200, vx:-4, vy:(Math.random()-0.5)*4 };
     }
     io.to(roomId).emit("game_state", { gameState: gs });
   }, 1000 / 30);
@@ -223,33 +205,32 @@ function startSnakeLoop(roomId) {
   if (!room) return;
   if (room.gameLoop) clearInterval(room.gameLoop);
 
-  const GRID_W = 40, GRID_H = 20;
+  const GW = 40, GH = 20;
 
   room.gameLoop = setInterval(() => {
     if (!room.gameState.running) return;
     const gs = room.gameState;
-    const roles = ["left", "right"];
 
-    // Move each snake
-    for (const role of roles) {
+    for (const role of ["left", "right"]) {
       const snake = gs.snakes[role];
       if (!snake.alive) continue;
 
+      // Apply queued direction
+      snake.dir = snake.nextDir;
+
       const head = snake.body[0];
       const newHead = {
-        x: (head.x + snake.dir.x + GRID_W) % GRID_W,
-        y: (head.y + snake.dir.y + GRID_H) % GRID_H
+        x: (head.x + snake.dir.x + GW) % GW,
+        y: (head.y + snake.dir.y + GH) % GH
       };
 
       // Self collision
       if (snake.body.some(s => s.x === newHead.x && s.y === newHead.y)) {
-        snake.alive = false;
-        continue;
+        snake.alive = false; continue;
       }
 
       snake.body.unshift(newHead);
 
-      // Ate food?
       if (newHead.x === gs.food.x && newHead.y === gs.food.y) {
         gs.scores[role]++;
         spawnFood(gs);
@@ -258,7 +239,16 @@ function startSnakeLoop(roomId) {
       }
     }
 
-    // Head-on collision between snakes
+    // Cross-collision: did a head land on the other snake's body?
+    for (const [r, other] of [["left","right"],["right","left"]]) {
+      const h = gs.snakes[r].body[0];
+      if (!h) continue;
+      if (gs.snakes[other].body.some(s => s.x === h.x && s.y === h.y)) {
+        gs.snakes[r].alive = false;
+      }
+    }
+
+    // Head-on
     const lh = gs.snakes.left.body[0];
     const rh = gs.snakes.right.body[0];
     if (lh && rh && lh.x === rh.x && lh.y === rh.y) {
@@ -266,27 +256,14 @@ function startSnakeLoop(roomId) {
       gs.snakes.right.alive = false;
     }
 
-    // Check if a snake hit the other snake's body
-    for (const [role, other] of [["left","right"],["right","left"]]) {
-      const myHead = gs.snakes[role].body[0];
-      if (!myHead) continue;
-      const otherBody = gs.snakes[other].body.slice(1);
-      if (otherBody.some(s => s.x === myHead.x && s.y === myHead.y)) {
-        gs.snakes[role].alive = false;
-      }
-    }
-
     io.to(roomId).emit("game_state", { gameState: gs });
 
-    // Check win condition
-    const leftAlive  = gs.snakes.left.alive;
-    const rightAlive = gs.snakes.right.alive;
+    const la = gs.snakes.left.alive, ra = gs.snakes.right.alive;
+    if (!la && !ra) { endGame(roomId, "draw");  return; }
+    if (!la)        { endGame(roomId, "right"); return; }
+    if (!ra)        { endGame(roomId, "left");  return; }
 
-    if (!leftAlive && !rightAlive) { endGame(roomId, "draw");  return; }
-    if (!leftAlive)                { endGame(roomId, "right"); return; }
-    if (!rightAlive)               { endGame(roomId, "left");  return; }
-
-  }, 1000 / 8); // Snake runs at 8 ticks/sec — feels right
+  }, 1000 / 8);
 }
 
 function endGame(roomId, winner) {
@@ -294,12 +271,9 @@ function endGame(roomId, winner) {
   if (!room) return;
   if (room.gameLoop) clearInterval(room.gameLoop);
   room.gameState.running = false;
-  room.gameState.winner = winner;
-  const scores = room.gameState.scores || { left: 0, right: 0 };
-  io.to(roomId).emit("game_over", { winner, scores });
+  room.gameState.winner  = winner;
+  io.to(roomId).emit("game_over", { winner, scores: room.gameState.scores });
 }
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Arcade server running on http://localhost:${PORT}`);
-});
+server.listen(PORT, () => console.log(`Arcade server running on http://localhost:${PORT}`));
