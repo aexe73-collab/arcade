@@ -61,10 +61,10 @@ document.getElementById("pick-pong").addEventListener("click", () => {
   showScreen("screen-waiting");
 });
 
-document.getElementById("pick-snake").addEventListener("click", () => {
-  currentGame = "snake";
-  document.getElementById("waiting-sub").textContent = "Finding a Snake player\u2026";
-  socket.emit("find_match", { game: "snake" });
+document.getElementById("pick-reaction").addEventListener("click", () => {
+  currentGame = "reaction";
+  document.getElementById("waiting-sub").textContent = "Finding a Reflex player\u2026";
+  socket.emit("find_match", { game: "reaction" });
   showScreen("screen-waiting");
 });
 
@@ -217,23 +217,129 @@ function stopRenderLoop() {
 
 // ── Game UI helpers ───────────────────────────────────────────────
 function setupGameUI(game) {
-  const hint   = document.getElementById("controls-hint");
-  const dpad   = document.getElementById("dpad");
-  const status = document.getElementById("game-status");
+  const hint      = document.getElementById("controls-hint");
+  const dpad      = document.getElementById("dpad");
+  const status    = document.getElementById("game-status");
   const bannerGame = document.getElementById("banner-game");
+  const canvas    = document.getElementById("pong-canvas");
+  const reactionUI = document.getElementById("reaction-ui");
 
-  if (game === "snake") {
-    hint.innerHTML = '<span>Arrow keys / WASD &nbsp;&mdash;&nbsp; steer</span>';
-    status.textContent   = "FIRST TO 3 ROUNDS";
-    bannerGame.textContent = "SNAKE";
-    dpad.style.display = "grid";
+  // Show/hide canvas vs reaction UI
+  if (game === "reaction") {
+    canvas.style.display    = "none";
+    reactionUI.style.display = "flex";
+    hint.innerHTML = '<span>Tap the button when it turns green!</span>';
+    status.textContent    = "FIRST TO 3";
+    bannerGame.textContent = "REFLEX";
+    dpad.style.display    = "none";
   } else {
-    hint.innerHTML = '<span>W / S &nbsp;&mdash;&nbsp; move paddle</span><span class="hint-sep"> | </span><span>Or drag</span>';
-    status.textContent   = "FIRST TO 5";
-    bannerGame.textContent = "PONG";
-    dpad.style.display = "none";
+    canvas.style.display    = "block";
+    reactionUI.style.display = "none";
+    if (game === "snake") {
+      hint.innerHTML = '<span>Arrow keys / WASD &nbsp;&mdash;&nbsp; steer</span>';
+      status.textContent    = "FIRST TO 3 ROUNDS";
+      bannerGame.textContent = "SNAKE";
+      dpad.style.display    = "grid";
+    } else {
+      hint.innerHTML = '<span>W / S &nbsp;&mdash;&nbsp; move paddle</span><span class="hint-sep"> | </span><span>Or drag</span>';
+      status.textContent    = "FIRST TO 5";
+      bannerGame.textContent = "PONG";
+      dpad.style.display    = "none";
+    }
   }
 }
+
+// ── Reaction game UI helpers ──────────────────────────────────────
+let reactionArmed = false;
+
+function setReactionLight(state) {
+  const light = document.getElementById("reaction-light");
+  const btn   = document.getElementById("reaction-tap-btn");
+  light.className = "reaction-light " + (state || "");
+  if (state === "green") {
+    btn.classList.add("armed");
+    reactionArmed = true;
+    document.getElementById("reaction-instruction").textContent = "TAP NOW!";
+  } else {
+    btn.classList.remove("armed");
+    reactionArmed = false;
+  }
+}
+
+function updateReactionScores(scores) {
+  const my   = myRole === "left" ? scores.left  : scores.right;
+  const them = myRole === "left" ? scores.right : scores.left;
+  document.getElementById("reaction-score-you").textContent  = my;
+  document.getElementById("reaction-score-them").textContent = them;
+  document.getElementById("banner-score-you").textContent    = my;
+  document.getElementById("banner-score-them").textContent   = them;
+}
+
+// Tap button handler
+document.getElementById("reaction-tap-btn").addEventListener("click", () => {
+  if (!gameState || gameState.game !== "reaction" || !roomId) return;
+  socket.emit("reaction_tap", { roomId, role: myRole });
+});
+
+// Also allow spacebar / enter
+document.addEventListener("keydown", (e) => {
+  if (!gameState || gameState.game !== "reaction") return;
+  if (e.key === " " || e.key === "Enter") {
+    e.preventDefault();
+    socket.emit("reaction_tap", { roomId, role: myRole });
+  }
+});
+
+// ── Reaction socket events ────────────────────────────────────────
+socket.on("reaction_waiting", ({ round, totalRounds, scores }) => {
+  setReactionLight("");
+  updateReactionScores(scores);
+  document.getElementById("reaction-round").textContent      = `ROUND ${round} OF ${totalRounds}`;
+  document.getElementById("reaction-instruction").textContent = "Get ready\u2026";
+  document.getElementById("reaction-result").textContent     = "";
+  document.getElementById("reaction-result").style.color     = "";
+});
+
+socket.on("reaction_go", () => {
+  setReactionLight("green");
+});
+
+socket.on("reaction_early", ({ role }) => {
+  if (role === myRole) {
+    setReactionLight("red");
+    document.getElementById("reaction-instruction").textContent = "Too early! Wait for green.";
+    setTimeout(() => setReactionLight(""), 800);
+  }
+});
+
+socket.on("reaction_first_tap", ({ role, time }) => {
+  const isMe = role === myRole;
+  const res  = document.getElementById("reaction-result");
+  if (isMe) {
+    res.textContent = `You tapped \u2014 ${time}ms`;
+    res.style.color = "#00ff88";
+  } else {
+    res.textContent = `Opponent tapped \u2014 waiting for you\u2026`;
+    res.style.color = "#6666aa";
+  }
+});
+
+socket.on("reaction_round_result", ({ winner, times, scores, round }) => {
+  const iWon = winner === myRole;
+  const myTime   = myRole === "left" ? times.left  : times.right;
+  const themTime = myRole === "left" ? times.right : times.left;
+
+  setReactionLight(iWon ? "green" : "red");
+  updateReactionScores(scores);
+
+  const res = document.getElementById("reaction-result");
+  res.textContent = iWon
+    ? `You win! ${myTime}ms vs ${themTime}ms`
+    : `They win. ${themTime}ms vs ${myTime}ms`;
+  res.style.color = iWon ? "#00ff88" : "#ff3366";
+
+  document.getElementById("reaction-instruction").textContent = iWon ? "Nice reflexes!" : "Too slow!";
+});
 
 function updateScoreDisplay(scores) {
   const my   = myRole === "left" ? scores.left  : scores.right;
