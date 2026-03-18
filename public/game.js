@@ -600,14 +600,17 @@ socket.on("game_over", ({ winner, scores }) => {
     badge.textContent = iWon ? "YOU WIN!" : "YOU LOSE";
     badge.className   = "result-badge" + (iWon ? "" : " loss");
   }
-  const my   = myRole === "left" ? scores.left  : scores.right;
-  const them = myRole === "left" ? scores.right : scores.left;
-  document.getElementById("final-score").textContent    = `${my} \u2014 ${them}`;
+
+  // Scores — opponent left, you right
+  const myScore   = myRole === "left" ? scores.left  : scores.right;
+  const themScore = myRole === "left" ? scores.right : scores.left;
+  document.getElementById("gameover-score-you").textContent  = myScore;
+  document.getElementById("gameover-score-them").textContent = themScore;
+
+  // Keep final-score for share card compatibility
   document.getElementById("rematch-status").textContent = "";
 
-  // Generate the share card after a short delay so video frames are current
   setTimeout(() => generateShareCard(scores, winner), 200);
-
   showScreen("screen-gameover");
 });
 
