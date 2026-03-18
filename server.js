@@ -10,7 +10,7 @@ const io = new Server(server, { cors: { origin: "*" } });
 app.use(express.static(path.join(__dirname, "public")));
 
 // Separate waiting queues per game
-const waitingQueues = { pong: null, snake: null };
+const waitingQueues = { pong: null, snake: null, reaction: null };
 const rooms = new Map();
 
 function generateRoomId() {
@@ -39,6 +39,21 @@ function createSnakeState() {
     },
     food: { x: 20, y: 10 },
     scores: { left: 0, right: 0 },
+    running: false,
+    winner: null
+  };
+}
+
+// ── Reaction state ────────────────────────────────────────────────
+function createReactionState() {
+  return {
+    game: "reaction",
+    phase: "waiting",   // waiting | ready | tapped
+    scores: { left: 0, right: 0 },
+    round: 1,
+    totalRounds: 5,
+    flashTime: null,    // server timestamp when green flashed
+    tapped: {},         // role -> timestamp
     running: false,
     winner: null
   };
@@ -73,7 +88,9 @@ io.on("connection", (socket) => {
       io.sockets.sockets.get(player1)?.join(roomId);
       socket.join(roomId);
 
-      const gameState = game === "snake" ? createSnakeState() : createPongState();
+      const gameState = game === "snake" ? createSnakeState()
+                      : game === "reaction" ? createReactionState()
+                      : createPongState();
       rooms.set(roomId, {
         players: [player1, player2],
         gameState,
@@ -104,8 +121,57 @@ io.on("connection", (socket) => {
     if (room.readyCount === 2) {
       room.gameState.running = true;
       io.to(roomId).emit("game_start", { gameState: room.gameState });
-      if (room.gameState.game === "snake") startSnakeLoop(roomId);
+      if (room.gameState.game === "snake")    startSnakeLoop(roomId);
+      else if (room.gameState.game === "reaction") startReactionRound(roomId);
       else startPongLoop(roomId);
+    }
+  });
+
+  // Reaction: player tapped
+  socket.on("reaction_tap", ({ roomId, role }) => {
+    const room = rooms.get(roomId);
+    if (!room || !room.gameState || room.gameState.game !== "reaction") return;
+    const gs = room.gameState;
+
+    // Ignore taps before green light or if already tapped
+    if (gs.phase !== "ready") {
+      // Early tap — penalty: flash red to this player
+      io.to(roomId).emit("reaction_early", { role });
+      return;
+    }
+
+    if (gs.tapped[role]) return; // already tapped this round
+
+    const tapTime = Date.now();
+    gs.tapped[role] = tapTime - gs.flashTime; // reaction time in ms
+
+    // Check if both have tapped
+    const roles = ["left", "right"];
+    if (roles.every(r => gs.tapped[r])) {
+      // Both tapped — faster one wins the round
+      const roundWinner = gs.tapped.left < gs.tapped.right ? "left" : "right";
+      gs.scores[roundWinner]++;
+      gs.phase = "tapped";
+
+      io.to(roomId).emit("reaction_round_result", {
+        winner: roundWinner,
+        times: gs.tapped,
+        scores: gs.scores,
+        round: gs.round
+      });
+
+      // Check match winner (first to 3)
+      if (gs.scores.left >= 3 || gs.scores.right >= 3) {
+        const matchWinner = gs.scores.left >= 3 ? "left" : "right";
+        endGame(roomId, matchWinner);
+      } else {
+        // Next round after pause
+        gs.round++;
+        setTimeout(() => startReactionRound(roomId), 2500);
+      }
+    } else {
+      // First to tap — tell both players
+      io.to(roomId).emit("reaction_first_tap", { role, time: gs.tapped[role] });
     }
   });
 
@@ -152,6 +218,7 @@ io.on("connection", (socket) => {
     for (const [roomId, room] of rooms.entries()) {
       if (room.players.includes(socket.id)) {
         if (room.gameLoop) clearInterval(room.gameLoop);
+        if (room.reactionTimer) clearTimeout(room.reactionTimer);
         socket.to(roomId).emit("opponent_left");
         rooms.delete(roomId);
         break;
@@ -259,34 +326,38 @@ function startSnakeLoop(roomId) {
     io.to(roomId).emit("game_state", { gameState: gs });
 
     const la = gs.snakes.left.alive, ra = gs.snakes.right.alive;
-    if (la && ra) return;
-    
-    if (room.gameLoop) clearInterval(room.gameLoop);
-    
-    // Award round point
-    if (!la && !ra) { /* draw — no point */ }
-    else if (!la)   { gs.scores.right++; }
-    else            { gs.scores.left++;  }
-    
-    // Broadcast round end so clients can show a flash
-    io.to(roomId).emit("game_state", { gameState: gs });
-    
-    // Check if someone has won 3 rounds
-    if (gs.scores.left >= 3)  { endGame(roomId, "left");  return; }
-    if (gs.scores.right >= 3) { endGame(roomId, "right"); return; }
-    
-    // Neither at 3 yet — reset snakes and start next round after a pause
-    setTimeout(() => {
-      gs.snakes = {
-        left:  { body: [{x:5,y:10},{x:4,y:10},{x:3,y:10}],   dir:{x:1,y:0},  nextDir:{x:1,y:0},  alive:true },
-        right: { body: [{x:34,y:10},{x:35,y:10},{x:36,y:10}], dir:{x:-1,y:0}, nextDir:{x:-1,y:0}, alive:true }
-      };
-      spawnFood(gs);
-      io.to(roomId).emit("game_state", { gameState: gs });
-      startSnakeLoop(roomId);
-    }, 1500);
+    if (!la && !ra) { endGame(roomId, "draw");  return; }
+    if (!la)        { endGame(roomId, "right"); return; }
+    if (!ra)        { endGame(roomId, "left");  return; }
 
   }, 1000 / 8);
+}
+
+// ── Reaction round ────────────────────────────────────────────────
+function startReactionRound(roomId) {
+  const room = rooms.get(roomId);
+  if (!room || !room.gameState) return;
+  const gs = room.gameState;
+
+  gs.phase = "waiting";
+  gs.tapped = {};
+  gs.flashTime = null;
+
+  io.to(roomId).emit("reaction_waiting", {
+    round: gs.round,
+    totalRounds: gs.totalRounds,
+    scores: gs.scores
+  });
+
+  // Random delay 1.5–5 seconds before green light
+  const delay = 1500 + Math.random() * 3500;
+  room.reactionTimer = setTimeout(() => {
+    const r = rooms.get(roomId);
+    if (!r) return;
+    r.gameState.phase = "ready";
+    r.gameState.flashTime = Date.now();
+    io.to(roomId).emit("reaction_go");
+  }, delay);
 }
 
 function endGame(roomId, winner) {
