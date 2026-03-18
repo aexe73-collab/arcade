@@ -17,36 +17,55 @@
       <div class="logo-block">
         <div class="logo-eyebrow">INSERT COIN</div>
         <h1 class="logo">ARCADE<span class="logo-accent">FACE</span></h1>
-        <p class="tagline">Play Pong. Face to face. With a stranger.</p>
+        <p class="tagline">Play face to face with a stranger.</p>
       </div>
       <button class="btn-primary" id="btn-find-match">
         <span class="btn-icon">&#9654;</span> FIND OPPONENT
       </button>
       <p class="home-sub">No account needed &mdash; just show up and play</p>
     </div>
-    <div class="home-deco">
-      <div class="pixel-ball"></div>
+    <div class="home-deco"><div class="pixel-ball"></div></div>
+  </div>
+
+  <!-- SCREEN 2: Game picker (before matchmaking) -->
+  <div id="screen-picker" class="screen">
+    <div class="scanlines"></div>
+    <div class="picker-content">
+      <div class="picker-title">CHOOSE YOUR GAME</div>
+      <p class="picker-sub">You'll be matched with someone playing the same game</p>
+      <div class="picker-grid">
+        <button class="game-card" id="pick-pong">
+          <div class="game-card-icon">&#9646; &#9646;</div>
+          <div class="game-card-name">PONG</div>
+          <div class="game-card-sub">First to 5 wins</div>
+          <div class="game-card-controls">W/S or drag to move</div>
+        </button>
+        <button class="game-card snake-card" id="pick-snake">
+          <div class="game-card-icon">&#9632;&#9632;&#9632;</div>
+          <div class="game-card-name">SNAKE</div>
+          <div class="game-card-sub">Last one alive wins</div>
+          <div class="game-card-controls">Arrow keys / swipe to steer</div>
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- SCREEN 2: Waiting / matchmaking -->
+  <!-- SCREEN 3: Waiting / matchmaking -->
   <div id="screen-waiting" class="screen">
     <div class="scanlines"></div>
     <div class="waiting-content">
       <div class="waiting-animation">
         <div class="dot-row">
-          <div class="dot"></div>
-          <div class="dot"></div>
-          <div class="dot"></div>
+          <div class="dot"></div><div class="dot"></div><div class="dot"></div>
         </div>
       </div>
       <h2 class="waiting-title">SCANNING FOR<br>OPPONENTS</h2>
-      <p class="waiting-sub">Challenging players worldwide&hellip;</p>
+      <p class="waiting-sub" id="waiting-sub">Finding a Pong player&hellip;</p>
       <button class="btn-ghost" id="btn-cancel-wait">CANCEL</button>
     </div>
   </div>
 
-  <!-- SCREEN 3: Face-off countdown -->
+  <!-- SCREEN 4: Face-off countdown -->
   <div id="screen-faceoff" class="screen">
     <div class="scanlines"></div>
     <div class="faceoff-layout">
@@ -66,32 +85,11 @@
     </div>
   </div>
 
-  <!-- SCREEN 3b: Game picker -->
-  <div id="screen-picker" class="screen">
-    <div class="scanlines"></div>
-    <div class="picker-content">
-      <div class="picker-title">CHOOSE YOUR GAME</div>
-      <div class="picker-hint" id="picker-hint">Pick a game &mdash; if you disagree, Pong wins</div>
-      <div class="picker-grid">
-        <button class="game-card" id="pick-pong">
-          <div class="game-card-icon">&#9646;&#9646;</div>
-          <div class="game-card-name">PONG</div>
-          <div class="game-card-sub">Classic paddle battle</div>
-        </button>
-        <button class="game-card" id="pick-snake">
-          <div class="game-card-icon">&#9632;&#9632;&#9632;</div>
-          <div class="game-card-name">SNAKE</div>
-          <div class="game-card-sub">Last one slithering wins</div>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- SCREEN 4: Game -->
+  <!-- SCREEN 5: Game -->
   <div id="screen-game" class="screen">
     <div class="game-layout">
 
-      <!-- Score bar (mobile only — hidden on desktop) -->
+      <!-- Score bar (mobile only) -->
       <div class="score-bar">
         <div class="score-block left">
           <span class="score-label">YOU</span>
@@ -106,28 +104,41 @@
         </div>
       </div>
 
-      <!-- Three-column game area (desktop) -->
+      <!-- Three-column layout -->
       <div class="game-area">
 
-        <!-- Left panel: opponent video -->
         <div class="side-panel panel-them">
           <video id="video-remote" autoplay playsinline></video>
           <div class="panel-label them">OPPONENT</div>
           <div class="panel-score" id="panel-score-them">0</div>
         </div>
 
-        <!-- Centre: canvas + mobile score -->
         <div class="canvas-wrap">
+          <div class="mobile-pips">
+            <div class="mobile-pip pip-them">
+              <video id="video-mobile-remote" autoplay playsinline></video>
+              <span>OPPONENT</span>
+            </div>
+            <div class="mobile-pip pip-you">
+              <video id="video-mobile-local" autoplay muted playsinline></video>
+              <span>YOU</span>
+            </div>
+          </div>
           <div class="desktop-score">
             <span class="ds-score them" id="ds-score-them">0</span>
             <span class="ds-sep">:</span>
             <span class="ds-score you" id="ds-score-you">0</span>
           </div>
           <canvas id="pong-canvas" width="800" height="400"></canvas>
+          <!-- Snake D-pad (mobile only) -->
+          <div class="dpad" id="dpad">
+            <button class="dpad-btn dpad-up"    id="dpad-up">&#9650;</button>
+            <button class="dpad-btn dpad-left"  id="dpad-left">&#9664;</button>
+            <button class="dpad-btn dpad-right" id="dpad-right">&#9654;</button>
+            <button class="dpad-btn dpad-down"  id="dpad-down">&#9660;</button>
+          </div>
           <div class="controls-hint" id="controls-hint">
             <span>W / S &nbsp;&mdash;&nbsp; move paddle</span>
-            <span class="hint-sep">&nbsp;|&nbsp;</span>
-            <span>Or drag on mobile</span>
           </div>
           <div class="mobile-footer">
             <div class="mobile-footer-logo">ARCADE<span>FACE</span></div>
@@ -139,7 +150,6 @@
           </div>
         </div>
 
-        <!-- Right panel: your video -->
         <div class="side-panel panel-you">
           <video id="video-local" autoplay muted playsinline></video>
           <div class="panel-label you">YOU</div>
@@ -150,36 +160,29 @@
     </div>
   </div>
 
-  <!-- SCREEN 5: Game over -->
+  <!-- SCREEN 6: Game over -->
   <div id="screen-gameover" class="screen">
     <div class="scanlines"></div>
     <div class="gameover-content">
       <div class="result-badge" id="result-badge">YOU WIN</div>
-      <div class="final-score" id="final-score">3 — 5</div>
-
+      <div class="final-score" id="final-score">3 &mdash; 5</div>
       <div class="gameover-actions">
-        <button class="btn-primary" id="btn-rematch">
-          &#8635; REMATCH
-        </button>
-        <button class="btn-ghost" id="btn-next-stranger">
-          NEXT STRANGER &#8594;
-        </button>
+        <button class="btn-primary" id="btn-rematch">&#8635; REMATCH</button>
+        <button class="btn-ghost"   id="btn-next-stranger">NEXT STRANGER &#8594;</button>
       </div>
-
       <div class="rematch-status" id="rematch-status"></div>
-
       <button class="btn-text" id="btn-home">Back to home</button>
     </div>
   </div>
 
-  <!-- Camera permission overlay -->
+  <!-- Camera overlay -->
   <div id="overlay-camera" class="overlay hidden">
     <div class="overlay-box">
       <div class="overlay-icon">&#128247;</div>
       <h3>Camera access needed</h3>
       <p>ArcadeFace needs your camera so your opponent can see your reactions.</p>
       <button class="btn-primary" id="btn-allow-camera">Allow camera</button>
-      <button class="btn-text" id="btn-skip-camera">Play without camera</button>
+      <button class="btn-text"    id="btn-skip-camera">Play without camera</button>
     </div>
   </div>
 
