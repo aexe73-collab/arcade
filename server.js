@@ -7,7 +7,28 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
+const fs = require("fs");
+
+app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
+
+// ── Email subscription endpoint ───────────────────────────────────
+app.post("/api/subscribe", (req, res) => {
+  const { email } = req.body;
+  if (!email || !email.includes("@")) {
+    return res.status(400).json({ error: "Invalid email" });
+  }
+
+  const file = path.join(__dirname, "subscribers.txt");
+  const line = `${new Date().toISOString()} | ${email}\n`;
+
+  fs.appendFile(file, line, (err) => {
+    if (err) console.error("Email save error:", err.message);
+  });
+
+  console.log("New subscriber:", email);
+  res.json({ ok: true });
+});
 
 // Separate waiting queues per game
 const waitingQueues = { pong: null, snake: null, reaction: null };
@@ -195,7 +216,12 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Rematch — go back to game picker on client
+  // Post-game chat relay
+  socket.on("chat_msg", ({ roomId, text }) => {
+    if (!text || text.trim().length === 0) return;
+    const clean = text.trim().substring(0, 120);
+    socket.to(roomId).emit("chat_msg", { text: clean });
+  });
   socket.on("request_rematch", ({ roomId }) => {
     const room = rooms.get(roomId);
     if (!room) return;
