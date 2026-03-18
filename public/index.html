@@ -236,6 +236,16 @@
       <!-- Post-game chat -->
       <div class="postgame-chat" id="postgame-chat">
         <div class="postgame-chat-label">GG? Say something.</div>
+        <div class="postgame-videos">
+          <div class="postgame-pip pip-them">
+            <video id="video-postgame-remote" autoplay playsinline></video>
+            <span>OPPONENT</span>
+          </div>
+          <div class="postgame-pip pip-you">
+            <video id="video-postgame-local" autoplay muted playsinline></video>
+            <span>YOU</span>
+          </div>
+        </div>
         <div class="postgame-messages" id="postgame-messages"></div>
         <div class="postgame-input-row">
           <input type="text" id="postgame-input" placeholder="gg / rematch? / trash talk..." maxlength="120" autocomplete="off"/>
