@@ -470,7 +470,7 @@ body {
 #pong-canvas {
   display: block;
   max-width: 100%;
-  max-height: calc(100vh - 120px);
+  max-height: calc(100vh - clamp(80px, 12vh, 140px) - 60px);
   image-rendering: pixelated;
 }
 
@@ -510,16 +510,12 @@ body {
   .picker-grid       { gap: 12px; }
   .game-card         { width: 140px; padding: 20px 12px; }
   .dpad              { display: grid; }
-  .game-banner       { height: 48px; padding: 0 12px; }
-  .banner-tag        { display: none; }
-  .banner-url        { display: none; }
-  .banner-game       { display: none; }
-  .game-banner-left  { min-width: unset; }
-  .game-banner-right { display: none; }
-  .banner-logo       { font-size: 11px; }
-  .banner-score-them,
-  .banner-score-you  { font-size: 20px; }
-  .banner-status     { font-size: 9px; padding: 3px 6px; }
+  .game-banner         { height: 56px; padding: 0 16px; border-bottom: 2px solid var(--accent2); }
+  .game-banner-left    { display: none; }
+  .game-banner-right   { display: none; }
+  .game-banner-centre  { flex: 1; }
+  .banner-logo         { font-size: clamp(16px, 5vw, 22px); }
+  .banner-tag          { font-size: 9px; letter-spacing: 1px; }
 }
 
 /* ── Game picker screen ────────────────────────────────── */
@@ -800,76 +796,76 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
-  height: 64px;
+  padding: 0 32px;
+  height: clamp(80px, 12vh, 140px);
   background: #000;
-  border-bottom: 3px solid var(--accent2);
+  border-bottom: 4px solid var(--accent2);
   flex-shrink: 0;
   z-index: 10;
 }
 
 .game-banner-left {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 120px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 100px;
 }
 
 .game-banner-centre {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex: 1;
   justify-content: center;
+  flex: 1;
 }
 
 .game-banner-right {
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  min-width: 120px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 100px;
 }
 
 .banner-logo-block {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
+  gap: 6px;
 }
 
 .banner-logo {
   font-family: var(--pixel);
-  font-size: clamp(12px, 1.5vw, 18px);
+  font-size: clamp(28px, 5vw, 64px);
   color: var(--text);
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .banner-logo span { color: var(--accent2); }
 
 .banner-tag {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: clamp(10px, 1vw, 13px);
   color: var(--muted);
-  letter-spacing: 1px;
+  letter-spacing: 2px;
 }
 
 .banner-score-them {
   font-family: var(--pixel);
-  font-size: clamp(24px, 3vw, 36px);
+  font-size: clamp(28px, 4vw, 52px);
   color: var(--accent2);
-  min-width: 32px;
-  text-align: center;
   line-height: 1;
+  text-align: right;
 }
 
 .banner-score-you {
   font-family: var(--pixel);
-  font-size: clamp(24px, 3vw, 36px);
+  font-size: clamp(28px, 4vw, 52px);
   color: var(--accent);
-  min-width: 32px;
-  text-align: center;
   line-height: 1;
+  text-align: right;
 }
 
 .banner-sep {
@@ -877,31 +873,36 @@ body {
   font-size: 20px;
   color: var(--border);
   line-height: 1;
+  display: none;
 }
+
+.banner-score-label {
+  font-family: var(--pixel);
+  font-size: 9px;
+  letter-spacing: 2px;
+}
+
+.banner-score-label.them { color: var(--accent2); }
+.banner-score-label.you  { color: var(--accent); }
 
 .banner-game {
   font-family: var(--pixel);
-  font-size: 10px;
+  font-size: clamp(9px, 1vw, 12px);
   color: var(--muted);
-  letter-spacing: 2px;
+  letter-spacing: 3px;
 }
 
 .banner-status {
   font-family: var(--pixel);
-  font-size: 11px;
+  font-size: clamp(10px, 1vw, 13px);
   color: var(--accent2);
   letter-spacing: 3px;
   animation: blink 1s step-end infinite;
-  padding: 5px 12px;
+  padding: 6px 14px;
   border: 2px solid var(--accent2);
 }
 
-.banner-url {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--muted);
-  letter-spacing: 1px;
-}
+.banner-url { display: none; }
 
 /* ── Share card ────────────────────────────────────────── */
 .share-card {
