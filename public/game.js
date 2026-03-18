@@ -223,7 +223,7 @@ function setupGameUI(game) {
 
   if (game === "snake") {
     hint.innerHTML = '<span>Arrow keys / WASD &nbsp;&mdash;&nbsp; steer</span>';
-    status.textContent = "EAT FOOD · AVOID WALLS";
+    status.textContent = "FIRST TO 3 ROUNDS";
     dpad.style.display = "grid"; // shown on all screens for snake so mobile gets it
   } else {
     hint.innerHTML = '<span>W / S &nbsp;&mdash;&nbsp; move paddle</span><span class="hint-sep"> | </span><span>Or drag</span>';
