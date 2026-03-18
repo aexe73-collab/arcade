@@ -32,6 +32,7 @@ async function getCamera() {
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     document.getElementById("video-local").srcObject       = localStream;
     document.getElementById("video-faceoff-local").srcObject = localStream;
+    document.getElementById("video-mobile-local").srcObject   = localStream;
     return true;
   } catch (e) {
     console.warn("Camera not available:", e.message);
@@ -90,6 +91,7 @@ async function startPeerConnection(isInitiator) {
     const remoteStream = event.streams[0];
     document.getElementById("video-remote").srcObject        = remoteStream;
     document.getElementById("video-faceoff-remote").srcObject = remoteStream;
+    document.getElementById("video-mobile-remote").srcObject  = remoteStream;
   };
 
   peerConn.onicecandidate = (event) => {
