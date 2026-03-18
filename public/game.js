@@ -17,6 +17,11 @@ const keys   = {};
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
+  // Show/hide mobile fixed labels only during game
+  const onGame = id === "screen-game";
+  const fixedGame = document.getElementById("banner-game-fixed");
+  const fixedStatus = document.getElementById("banner-status");
+  if (fixedGame)   fixedGame.style.display   = onGame ? "block" : "none";
 }
 function showOverlay(id) { document.getElementById(id).classList.remove("hidden"); }
 function hideOverlay(id) { document.getElementById(id).classList.add("hidden"); }
@@ -217,34 +222,35 @@ function stopRenderLoop() {
 
 // ── Game UI helpers ───────────────────────────────────────────────
 function setupGameUI(game) {
-  const hint      = document.getElementById("controls-hint");
-  const dpad      = document.getElementById("dpad");
-  const status    = document.getElementById("game-status");
-  const bannerGame = document.getElementById("banner-game");
-  const canvas    = document.getElementById("pong-canvas");
-  const reactionUI = document.getElementById("reaction-ui");
+  const hint           = document.getElementById("controls-hint");
+  const dpad           = document.getElementById("dpad");
+  const status         = document.getElementById("game-status");
+  const bannerGame     = document.getElementById("banner-game");
+  const bannerGameFixed= document.getElementById("banner-game-fixed");
+  const canvas         = document.getElementById("pong-canvas");
+  const reactionUI     = document.getElementById("reaction-ui");
+  const gameName       = game === "snake" ? "SNAKE" : game === "reaction" ? "REFLEX" : "PONG";
 
-  // Show/hide canvas vs reaction UI
+  if (bannerGame)      bannerGame.textContent      = gameName;
+  if (bannerGameFixed) bannerGameFixed.textContent = gameName;
+
   if (game === "reaction") {
-    canvas.style.display    = "none";
+    canvas.style.display     = "none";
     reactionUI.style.display = "flex";
-    hint.innerHTML = '<span>Tap the button when it turns green!</span>';
-    status.textContent    = "FIRST TO 3";
-    bannerGame.textContent = "REFLEX";
-    dpad.style.display    = "none";
+    hint.innerHTML           = '<span>Tap the circle when it turns green!</span>';
+    status.textContent       = "FIRST TO 3";
+    dpad.style.display       = "none";
   } else {
-    canvas.style.display    = "block";
+    canvas.style.display     = "block";
     reactionUI.style.display = "none";
     if (game === "snake") {
-      hint.innerHTML = '<span>Arrow keys / WASD &nbsp;&mdash;&nbsp; steer</span>';
-      status.textContent    = "FIRST TO 3 ROUNDS";
-      bannerGame.textContent = "SNAKE";
-      dpad.style.display    = "grid";
+      hint.innerHTML     = '<span>Arrow keys / WASD &nbsp;&mdash;&nbsp; steer</span>';
+      status.textContent = "FIRST TO 3 ROUNDS";
+      dpad.style.display = "grid";
     } else {
-      hint.innerHTML = '<span>W / S &nbsp;&mdash;&nbsp; move paddle</span><span class="hint-sep"> | </span><span>Or drag</span>';
-      status.textContent    = "FIRST TO 5";
-      bannerGame.textContent = "PONG";
-      dpad.style.display    = "none";
+      hint.innerHTML     = '<span>W / S &nbsp;&mdash;&nbsp; move paddle</span><span class="hint-sep"> | </span><span>Or drag</span>';
+      status.textContent = "FIRST TO 5";
+      dpad.style.display = "none";
     }
   }
 }
@@ -254,15 +260,19 @@ let reactionArmed = false;
 
 function setReactionLight(state) {
   const light = document.getElementById("reaction-light");
-  const btn   = document.getElementById("reaction-tap-btn");
+  const label = document.getElementById("reaction-light-label");
   light.className = "reaction-light " + (state || "");
   if (state === "green") {
-    btn.classList.add("armed");
+    label.textContent = "TAP!";
     reactionArmed = true;
-    document.getElementById("reaction-instruction").textContent = "TAP NOW!";
-  } else {
-    btn.classList.remove("armed");
+    document.getElementById("reaction-instruction").textContent = "TAP THE CIRCLE!";
+  } else if (state === "red") {
+    label.textContent = "EARLY!";
     reactionArmed = false;
+  } else {
+    label.textContent = "WAIT";
+    reactionArmed = false;
+    document.getElementById("reaction-instruction").textContent = "Wait for green — tap the circle!";
   }
 }
 
@@ -275,13 +285,13 @@ function updateReactionScores(scores) {
   document.getElementById("banner-score-them").textContent   = them;
 }
 
-// Tap button handler
-document.getElementById("reaction-tap-btn").addEventListener("click", () => {
+// Circle is the tap target
+document.getElementById("reaction-light").addEventListener("click", () => {
   if (!gameState || gameState.game !== "reaction" || !roomId) return;
   socket.emit("reaction_tap", { roomId, role: myRole });
 });
 
-// Also allow spacebar / enter
+// Spacebar / Enter also works
 document.addEventListener("keydown", (e) => {
   if (!gameState || gameState.game !== "reaction") return;
   if (e.key === " " || e.key === "Enter") {
@@ -294,10 +304,10 @@ document.addEventListener("keydown", (e) => {
 socket.on("reaction_waiting", ({ round, totalRounds, scores }) => {
   setReactionLight("");
   updateReactionScores(scores);
-  document.getElementById("reaction-round").textContent      = `ROUND ${round} OF ${totalRounds}`;
-  document.getElementById("reaction-instruction").textContent = "Get ready\u2026";
-  document.getElementById("reaction-result").textContent     = "";
-  document.getElementById("reaction-result").style.color     = "";
+  document.getElementById("reaction-round").textContent       = `ROUND ${round} OF ${totalRounds}`;
+  document.getElementById("reaction-instruction").textContent = "Wait for green — tap the circle!";
+  document.getElementById("reaction-result").textContent      = "";
+  document.getElementById("reaction-result").style.color      = "";
 });
 
 socket.on("reaction_go", () => {
@@ -316,16 +326,19 @@ socket.on("reaction_first_tap", ({ role, time }) => {
   const isMe = role === myRole;
   const res  = document.getElementById("reaction-result");
   if (isMe) {
-    res.textContent = `You tapped \u2014 ${time}ms`;
-    res.style.color = "#00ff88";
-  } else {
-    res.textContent = `Opponent tapped \u2014 waiting for you\u2026`;
+    // Show your own time instantly — don't wait for opponent
+    res.textContent = `Your time: ${time}ms — waiting for opponent...`;
     res.style.color = "#6666aa";
+    setReactionLight("");
+    document.getElementById("reaction-instruction").textContent = "Waiting for opponent...";
+  } else {
+    res.textContent = `Opponent tapped first — tap now!`;
+    res.style.color = "#ff3366";
   }
 });
 
 socket.on("reaction_round_result", ({ winner, times, scores, round }) => {
-  const iWon = winner === myRole;
+  const iWon     = winner === myRole;
   const myTime   = myRole === "left" ? times.left  : times.right;
   const themTime = myRole === "left" ? times.right : times.left;
 
