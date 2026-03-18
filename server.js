@@ -10,14 +10,15 @@ const io = new Server(server, { cors: { origin: "*" } });
 const fs = require("fs");
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
 
-// Serve Supabase config from environment variables
+// Config endpoint — must be before static middleware
 app.get("/config.js", (req, res) => {
   res.setHeader("Content-Type", "application/javascript");
   res.send(`window.SUPABASE_URL = "${process.env.SUPABASE_URL || ""}";
 window.SUPABASE_ANON_KEY = "${process.env.SUPABASE_ANON_KEY || ""}";`);
 });
+
+app.use(express.static(path.join(__dirname, "public")));
 
 // ── Email subscription endpoint ───────────────────────────────────
 app.post("/api/subscribe", (req, res) => {
