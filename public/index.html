@@ -95,24 +95,30 @@
   <div id="screen-game" class="screen">
     <div class="game-layout">
 
-      <!-- Branded top banner — logo centre, scores either side -->
+      <!-- Branded top banner -->
       <div class="game-banner">
+        <!-- Desktop: left side info -->
         <div class="game-banner-left">
           <span class="banner-status" id="banner-status">LIVE</span>
           <span class="banner-game" id="banner-game">PONG</span>
         </div>
+        <!-- Centre: massive logo -->
         <div class="game-banner-centre">
-          <span class="banner-score-them" id="banner-score-them">0</span>
-          <span class="banner-sep">:</span>
           <div class="banner-logo-block">
             <span class="banner-logo">ARCADE<span>FACE</span></span>
-            <span class="banner-tag">#ArcadeFace</span>
+            <span class="banner-tag">#ArcadeFace &nbsp;&bull;&nbsp; arcadeface.com</span>
           </div>
-          <span class="banner-sep">:</span>
-          <span class="banner-score-you" id="banner-score-you">0</span>
         </div>
+        <!-- Desktop: right side scores -->
         <div class="game-banner-right">
-          <span class="banner-url">arcadeface.com</span>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+            <span class="banner-score-label them">OPPONENT</span>
+            <span class="banner-score-them" id="banner-score-them">0</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;margin-top:8px">
+            <span class="banner-score-label you">YOU</span>
+            <span class="banner-score-you" id="banner-score-you">0</span>
+          </div>
         </div>
       </div>
 
