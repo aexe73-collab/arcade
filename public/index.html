@@ -89,7 +89,24 @@
   <div id="screen-game" class="screen">
     <div class="game-layout">
 
-      <!-- Score bar (mobile only) -->
+      <!-- Branded top banner — always visible, Kick-style -->
+      <div class="game-banner">
+        <div class="game-banner-left">
+          <span class="banner-logo">ARCADE<span>FACE</span></span>
+          <span class="banner-tag">#ArcadeFace</span>
+        </div>
+        <div class="game-banner-centre">
+          <span class="banner-score-them" id="banner-score-them">0</span>
+          <span class="banner-sep">:</span>
+          <span class="banner-score-you" id="banner-score-you">0</span>
+        </div>
+        <div class="game-banner-right">
+          <span class="banner-game" id="banner-game">PONG</span>
+          <span class="banner-status" id="banner-status">LIVE</span>
+        </div>
+      </div>
+
+      <!-- Score bar (mobile fallback — hidden when banner shows) -->
       <div class="score-bar">
         <div class="score-block left">
           <span class="score-label">YOU</span>
@@ -130,7 +147,6 @@
             <span class="ds-score you" id="ds-score-you">0</span>
           </div>
           <canvas id="pong-canvas" width="800" height="400"></canvas>
-          <!-- Snake D-pad (mobile only) -->
           <div class="dpad" id="dpad">
             <button class="dpad-btn dpad-up"    id="dpad-up">&#9650;</button>
             <button class="dpad-btn dpad-left"  id="dpad-left">&#9664;</button>
@@ -166,6 +182,14 @@
     <div class="gameover-content">
       <div class="result-badge" id="result-badge">YOU WIN</div>
       <div class="final-score" id="final-score">3 &mdash; 5</div>
+
+      <!-- Shareable result card -->
+      <div class="share-card" id="share-card">
+        <canvas id="share-canvas" width="800" height="420"></canvas>
+        <button class="btn-share" id="btn-share">&#8681; SAVE &amp; SHARE</button>
+        <p class="share-hint">Screenshot or save &mdash; tag <strong>#ArcadeFace</strong></p>
+      </div>
+
       <div class="gameover-actions">
         <button class="btn-primary" id="btn-rematch">&#8635; REMATCH</button>
         <button class="btn-ghost"   id="btn-next-stranger">NEXT STRANGER &#8594;</button>
