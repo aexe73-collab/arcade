@@ -196,7 +196,7 @@ setInterval(() => {
     if (myRole === "right") gameState.paddles.right = newY;
     socket.emit("paddle_move", { roomId, role: myRole, y: newY });
   }
-}, 1000 / 30);
+}, 1000 / 20);
 
 // ── Touch / mouse controls ────────────────────────────────────────
 canvas.addEventListener("touchmove", (e) => {
@@ -505,7 +505,7 @@ setInterval(() => {
     if (myRole === "right") gameState.paddles.right = newY;
     socket.emit("paddle_move", { roomId, role: myRole, y: newY });
   }
-}, 1000 / 30);
+}, 1000 / 20);
 
 // ── Touch / mouse drag for mobile ────────────────────────────────
 let isDragging = false;
