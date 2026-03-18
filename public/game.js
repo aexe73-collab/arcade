@@ -31,8 +31,10 @@ function initSupabase() {
   const code = params.get("code");
   if (code) {
     console.log("Found OAuth code in URL, exchanging...");
+    console.log("localStorage keys:", Object.keys(localStorage).join(", "));
     sbClient.auth.exchangeCodeForSession(code).then(({ data, error }) => {
-      console.log("Exchange result:", data?.session?.user?.email || error?.message);
+      console.log("Exchange result:", data?.session?.user?.email || error?.message || "unknown error");
+      console.log("Full error:", JSON.stringify(error));
       if (data?.session) {
         setUser(data.session.user);
         showScreen("screen-home");
