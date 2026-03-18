@@ -97,29 +97,17 @@
 
       <!-- Branded top banner -->
       <div class="game-banner">
-        <!-- Desktop: left side info -->
         <div class="game-banner-left">
           <span class="banner-status" id="banner-status">LIVE</span>
           <span class="banner-game" id="banner-game">PONG</span>
         </div>
-        <!-- Centre: massive logo -->
         <div class="game-banner-centre">
           <div class="banner-logo-block">
             <span class="banner-logo">ARCADE<span>FACE</span></span>
             <span class="banner-tag">#ArcadeFace &nbsp;&bull;&nbsp; arcadeface.com</span>
           </div>
         </div>
-        <!-- Desktop: right side scores -->
-        <div class="game-banner-right">
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
-            <span class="banner-score-label them">OPPONENT</span>
-            <span class="banner-score-them" id="banner-score-them">0</span>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;margin-top:8px">
-            <span class="banner-score-label you">YOU</span>
-            <span class="banner-score-you" id="banner-score-you">0</span>
-          </div>
-        </div>
+        <div class="game-banner-right"></div>
       </div>
 
       <!-- Score bar (mobile fallback — hidden when banner shows) -->
@@ -222,7 +210,19 @@
       <div class="gameover-brand-block">
         <div class="gameover-brand-logo">ARCADE<span>FACE</span></div>
         <div class="result-badge" id="result-badge">YOU WIN</div>
-        <div class="final-score" id="final-score">3 &mdash; 5</div>
+      </div>
+
+      <!-- Score layout: opponent left, you right -->
+      <div class="gameover-scores">
+        <div class="gameover-score-block them">
+          <span class="gameover-score-label">OPPONENT</span>
+          <span class="gameover-score-val" id="gameover-score-them">0</span>
+        </div>
+        <div class="gameover-score-sep">—</div>
+        <div class="gameover-score-block you">
+          <span class="gameover-score-label">YOU</span>
+          <span class="gameover-score-val" id="gameover-score-you">0</span>
+        </div>
       </div>
 
       <!-- Shareable result card -->
