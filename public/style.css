@@ -509,6 +509,7 @@ body {
   .mobile-footer     { display: flex; }
   .picker-grid       { gap: 12px; }
   .game-card         { width: 140px; padding: 20px 12px; }
+  .dpad              { display: grid; }
 }
 
 /* ── Game picker screen ────────────────────────────────── */
@@ -532,7 +533,7 @@ body {
   letter-spacing: 3px;
 }
 
-.picker-hint {
+.picker-sub {
   font-family: var(--mono);
   font-size: 12px;
   color: var(--muted);
@@ -555,24 +556,12 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   transition: border-color 0.15s, transform 0.1s;
 }
 
-.game-card:hover {
-  border-color: var(--accent);
-  transform: translateY(-3px);
-}
-
-.game-card.selected {
-  border-color: var(--accent);
-  background: rgba(0,255,136,0.08);
-}
-
-.game-card.selected-snake {
-  border-color: var(--accent2);
-  background: rgba(255,51,102,0.08);
-}
+.game-card:hover      { border-color: var(--accent); transform: translateY(-3px); }
+.snake-card:hover     { border-color: var(--accent2); }
 
 .game-card-icon {
   font-size: 28px;
@@ -580,11 +569,11 @@ body {
   letter-spacing: 4px;
 }
 
-#pick-snake .game-card-icon { color: var(--accent2); }
+.snake-card .game-card-icon { color: var(--accent2); }
 
 .game-card-name {
   font-family: var(--pixel);
-  font-size: 14px;
+  font-size: 16px;
   color: var(--text);
   letter-spacing: 2px;
 }
@@ -594,6 +583,48 @@ body {
   font-size: 11px;
   color: var(--muted);
 }
+
+.game-card-controls {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--border);
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  width: 100%;
+  text-align: center;
+}
+
+/* ── D-pad (Snake mobile controls) ────────────────────── */
+.dpad {
+  display: none;
+  position: relative;
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+}
+
+.dpad-btn {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dpad-btn:active { background: var(--accent2); color: var(--bg); }
+
+.dpad-up    { top: 0;   left: 42px; }
+.dpad-down  { bottom: 0; left: 42px; }
+.dpad-left  { top: 42px; left: 0; }
+.dpad-right { top: 42px; right: 0; }
 
 /* ── Mobile footer ─────────────────────────────────────── */
 .mobile-footer {
