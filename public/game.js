@@ -611,7 +611,30 @@ socket.on("game_over", ({ winner, scores }) => {
   showScreen("screen-gameover");
 });
 
-// ── Share button ──────────────────────────────────────────────────
+// ── Email capture ─────────────────────────────────────────────────
+document.getElementById("btn-email").addEventListener("click", async () => {
+  const input = document.getElementById("email-input");
+  const email = input.value.trim();
+  if (!email || !email.includes("@")) {
+    input.style.borderColor = "var(--accent2)";
+    return;
+  }
+  input.style.borderColor = "";
+
+  try {
+    await fetch("/api/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email })
+    });
+  } catch (e) {
+    console.warn("Email submit:", e.message);
+  }
+
+  // Show confirmation regardless — don't make users feel bad if it fails
+  document.getElementById("email-capture").querySelector(".email-capture-row").classList.add("hidden");
+  document.getElementById("email-done").classList.remove("hidden");
+});
 document.getElementById("btn-share").addEventListener("click", () => {
   const sc = document.getElementById("share-canvas");
   const link = document.createElement("a");
