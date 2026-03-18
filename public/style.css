@@ -393,7 +393,7 @@ body {
 
 /* Side video panels */
 .side-panel {
-  width: 220px;
+  width: 280px;
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
@@ -469,7 +469,7 @@ body {
 
 #pong-canvas {
   display: block;
-  max-width: 100%;
+  width: 100%;
   max-height: calc(100vh - 120px);
   image-rendering: pixelated;
 }
