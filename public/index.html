@@ -46,19 +46,45 @@
     </div>
   </div>
 
-  <!-- SCREEN 3: Game -->
+  <!-- SCREEN 3: Face-off countdown -->
+  <div id="screen-faceoff" class="screen">
+    <div class="scanlines"></div>
+    <div class="faceoff-layout">
+
+      <!-- Opponent video panel -->
+      <div class="faceoff-panel faceoff-them">
+        <video id="video-faceoff-remote" autoplay playsinline></video>
+        <div class="faceoff-name them">OPPONENT</div>
+      </div>
+
+      <!-- Centre countdown -->
+      <div class="faceoff-centre">
+        <div class="faceoff-vs">VS</div>
+        <div class="countdown-number" id="countdown-number">3</div>
+        <div class="faceoff-hint">Say hi. Trash talk.<br>Game starts in&hellip;</div>
+      </div>
+
+      <!-- Your video panel -->
+      <div class="faceoff-panel faceoff-you">
+        <video id="video-faceoff-local" autoplay muted playsinline></video>
+        <div class="faceoff-name you">YOU</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SCREEN 4: Game -->
   <div id="screen-game" class="screen">
     <div class="game-layout">
 
-      <!-- Top bar: scores -->
+      <!-- Score bar (mobile only — hidden on desktop) -->
       <div class="score-bar">
         <div class="score-block left">
           <span class="score-label">YOU</span>
           <span class="score-value" id="score-left">0</span>
         </div>
         <div class="score-center">
-          <span class="score-divider">:</span>
-          <span class="game-status" id="game-status">GET READY</span>
+          <span class="game-status" id="game-status">FIRST TO 5</span>
         </div>
         <div class="score-block right">
           <span class="score-label">THEM</span>
@@ -66,35 +92,43 @@
         </div>
       </div>
 
-      <!-- Main game area -->
+      <!-- Three-column game area (desktop) -->
       <div class="game-area">
 
-        <!-- Video: local player (bottom-left) -->
-        <div class="video-pip" id="pip-local">
-          <video id="video-local" autoplay muted playsinline></video>
-          <div class="pip-label">YOU</div>
-        </div>
-
-        <!-- Pong canvas -->
-        <canvas id="pong-canvas" width="800" height="400"></canvas>
-
-        <!-- Video: remote player (bottom-right) -->
-        <div class="video-pip" id="pip-remote">
+        <!-- Left panel: opponent video -->
+        <div class="side-panel panel-them">
           <video id="video-remote" autoplay playsinline></video>
-          <div class="pip-label">THEM</div>
+          <div class="panel-label them">OPPONENT</div>
+          <div class="panel-score" id="panel-score-them">0</div>
         </div>
-      </div>
 
-      <!-- Controls hint -->
-      <div class="controls-hint">
-        <span>W / S &nbsp;&mdash;&nbsp; move paddle</span>
-        <span class="hint-sep">&nbsp;|&nbsp;</span>
-        <span>Or drag on mobile</span>
+        <!-- Centre: canvas + mobile score -->
+        <div class="canvas-wrap">
+          <div class="desktop-score">
+            <span class="ds-score them" id="ds-score-them">0</span>
+            <span class="ds-sep">:</span>
+            <span class="ds-score you" id="ds-score-you">0</span>
+          </div>
+          <canvas id="pong-canvas" width="800" height="400"></canvas>
+          <div class="controls-hint">
+            <span>W / S &nbsp;&mdash;&nbsp; move paddle</span>
+            <span class="hint-sep">&nbsp;|&nbsp;</span>
+            <span>Or drag on mobile</span>
+          </div>
+        </div>
+
+        <!-- Right panel: your video -->
+        <div class="side-panel panel-you">
+          <video id="video-local" autoplay muted playsinline></video>
+          <div class="panel-label you">YOU</div>
+          <div class="panel-score" id="panel-score-you">0</div>
+        </div>
+
       </div>
     </div>
   </div>
 
-  <!-- SCREEN 4: Game over -->
+  <!-- SCREEN 5: Game over -->
   <div id="screen-gameover" class="screen">
     <div class="scanlines"></div>
     <div class="gameover-content">
