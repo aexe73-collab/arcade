@@ -25,7 +25,7 @@ function hideOverlay(id) { document.getElementById(id).classList.add("hidden"); 
 async function getCamera() {
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    ["video-local","video-faceoff-local","video-mobile-local"].forEach(id => {
+    ["video-local","video-faceoff-local","video-mobile-local","video-postgame-local"].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.srcObject = localStream;
     });
@@ -109,7 +109,7 @@ async function startPeerConnection(isInitiator) {
 
   peerConn.ontrack = (event) => {
     const s = event.streams[0];
-    ["video-remote","video-faceoff-remote","video-mobile-remote"].forEach(id => {
+    ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.srcObject = s;
     });
