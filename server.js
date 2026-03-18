@@ -259,9 +259,32 @@ function startSnakeLoop(roomId) {
     io.to(roomId).emit("game_state", { gameState: gs });
 
     const la = gs.snakes.left.alive, ra = gs.snakes.right.alive;
-    if (!la && !ra) { endGame(roomId, "draw");  return; }
-    if (!la)        { endGame(roomId, "right"); return; }
-    if (!ra)        { endGame(roomId, "left");  return; }
+    if (la && ra) return;
+    
+    if (room.gameLoop) clearInterval(room.gameLoop);
+    
+    // Award round point
+    if (!la && !ra) { /* draw — no point */ }
+    else if (!la)   { gs.scores.right++; }
+    else            { gs.scores.left++;  }
+    
+    // Broadcast round end so clients can show a flash
+    io.to(roomId).emit("game_state", { gameState: gs });
+    
+    // Check if someone has won 3 rounds
+    if (gs.scores.left >= 3)  { endGame(roomId, "left");  return; }
+    if (gs.scores.right >= 3) { endGame(roomId, "right"); return; }
+    
+    // Neither at 3 yet — reset snakes and start next round after a pause
+    setTimeout(() => {
+      gs.snakes = {
+        left:  { body: [{x:5,y:10},{x:4,y:10},{x:3,y:10}],   dir:{x:1,y:0},  nextDir:{x:1,y:0},  alive:true },
+        right: { body: [{x:34,y:10},{x:35,y:10},{x:36,y:10}], dir:{x:-1,y:0}, nextDir:{x:-1,y:0}, alive:true }
+      };
+      spawnFood(gs);
+      io.to(roomId).emit("game_state", { gameState: gs });
+      startSnakeLoop(roomId);
+    }, 1500);
 
   }, 1000 / 8);
 }
