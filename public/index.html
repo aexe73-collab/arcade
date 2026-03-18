@@ -109,6 +109,8 @@
         <div class="game-banner-right"></div>
         <span class="banner-game" id="banner-game">PONG</span>
       </div>
+      <!-- Mobile fixed bottom labels -->
+      <span class="banner-game-fixed" id="banner-game-fixed">PONG</span>
 
       <!-- Score bar (mobile fallback — hidden when banner shows) -->
       <div class="score-bar">
@@ -160,11 +162,11 @@
                 <span class="reaction-score-val" id="reaction-score-you">0</span>
               </div>
             </div>
-            <div class="reaction-light" id="reaction-light">
+            <div class="reaction-instruction" id="reaction-instruction">Wait for green — tap the circle!</div>
+            <button class="reaction-light" id="reaction-light">
               <div class="reaction-light-inner" id="reaction-light-inner"></div>
-            </div>
-            <div class="reaction-instruction" id="reaction-instruction">Get ready...</div>
-            <button class="reaction-tap-btn" id="reaction-tap-btn">TAP!</button>
+              <span class="reaction-light-label" id="reaction-light-label">WAIT</span>
+            </button>
             <div class="reaction-result" id="reaction-result"></div>
           </div>
           <div class="dpad" id="dpad">
