@@ -12,6 +12,13 @@ const fs = require("fs");
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
+// Serve Supabase config from environment variables
+app.get("/config.js", (req, res) => {
+  res.setHeader("Content-Type", "application/javascript");
+  res.send(`window.SUPABASE_URL = "${process.env.SUPABASE_URL || ""}";
+window.SUPABASE_ANON_KEY = "${process.env.SUPABASE_ANON_KEY || ""}";`);
+});
+
 // ── Email subscription endpoint ───────────────────────────────────
 app.post("/api/subscribe", (req, res) => {
   const { email } = req.body;
