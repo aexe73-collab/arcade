@@ -690,19 +690,10 @@ document.getElementById("pick-reaction").addEventListener("click", () => {
 function startCountdown(onComplete) {
   showScreen("screen-faceoff");
 
-  // Assign local video to faceoff screen
   if (localStream) {
     const lv = document.getElementById("video-faceoff-local");
     if (lv) lv.srcObject = localStream;
   }
-
-  // Faceoff screen is now visible — assign remote stream
-  if (window._remoteStream) {
-    _remoteStreamAssigned = false;
-    assignRemoteStream(window._remoteStream);
-  }
-
-  const remoteRetry = null; // no retry needed — canplay event handles it
 
   let count = 10;
   const el = document.getElementById("countdown-number");
@@ -713,7 +704,6 @@ function startCountdown(onComplete) {
     count--;
     if (count <= 0) {
       clearInterval(tick);
-      clearInterval(remoteRetry);
       el.textContent = "GO!";
       el.style.color = "#ff3366";
       setTimeout(onComplete, 700);
@@ -737,40 +727,7 @@ const ICE_SERVERS = {
   ]
 };
 
-let _remoteStreamAssigned = false;
-
-function assignRemoteStream(s) {
-  if (!s) return;
-  if (_remoteStreamAssigned) return; // only assign once per match
-  _remoteStreamAssigned = true;
-  console.log("[RTC] assigning stream to all video elements");
-  ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.muted = true;
-    el.srcObject = s;
-    // Use canplay event — fires when browser is ready, avoids AbortError
-    const onCanPlay = () => {
-      el.removeEventListener("canplay", onCanPlay);
-      el.play().then(() => {
-        console.log("[RTC] playing:", id);
-        el.muted = false;
-        el.volume = 1.0;
-      }).catch(e => console.warn("[RTC] canplay play failed:", id, e.name));
-    };
-    el.addEventListener("canplay", onCanPlay);
-    // Fallback: if canplay already fired or won't fire, try after delay
-    setTimeout(() => {
-      if (el.paused) {
-        el.play().then(() => {
-          console.log("[RTC] fallback playing:", id);
-          el.muted = false;
-          el.volume = 1.0;
-        }).catch(() => {});
-      }
-    }, 1000);
-  });
-}
+// remote stream assigned directly in ontrack
 
 async function startPeerConnection(isInitiator) {
   peerConn = new RTCPeerConnection(ICE_SERVERS);
@@ -778,13 +735,10 @@ async function startPeerConnection(isInitiator) {
 
   peerConn.ontrack = (event) => {
     const s = event.streams[0];
-    console.log("[RTC] ontrack! tracks:", s.getTracks().map(t=>t.kind), "stream active:", s.active);
-    window._remoteStream = s;
-    assignRemoteStream(s);
-  };
-
-  peerConn.oniceconnectionstatechange = () => {
-    console.log("[RTC] ICE state:", peerConn.iceConnectionState);
+    ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.srcObject = s;
+    });
   };
 
   peerConn.onicecandidate = (e) => {
@@ -795,7 +749,6 @@ async function startPeerConnection(isInitiator) {
     const offer = await peerConn.createOffer();
     await peerConn.setLocalDescription(offer);
     socket.emit("webrtc_offer", { roomId, offer });
-    console.log("[RTC] offer sent, senders:", peerConn.getSenders().length);
   }
 }
 
@@ -1279,8 +1232,6 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
   myRole      = role;
   currentGame = game;
   clearChat();
-  window._remoteStream = null;
-  _remoteStreamAssigned = false;
 
   if (!localStream) await getCamera();
   await startPeerConnection(role === "left");
@@ -1293,8 +1244,6 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
     }
     socket.emit("player_ready", { roomId });
     // Now screen is visible — assign stream to video elements so play() succeeds
-    _remoteStreamAssigned = false;
-    if (window._remoteStream) assignRemoteStream(window._remoteStream);
   });
 });
 
@@ -1307,7 +1256,6 @@ socket.on("webrtc_offer", async ({ offer }) => {
     localStream.getTracks().forEach(t => {
       if (!existingTracks.includes(t.id)) {
         peerConn.addTrack(t, localStream);
-        console.log("[RTC] non-initiator added track:", t.kind);
       }
     });
   }
@@ -1315,7 +1263,6 @@ socket.on("webrtc_offer", async ({ offer }) => {
   const answer = await peerConn.createAnswer();
   await peerConn.setLocalDescription(answer);
   socket.emit("webrtc_answer", { roomId, answer });
-  console.log("[RTC] answer sent");
 });
 
 socket.on("webrtc_answer", async ({ answer }) => {
