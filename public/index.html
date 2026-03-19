@@ -345,8 +345,21 @@
     </div>
   </div>
 
-  <!-- Camera overlay -->
-  <div id="overlay-camera" class="overlay hidden">
+  <!-- Challenge link modal -->
+  <div id="overlay-challenge" class="overlay hidden">
+    <div class="overlay-box">
+      <div class="overlay-icon">&#9654;</div>
+      <h3>CHALLENGE SENT</h3>
+      <p>Share this link with your friend — they'll be matched directly with you.</p>
+      <div class="challenge-link-box">
+        <input type="text" id="challenge-link-input" readonly/>
+        <button class="btn-copy" id="btn-copy-link">COPY</button>
+      </div>
+      <p class="challenge-hint" id="challenge-copied" style="color:var(--accent);display:none">&#10003; Copied!</p>
+      <p style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:8px">Pick your game below while you wait</p>
+      <button class="btn-text" id="btn-challenge-close">Got it</button>
+    </div>
+  </div>
     <div class="overlay-box">
       <div class="overlay-icon">&#128247;</div>
       <h3>Camera access needed</h3>
