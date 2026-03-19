@@ -228,17 +228,6 @@ io.on("connection", (socket) => {
   socket.on("webrtc_answer", ({ roomId, answer })    => socket.to(roomId).emit("webrtc_answer", { answer }));
   socket.on("webrtc_ice",    ({ roomId, candidate }) => socket.to(roomId).emit("webrtc_ice",    { candidate }));
 
-  // Both players camera ready — start countdown
-  socket.on("camera_ready", ({ roomId }) => {
-    const room = rooms.get(roomId);
-    if (!room) return;
-    if (!room.cameraReady) room.cameraReady = 0;
-    room.cameraReady++;
-    if (room.cameraReady >= 2) {
-      io.to(roomId).emit("both_camera_ready");
-    }
-  });
-
   // Both players ready — start
   socket.on("player_ready", ({ roomId }) => {
     const room = rooms.get(roomId);
