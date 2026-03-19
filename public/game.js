@@ -1,5 +1,11 @@
 // ── ArcadeFace Client ─────────────────────────────────────────────
-const socket = io();
+const socket = io({
+  transports: ["polling", "websocket"], // start with polling, upgrade to WS
+  reconnection: true,
+  reconnectionAttempts: 10,
+  reconnectionDelay: 500,
+  timeout: 20000
+});
 
 let myRole      = null;
 let roomId      = null;
@@ -10,6 +16,20 @@ let peerConn    = null;
 let animFrameId = null;
 let currentUser = null;   // Supabase user object
 let playMode    = "random"; // random | friend | group
+
+// Rejoin room after socket reconnects
+socket.on("reconnect", () => {
+  console.log("[WS] reconnected");
+  const dbg = document.getElementById("rtc-debug");
+  if (dbg) dbg.textContent = "reconnected";
+  if (roomId) socket.emit("rejoin_room", { roomId, role: myRole });
+});
+
+socket.on("disconnect", (reason) => {
+  console.log("[WS] disconnected:", reason);
+  const dbg = document.getElementById("rtc-debug");
+  if (dbg) dbg.textContent = "disconnected: " + reason;
+});
 
 const canvas = document.getElementById("pong-canvas");
 const ctx    = canvas.getContext("2d");
