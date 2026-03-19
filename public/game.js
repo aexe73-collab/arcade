@@ -737,27 +737,21 @@ const ICE_SERVERS = {
 };
 
 function assignRemoteStream(s) {
-  if (!s) { console.warn("[RTC] assignRemoteStream called with no stream"); return; }
-  console.log("[RTC] assignRemoteStream called");
+  if (!s) return;
   ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
     const el = document.getElementById(id);
-    console.log("[RTC] element", id, "->", el ? "found" : "NULL");
     if (!el) return;
-    if (el.srcObject !== s) el.srcObject = s;
+    // Clear then reassign — forces Safari to reinitialise media pipeline
     el.muted = true;
-    let attempts = 0;
-    const tryPlay = () => {
-      if (attempts++ > 20) { console.error("[RTC] gave up on:", id); return; }
+    el.srcObject = null;
+    setTimeout(() => {
+      el.srcObject = s;
       el.play().then(() => {
         console.log("[RTC] playing:", id);
         el.muted = false;
         el.volume = 1.0;
-      }).catch(e => {
-        console.warn("[RTC] play attempt", attempts, id, e.name, e.message);
-        setTimeout(tryPlay, 500);
-      });
-    };
-    tryPlay();
+      }).catch(e => console.warn("[RTC] play failed:", id, e.name, e.message));
+    }, 50);
   });
 }
 
