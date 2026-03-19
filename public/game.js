@@ -1227,10 +1227,7 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
   myRole      = role;
   currentGame = game;
   clearChat();
-
-  if (!localStream) await getCamera();
   await startPeerConnection(role === "left");
-
   startCountdown(() => {
     setupGameUI(currentGame);
     showScreen("screen-game");
@@ -1238,22 +1235,12 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
       startRenderLoop();
     }
     socket.emit("player_ready", { roomId });
-    // Now screen is visible — assign stream to video elements so play() succeeds
   });
 });
 
 
 socket.on("webrtc_offer", async ({ offer }) => {
   if (!peerConn) await startPeerConnection(false);
-  // Ensure our tracks are in the connection before answering
-  if (localStream) {
-    const existingTracks = peerConn.getSenders().map(s => s.track?.id);
-    localStream.getTracks().forEach(t => {
-      if (!existingTracks.includes(t.id)) {
-        peerConn.addTrack(t, localStream);
-      }
-    });
-  }
   await peerConn.setRemoteDescription(new RTCSessionDescription(offer));
   const answer = await peerConn.createAnswer();
   await peerConn.setLocalDescription(answer);
