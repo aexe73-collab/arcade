@@ -107,6 +107,7 @@ document.getElementById("btn-send-link").addEventListener("click", async () => {
 document.getElementById("btn-signout").addEventListener("click", async () => {
   if (sbClient) await sbClient.auth.signOut();
   setUser(null);
+  showScreen("screen-home");
 });
 
 // ── Mode selector ─────────────────────────────────────────────────
