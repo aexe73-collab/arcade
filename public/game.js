@@ -111,10 +111,6 @@ document.getElementById("btn-signout").addEventListener("click", async () => {
 });
 
 // ── Mode selector ─────────────────────────────────────────────────
-document.getElementById("btn-play-modes").addEventListener("click", () => {
-  showScreen("screen-mode");
-});
-
 document.getElementById("btn-picker-back").addEventListener("click", () => {
   currentUser ? showScreen("screen-mode") : showScreen("screen-home");
 });
@@ -206,26 +202,41 @@ async function getCamera() {
   }
 }
 
-// ── Game picker (shown on home screen click) ──────────────────────
-document.getElementById("btn-find-match").addEventListener("click", async () => {
+// ── Camera permission helper ──────────────────────────────────────
+async function requestCameraThenProceed(destination) {
   const hasCam = await getCamera();
-  if (!hasCam) showOverlay("overlay-camera");
-  else showScreen("screen-picker");
+  if (hasCam) {
+    showScreen(destination);
+  } else {
+    showOverlay("overlay-camera");
+    // Store where to go after camera decision
+    window._cameraDestination = destination;
+  }
+}
+
+// ── Game picker (guest — home screen click) ───────────────────────
+document.getElementById("btn-find-match").addEventListener("click", async () => {
+  await requestCameraThenProceed("screen-picker");
+});
+
+// ── Play button (signed in) ───────────────────────────────────────
+document.getElementById("btn-play-modes").addEventListener("click", async () => {
+  await requestCameraThenProceed("screen-mode");
 });
 
 document.getElementById("btn-allow-camera").addEventListener("click", async () => {
   hideOverlay("overlay-camera");
   const hasCam = await getCamera();
   if (!hasCam) {
-    alert("Camera access was blocked. Please click the camera/lock icon in your browser's address bar and allow camera access, then refresh the page.");
+    alert("Camera still blocked. Click the camera icon in your browser address bar, allow access, then refresh.");
     return;
   }
-  showScreen("screen-picker");
+  showScreen(window._cameraDestination || "screen-picker");
 });
 
 document.getElementById("btn-skip-camera").addEventListener("click", () => {
   hideOverlay("overlay-camera");
-  showScreen("screen-picker");
+  showScreen(window._cameraDestination || "screen-picker");
 });
 
 document.getElementById("pick-pong").addEventListener("click", () => {
@@ -1017,44 +1028,8 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
   myRole      = role;
   currentGame = game;
   clearChat();
-
-  // Show waiting screen first while we sort camera
-  showScreen("screen-waiting");
-  document.getElementById("waiting-title").textContent = "OPPONENT FOUND!";
-  document.getElementById("waiting-sub").textContent   = "Setting up camera\u2026";
-
   await startPeerConnection(role === "left");
-
-  // Handle camera permission before signalling ready
-  if (!localStream) {
-    const hasCam = await getCamera();
-    if (!hasCam) {
-      // Show camera overlay — user must choose allow or skip
-      showOverlay("overlay-camera");
-      // Wait for their choice before continuing
-      await new Promise(resolve => {
-        const allowBtn = document.getElementById("btn-allow-camera");
-        const skipBtn  = document.getElementById("btn-skip-camera");
-        const onAllow = async () => {
-          hideOverlay("overlay-camera");
-          await getCamera();
-          allowBtn.removeEventListener("click", onAllow);
-          skipBtn.removeEventListener("click", onSkip);
-          resolve();
-        };
-        const onSkip = () => {
-          hideOverlay("overlay-camera");
-          allowBtn.removeEventListener("click", onAllow);
-          skipBtn.removeEventListener("click", onSkip);
-          resolve();
-        };
-        allowBtn.addEventListener("click", onAllow);
-        skipBtn.addEventListener("click", onSkip);
-      });
-    }
-  }
-
-  // Signal server we're camera-ready
+  // Camera already handled at home screen — signal ready immediately
   socket.emit("camera_ready", { roomId });
 });
 
