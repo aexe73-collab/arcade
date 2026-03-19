@@ -51,11 +51,54 @@ app.post("/api/subscribe", (req, res) => {
 });
 
 // Separate waiting queues per game
-const waitingQueues = { pong: null, snake: null, reaction: null, raid: null };
+const waitingQueues = { pong: null, snake: null, reaction: null, raid: null, fourdots: null };
 const rooms = new Map();
 
 function generateRoomId() {
   return Math.random().toString(36).substring(2, 9);
+}
+
+// ── 4 Dots state ──────────────────────────────────────────────────
+const COLS = 7, ROWS = 6;
+
+function createFourDotsState() {
+  return {
+    game: "fourdots",
+    board: Array.from({ length: ROWS }, () => Array(COLS).fill(null)), // null | "left" | "right"
+    turn: "left",
+    winner: null,
+    draw: false,
+    phase: "playing"
+  };
+}
+
+function dropPiece(board, col, role) {
+  for (let row = ROWS - 1; row >= 0; row--) {
+    if (!board[row][col]) { board[row][col] = role; return row; }
+  }
+  return -1; // column full
+}
+
+function checkWinner(board) {
+  const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const p = board[r][c];
+      if (!p) continue;
+      for (const [dr, dc] of dirs) {
+        let count = 1, cells = [{r, c}];
+        for (let i = 1; i < 4; i++) {
+          const nr = r + dr*i, nc = c + dc*i;
+          if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS || board[nr][nc] !== p) break;
+          count++; cells.push({r: nr, c: nc});
+        }
+        if (count === 4) return { winner: p, cells };
+      }
+    }
+  }
+  // Check draw
+  if (board[0].every(c => c !== null)) return { winner: null, draw: true };
+  return null;
 }
 
 // ── Raid (Battleship) state ───────────────────────────────────────
@@ -158,9 +201,10 @@ io.on("connection", (socket) => {
       io.sockets.sockets.get(player1)?.join(roomId);
       socket.join(roomId);
 
-      const gameState = game === "snake"    ? createSnakeState()
-                      : game === "reaction" ? createReactionState()
-                      : game === "raid"     ? createRaidState()
+      const gameState = game === "snake"     ? createSnakeState()
+                      : game === "reaction"  ? createReactionState()
+                      : game === "raid"      ? createRaidState()
+                      : game === "fourdots"  ? createFourDotsState()
                       : createPongState();
       rooms.set(roomId, {
         players: [player1, player2],
@@ -203,9 +247,10 @@ io.on("connection", (socket) => {
     if (room.readyCount === 2) {
       room.gameState.running = true;
       io.to(roomId).emit("game_start", { gameState: room.gameState });
-      if (room.gameState.game === "snake")       startSnakeLoop(roomId);
-      else if (room.gameState.game === "reaction") startReactionRound(roomId);
-      else if (room.gameState.game === "raid")     {} // Raid waits for ship placement
+      if (room.gameState.game === "snake")        startSnakeLoop(roomId);
+      else if (room.gameState.game === "reaction")  startReactionRound(roomId);
+      else if (room.gameState.game === "raid")       {} // waits for ship placement
+      else if (room.gameState.game === "fourdots")   startFourDotsTimer(roomId);
       else startPongLoop(roomId);
     }
   });
@@ -276,6 +321,16 @@ io.on("connection", (socket) => {
     if (dir.x !== -snake.dir.x || dir.y !== -snake.dir.y) {
       snake.nextDir = dir;
     }
+  });
+
+  // ── 4 Dots: player drops piece ────────────────────────────────
+  socket.on("fourdots_drop", ({ roomId, role, col }) => {
+    const room = rooms.get(roomId);
+    if (!room || !room.gameState || room.gameState.game !== "fourdots") return;
+    const gs = room.gameState;
+    if (gs.phase !== "playing" || gs.turn !== role) return;
+    if (room.turnTimer) { clearTimeout(room.turnTimer); room.turnTimer = null; }
+    processDotsMove(roomId, role, col);
   });
 
   // Post-game chat relay
@@ -399,9 +454,9 @@ io.on("connection", (socket) => {
     }
     for (const [roomId, room] of rooms.entries()) {
       if (room.players.includes(socket.id)) {
-        if (room.gameLoop)   clearInterval(room.gameLoop);
+        if (room.gameLoop)      clearInterval(room.gameLoop);
         if (room.reactionTimer) clearTimeout(room.reactionTimer);
-        if (room.turnTimer)  clearTimeout(room.turnTimer);
+        if (room.turnTimer)     clearTimeout(room.turnTimer);
         socket.to(roomId).emit("opponent_left");
         rooms.delete(roomId);
         break;
@@ -543,7 +598,66 @@ function startReactionRound(roomId) {
   }, delay);
 }
 
-// ── Raid turn timer ───────────────────────────────────────────────
+// ── 4 Dots timer and handlers ─────────────────────────────────────
+function startFourDotsTimer(roomId) {
+  const room = rooms.get(roomId);
+  if (!room || !room.gameState || room.gameState.game !== "fourdots") return;
+  const gs = room.gameState;
+  if (gs.phase !== "playing") return;
+
+  if (room.turnTimer) clearTimeout(room.turnTimer);
+  io.to(roomId).emit("fourdots_turn", { turn: gs.turn, board: gs.board });
+
+  room.turnTimer = setTimeout(() => {
+    const r = rooms.get(roomId);
+    if (!r || !r.gameState || r.gameState.game !== "fourdots") return;
+    const gs = r.gameState;
+    if (gs.phase !== "playing") return;
+
+    // Time up — find a valid random column
+    const validCols = [];
+    for (let c = 0; c < COLS; c++) if (!gs.board[0][c]) validCols.push(c);
+    if (validCols.length === 0) return;
+    const col = validCols[Math.floor(Math.random() * validCols.length)];
+
+    io.to(roomId).emit("fourdots_timeout", { role: gs.turn });
+    processDotsMove(roomId, gs.turn, col);
+  }, 5000);
+}
+
+function processDotsMove(roomId, role, col) {
+  const room = rooms.get(roomId);
+  if (!room || !room.gameState) return;
+  const gs = room.gameState;
+
+  const row = dropPiece(gs.board, col, role);
+  if (row === -1) return; // column full — ignore
+
+  const result = checkWinner(gs.board);
+
+  io.to(roomId).emit("fourdots_drop", {
+    col, row, role,
+    board: gs.board,
+    result: result || null
+  });
+
+  if (result) {
+    gs.phase = "done";
+    if (room.turnTimer) clearTimeout(room.turnTimer);
+    if (result.draw) {
+      endGame(roomId, "draw");
+    } else {
+      endGame(roomId, result.winner);
+    }
+    return;
+  }
+
+  // Switch turn
+  gs.turn = role === "left" ? "right" : "left";
+  startFourDotsTimer(roomId);
+}
+
+io.on("connection_fourdots_placeholder", () => {}); // placeholder — handlers added in main io.on block
 function startRaidTurnTimer(roomId) {
   const room = rooms.get(roomId);
   if (!room) return;
