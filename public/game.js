@@ -255,8 +255,13 @@ const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 // Resume audio context on first user interaction (browser policy)
 function resumeAudio() {
   if (audioCtx.state === "suspended") audioCtx.resume();
+  // Unmute remote videos after user interaction
+  ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.muted && el.srcObject) { el.muted = false; el.volume = 1.0; }
+  });
 }
-document.addEventListener("click",     resumeAudio, { once: false });
+document.addEventListener("click",      resumeAudio, { once: false });
 document.addEventListener("touchstart", resumeAudio, { once: false });
 
 function playHitSound() {
@@ -1271,6 +1276,13 @@ socket.on("both_camera_ready", () => {
       startRenderLoop();
     }
     socket.emit("player_ready", { roomId });
+    // Ensure remote stream is assigned to the now-visible side panel
+    if (window._remoteStream) {
+      ["video-remote","video-mobile-remote"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.srcObject = window._remoteStream; el.play().catch(() => {}); }
+      });
+    }
   });
 });
 
