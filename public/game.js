@@ -31,14 +31,20 @@ function initSupabase() {
   const code = params.get("code");
   if (code) {
     console.log("Found OAuth code in URL, exchanging...");
-    console.log("localStorage keys:", Object.keys(localStorage).join(", "));
+    // Manually restore verifier if Supabase can't find it
+    const verifierKey = Object.keys(localStorage).find(k => k.includes("code-verifier"));
+    console.log("Verifier key:", verifierKey, "value:", verifierKey ? localStorage.getItem(verifierKey)?.substring(0, 20) + "..." : "MISSING");
     sbClient.auth.exchangeCodeForSession(code).then(({ data, error }) => {
-      console.log("Exchange result:", data?.session?.user?.email || error?.message || "unknown error");
-      console.log("Full error:", JSON.stringify(error));
+      console.log("Exchange result:", data?.session?.user?.email || error?.message);
       if (data?.session) {
         setUser(data.session.user);
         showScreen("screen-home");
         window.history.replaceState({}, document.title, window.location.pathname);
+      } else {
+        // Verifier mismatch — try getting session directly
+        sbClient.auth.getSession().then(({ data: { session } }) => {
+          if (session) { setUser(session.user); showScreen("screen-home"); }
+        });
       }
     });
     return;
@@ -114,7 +120,10 @@ document.getElementById("btn-google-signin").addEventListener("click", async () 
   if (!sbClient) { alert("Auth not configured."); return; }
   await sbClient.auth.signInWithOAuth({
     provider: "google",
-    options: { redirectTo: "https://www.arcadeface.com" }
+    options: {
+      redirectTo: "https://www.arcadeface.com",
+      queryParams: { access_type: "offline", prompt: "consent" }
+    }
   });
 });
 
