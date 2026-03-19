@@ -232,7 +232,18 @@ io.on("connection", (socket) => {
   socket.on("webrtc_answer", ({ roomId, answer })    => socket.to(roomId).emit("webrtc_answer", { answer }));
   socket.on("webrtc_ice",    ({ roomId, candidate }) => socket.to(roomId).emit("webrtc_ice",    { candidate }));
 
-  // Both players ready — start
+  // Rejoin room after reconnect
+  socket.on("rejoin_room", ({ roomId, role }) => {
+    const room = rooms.get(roomId);
+    if (!room) return;
+    socket.join(roomId);
+    console.log(`[rejoin] ${socket.id} rejoined ${roomId} as ${role}`);
+    // Update player reference in room
+    const idx = role === "left" ? 0 : 1;
+    room.players[idx] = socket.id;
+  });
+
+  // Both players camera ready — start countdown
   socket.on("player_ready", ({ roomId }) => {
     const room = rooms.get(roomId);
     if (!room) return;
