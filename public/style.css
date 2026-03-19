@@ -1086,6 +1086,23 @@ body {
   color: var(--muted);
 }
 
+.raid-placement-status {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.raid-waiting-msg {
+  font-family: var(--pixel);
+  font-size: 9px;
+  color: var(--accent);
+  letter-spacing: 2px;
+  text-align: center;
+  animation: blink 1.2s step-end infinite;
+}
+
 .raid-placement { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
 .raid-combat    { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
 
