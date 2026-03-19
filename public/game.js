@@ -215,7 +215,11 @@ document.getElementById("btn-find-match").addEventListener("click", async () => 
 
 document.getElementById("btn-allow-camera").addEventListener("click", async () => {
   hideOverlay("overlay-camera");
-  await getCamera();
+  const hasCam = await getCamera();
+  if (!hasCam) {
+    alert("Camera access was blocked. Please click the camera/lock icon in your browser's address bar and allow camera access, then refresh the page.");
+    return;
+  }
   showScreen("screen-picker");
 });
 
@@ -336,8 +340,10 @@ function raidPlaceShip(x, y) {
 
   if (raidState.currentShipIdx < RAID_SHIPS.length) {
     btns[raidState.currentShipIdx].classList.add("active");
+    const remaining = RAID_SHIPS.length - raidState.currentShipIdx;
+    document.getElementById("raid-placement-status").textContent = `${remaining} ship${remaining > 1 ? "s" : ""} left to place`;
   } else {
-    // All ships placed — show ready button
+    document.getElementById("raid-placement-status").textContent = "All ships placed — ready to battle!";
     document.getElementById("raid-ready-btn").style.display = "block";
   }
 }
@@ -468,9 +474,10 @@ document.getElementById("raid-orient-v").addEventListener("click", () => {
 // Raid ready button
 document.getElementById("raid-ready-btn").addEventListener("click", () => {
   socket.emit("raid_place_ships", { roomId, role: myRole, ships: raidState.myShips });
-  document.getElementById("raid-ready-btn").textContent = "WAITING FOR OPPONENT...";
-  document.getElementById("raid-ready-btn").disabled = true;
-  document.querySelectorAll(".raid-cell").forEach(el => el.style.cursor = "default");
+  document.getElementById("raid-ready-btn").style.display = "none";
+  document.getElementById("raid-waiting-msg").classList.remove("hidden");
+  document.getElementById("raid-placement-status").textContent = "Waiting for opponent...";
+  document.querySelectorAll("#raid-my-grid-place .raid-cell").forEach(el => el.style.cursor = "default");
 });
 
 document.getElementById("pick-reaction").addEventListener("click", () => {
@@ -664,7 +671,9 @@ function setupGameUI(game) {
     document.getElementById("raid-combat").classList.add("hidden");
     document.getElementById("raid-ready-btn").style.display = "none";
     document.getElementById("raid-ready-btn").disabled = false;
-    document.getElementById("raid-ready-btn").textContent = "READY — FIRE!";
+    document.getElementById("raid-ready-btn").textContent = "&#9654; READY — START BATTLE";
+    document.getElementById("raid-waiting-msg").classList.add("hidden");
+    document.getElementById("raid-placement-status").textContent = "Place all 4 ships to continue";
     document.querySelectorAll(".raid-ship-btn").forEach((b, i) => {
       b.classList.remove("active", "placed");
       if (i === 0) b.classList.add("active");
