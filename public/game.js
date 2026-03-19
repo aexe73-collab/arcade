@@ -717,8 +717,18 @@ const ICE_SERVERS = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
-    { urls: "turn:openrelay.metered.ca:80",  username: "openrelayproject", credential: "openrelayproject" },
-    { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" }
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    // Metered TURN — UDP
+    { urls: "turn:openrelay.metered.ca:80",   username: "openrelayproject", credential: "openrelayproject" },
+    { urls: "turn:openrelay.metered.ca:443",  username: "openrelayproject", credential: "openrelayproject" },
+    // Metered TURN — TCP fallback (works through strict firewalls)
+    { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" },
+    // Cloudflare TURN
+    { urls: "turn:turn.cloudflare.com:3478",  username: "openrelayproject", credential: "openrelayproject" },
+    // Additional STUN servers
+    { urls: "stun:stun.services.mozilla.com" },
+    { urls: "stun:stun.stunprotocol.org:3478" }
   ]
 };
 
@@ -734,6 +744,10 @@ async function startPeerConnection(isInitiator) {
       const el = document.getElementById(id);
       if (el) el.srcObject = s;
     });
+  };
+
+  peerConn.oniceconnectionstatechange = () => {
+    console.log("[ICE]", peerConn.iceConnectionState);
   };
 
   peerConn.onicecandidate = (e) => {
