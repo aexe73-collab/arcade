@@ -1223,7 +1223,29 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
   currentGame = game;
   clearChat();
   await startPeerConnection(role === "left");
-  // Camera already handled at home screen — signal ready immediately
+
+  // If camera not yet acquired, try now
+  if (!localStream) {
+    const hasCam = await getCamera();
+    if (!hasCam) {
+      // Show overlay and wait for user to decide
+      window._cameraDestination = null; // don't navigate away
+      showOverlay("overlay-camera");
+      await new Promise(resolve => {
+        const onDecide = async () => {
+          hideOverlay("overlay-camera");
+          if (!localStream) await getCamera(); // try once more if they clicked allow
+          document.getElementById("btn-allow-camera").removeEventListener("click", onDecide);
+          document.getElementById("btn-skip-camera").removeEventListener("click", onDecide);
+          resolve();
+        };
+        document.getElementById("btn-allow-camera").addEventListener("click", onDecide, { once: true });
+        document.getElementById("btn-skip-camera").addEventListener("click", onDecide, { once: true });
+      });
+    }
+  }
+
+  // Signal server we're ready
   socket.emit("camera_ready", { roomId });
 });
 
