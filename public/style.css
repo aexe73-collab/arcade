@@ -327,12 +327,13 @@ body {
 .btn-ghost {
   font-family: var(--pixel);
   font-size: 10px;
-  padding: 12px 24px;
+  padding: 14px 24px;
   background: transparent;
   color: var(--muted);
   border: 1px solid var(--border);
   cursor: pointer;
   letter-spacing: 2px;
+  line-height: 2;
   transition: color 0.15s, border-color 0.15s;
 }
 
