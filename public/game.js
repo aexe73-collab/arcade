@@ -1276,17 +1276,9 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
   window._remoteStream = null;
   _remoteStreamAssigned = false;
 
-  // Ensure camera is acquired before starting WebRTC
   if (!localStream) await getCamera();
-
-  // Start peer connection — tracks added inside
   await startPeerConnection(role === "left");
 
-  socket.emit("camera_ready", { roomId });
-});
-
-// Server tells us both players are camera-ready — start countdown
-socket.on("both_camera_ready", () => {
   startCountdown(() => {
     setupGameUI(currentGame);
     showScreen("screen-game");
@@ -1294,10 +1286,9 @@ socket.on("both_camera_ready", () => {
       startRenderLoop();
     }
     socket.emit("player_ready", { roomId });
-
-    // Stream already assigned via ontrack — no reassignment needed
   });
 });
+
 
 socket.on("webrtc_offer", async ({ offer }) => {
   if (!peerConn) await startPeerConnection(false);
