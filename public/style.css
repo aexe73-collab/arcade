@@ -75,7 +75,7 @@ body {
   padding: 40px 24px;
   width: 100%;
   max-width: 380px;
-  min-height: 100vh;
+  flex: 1;
   justify-content: center;
 }
 .signin-logo {
@@ -128,7 +128,7 @@ body {
   text-align: center;
   padding: 40px 24px;
   width: 100%;
-  min-height: 100vh;
+  flex: 1;
   justify-content: center;
 }
 .mode-title {
@@ -643,10 +643,6 @@ body {
 .mobile-pips { display: none; }
 
 @media (max-width: 768px) {
-  #screen-picker, #screen-signin, #screen-mode {
-    align-items: flex-start;
-    justify-content: flex-start;
-  }
   .faceoff-layout    { flex-direction: column; }
   .faceoff-panel.faceoff-them { border-right: none; border-bottom: 3px solid var(--accent2); }
   .faceoff-panel.faceoff-you  { border-left: none;  border-top:    3px solid var(--accent); }
@@ -735,7 +731,7 @@ body {
   text-align: center;
   padding: 40px 20px;
   width: 100%;
-  min-height: 100vh;
+  flex: 1;
   justify-content: center;
 }
 
