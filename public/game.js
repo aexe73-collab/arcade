@@ -1251,23 +1251,27 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
 
 // Server tells us both players are camera-ready — start countdown
 socket.on("both_camera_ready", () => {
-  // Re-assign local stream to all video elements in case UI wasn't ready earlier
+  // Assign local stream to all local video elements
   if (localStream) {
     ["video-local","video-faceoff-local","video-mobile-local","video-postgame-local"].forEach(id => {
       const el = document.getElementById(id);
-      if (el && !el.srcObject) el.srcObject = localStream;
+      if (el) el.srcObject = localStream;
     });
   }
+
   startCountdown(() => {
     setupGameUI(currentGame);
     showScreen("screen-game");
-    startRenderLoop();
+    if (currentGame !== "fourdots" && currentGame !== "raid" && currentGame !== "reaction") {
+      startRenderLoop();
+    }
     socket.emit("player_ready", { roomId });
-    // Re-assign remote stream after game UI is shown
-    if (peerConn) {
-      const receivers = peerConn.getReceivers();
-      if (receivers.length > 0) {
-        const tracks = receivers.map(r => r.track).filter(Boolean);
+
+    // Re-assign remote stream now that game screen is visible
+    setTimeout(() => {
+      if (peerConn) {
+        const receivers = peerConn.getReceivers();
+        const tracks = receivers.map(r => r.track).filter(t => t && t.readyState === "live");
         if (tracks.length > 0) {
           const s = new MediaStream(tracks);
           ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
@@ -1276,7 +1280,7 @@ socket.on("both_camera_ready", () => {
           });
         }
       }
-    }
+    }, 300);
   });
 });
 
@@ -1299,12 +1303,12 @@ socket.on("webrtc_ice", async ({ candidate }) => {
 
 socket.on("game_start", ({ gameState: gs }) => {
   gameState = gs;
-  updateScoreDisplay(gs.scores);
+  if (gs.scores) updateScoreDisplay(gs.scores);
 });
 
 socket.on("game_state", ({ gameState: gs }) => {
   gameState = gs;
-  updateScoreDisplay(gs.scores);
+  if (gs.scores) updateScoreDisplay(gs.scores);
 });
 
 socket.on("game_over", ({ winner, scores }) => {
