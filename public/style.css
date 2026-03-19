@@ -65,7 +65,7 @@ body {
 .home-divider::before, .home-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
 /* ── Sign in screen ────────────────────────────────────── */
-#screen-signin { background: var(--bg); }
+#screen-signin { background: var(--bg); overflow-y: auto; align-items: flex-start; justify-content: flex-start; }
 .signin-content {
   display: flex;
   flex-direction: column;
@@ -117,7 +117,7 @@ body {
 .signin-divider::before, .signin-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
 /* ── Mode selector screen ──────────────────────────────── */
-#screen-mode { background: var(--bg); flex-direction: column; }
+#screen-mode { background: var(--bg); flex-direction: column; overflow-y: auto; align-items: flex-start; justify-content: flex-start; }
 .mode-content {
   display: flex;
   flex-direction: column;
@@ -125,6 +125,8 @@ body {
   gap: 28px;
   text-align: center;
   padding: 40px 24px;
+  width: 100%;
+  min-height: 100%;
 }
 .mode-title {
   font-family: var(--pixel);
@@ -714,6 +716,9 @@ body {
 #screen-picker {
   background: var(--bg);
   flex-direction: column;
+  overflow-y: auto;
+  align-items: flex-start;
+  justify-content: flex-start;
 }
 
 .picker-content {
@@ -722,6 +727,9 @@ body {
   align-items: center;
   gap: 28px;
   text-align: center;
+  padding: 40px 20px;
+  width: 100%;
+  min-height: 100%;
 }
 
 .picker-title {
