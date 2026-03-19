@@ -79,11 +79,25 @@ document.getElementById("btn-send-link").addEventListener("click", async () => {
     alert("Auth not configured — add SUPABASE_URL and SUPABASE_ANON_KEY.");
     return;
   }
+
+  const btn = document.getElementById("btn-send-link");
+  btn.textContent = "SENDING...";
+  btn.disabled = true;
+
   const { error } = await sbClient.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: window.location.origin }
+    options: { emailRedirectTo: "https://www.arcadeface.com" }
   });
-  if (error) { console.error(error); return; }
+
+  btn.textContent = "SEND MAGIC LINK";
+  btn.disabled = false;
+
+  if (error) {
+    console.error("Magic link error:", error.message);
+    alert("Error: " + error.message);
+    return;
+  }
+
   document.getElementById("signin-form").classList.add("hidden");
   document.getElementById("signin-sent").classList.remove("hidden");
 });
