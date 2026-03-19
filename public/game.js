@@ -23,42 +23,11 @@ let sbClient = null;
 function initSupabase() {
   if (!SUPABASE_URL || !SUPABASE_KEY) return;
   sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { detectSessionInUrl: true, persistSession: true, flowType: "pkce" }
+    auth: { detectSessionInUrl: true, persistSession: true }
   });
 
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get("code");
-  if (code) {
-    console.log("Found OAuth code in URL, exchanging...");
-    const verifierKey = Object.keys(localStorage).find(k => k.includes("code-verifier"));
-    const verifier = verifierKey ? localStorage.getItem(verifierKey) : null;
-    console.log("Verifier found:", !!verifier);
-
-    // Supabase expects the verifier under a specific key — set it directly
-    if (verifier) {
-      const expectedKey = `sb-${SUPABASE_URL.split("//")[1].split(".")[0]}-auth-token-code-verifier`;
-      localStorage.setItem(expectedKey, verifier);
-      // Also try the exact supabase internal key format
-      localStorage.setItem("supabase.auth.pkce.code_verifier", verifier);
-    }
-
-    sbClient.auth.exchangeCodeForSession(code).then(({ data, error }) => {
-      console.log("Exchange result:", data?.session?.user?.email || error?.message);
-      if (data?.session) {
-        setUser(data.session.user);
-        showScreen("screen-home");
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-    });
-    return;
-  }
-
   sbClient.auth.getSession().then(({ data: { session } }) => {
-    console.log("getSession:", session?.user?.email || "no session");
-    if (session) {
-      setUser(session.user);
-      showScreen("screen-home");
-    }
+    if (session) { setUser(session.user); showScreen("screen-home"); }
   });
 
   sbClient.auth.onAuthStateChange((event, session) => {
@@ -119,16 +88,7 @@ document.getElementById("btn-send-link").addEventListener("click", async () => {
   document.getElementById("signin-sent").classList.remove("hidden");
 });
 
-document.getElementById("btn-google-signin").addEventListener("click", async () => {
-  if (!sbClient) { alert("Auth not configured."); return; }
-  await sbClient.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: "https://www.arcadeface.com",
-      queryParams: { access_type: "offline", prompt: "consent" }
-    }
-  });
-});
+// Google OAuth removed — magic link only for now
 
 document.getElementById("btn-signout").addEventListener("click", async () => {
   if (sbClient) await sbClient.auth.signOut();
