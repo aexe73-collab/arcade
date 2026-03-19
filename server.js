@@ -690,14 +690,24 @@ function endGame(roomId, winner) {
   room.gameState.running = false;
   room.gameState.winner  = winner;
 
-  // Build scores for game_over event — raid uses sunk counts
+  // Build scores for game_over event
   let scores = room.gameState.scores;
   if (room.gameState.game === "raid") {
     scores = {
       left:  room.gameState.boards.left.sunk,
       right: room.gameState.boards.right.sunk
     };
+  } else if (room.gameState.game === "fourdots") {
+    // Count pieces on board as score proxy
+    const board = room.gameState.board;
+    let left = 0, right = 0;
+    board.forEach(row => row.forEach(cell => {
+      if (cell === "left") left++;
+      else if (cell === "right") right++;
+    }));
+    scores = { left, right };
   }
+  if (!scores) scores = { left: 0, right: 0 };
   io.to(roomId).emit("game_over", { winner, scores });
 }
 
