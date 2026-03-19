@@ -256,6 +256,13 @@ document.getElementById("pick-pong").addEventListener("click", () => {
   showScreen("screen-waiting");
 });
 
+document.getElementById("pick-snake").addEventListener("click", () => {
+  currentGame = "snake";
+  document.getElementById("waiting-sub").textContent = "Finding a Snake match\u2026";
+  socket.emit("find_match", { game: "snake" });
+  showScreen("screen-waiting");
+});
+
 document.getElementById("pick-raid").addEventListener("click", () => {
   currentGame = "raid";
   document.getElementById("waiting-sub").textContent = "Finding a Raid match\u2026";
