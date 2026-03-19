@@ -552,18 +552,15 @@ function startRaidTurnTimer(roomId) {
     if (!r || !r.gameState || r.gameState.game !== "raid") return;
     const gs = r.gameState;
     if (gs.phase !== "combat") return;
-    // Auto-fire a random untried cell for the current player
-    const targetRole  = gs.turn === "left" ? "right" : "left";
-    const targetBoard = gs.boards[targetRole];
-    const tried = new Set(targetBoard.shots.map(s => `${s.x},${s.y}`));
-    let x, y;
-    do {
-      x = Math.floor(Math.random() * GRID);
-      y = Math.floor(Math.random() * GRID);
-    } while (tried.has(`${x},${y}`));
-    io.to(roomId).emit("raid_timeout", { role: gs.turn });
-    // Process as a regular shot
-    io.to(roomId).emit("raid_fire", { roomId, role: gs.turn, x, y });
+
+    // Time up — the player whose turn it was loses
+    const loser  = gs.turn;
+    const winner = loser === "left" ? "right" : "left";
+
+    io.to(roomId).emit("raid_timeout", { role: loser });
+    gs.phase  = "done";
+    gs.winner = winner;
+    endGame(roomId, winner);
   }, 15000);
 }
 
