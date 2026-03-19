@@ -341,18 +341,33 @@ io.on("connection", (socket) => {
     }
 
     targetBoard.shots.push({ x, y, hit });
-    if (sunkShip) targetBoard.sunk++;
+
+    // Recount all sunk ships fresh to avoid off-by-one
+    if (hit) {
+      let sunkCount = 0;
+      for (const ship of targetBoard.ships) {
+        const allHit = ship.cells.every(c =>
+          targetBoard.shots.some(s => s.x === c.x && s.y === c.y && s.hit)
+        );
+        if (allHit) {
+          sunkCount++;
+          if (!ship.sunk) { ship.sunk = true; sunkShip = ship; }
+        }
+      }
+      targetBoard.sunk = sunkCount;
+    }
 
     io.to(roomId).emit("raid_shot_result", {
       role, x, y, hit,
-      sunk: sunkShip ? sunkShip : null,
+      sunk: sunkShip || null,
       targetSunk: targetBoard.sunk
     });
 
-    // Check win — all 4 ships sunk
+    // Check win — all buildings destroyed
     if (targetBoard.sunk >= RAID_SHIPS.length) {
       gs.phase  = "done";
       gs.winner = role;
+      if (room.turnTimer) { clearTimeout(room.turnTimer); room.turnTimer = null; }
       endGame(roomId, role);
       return;
     }
