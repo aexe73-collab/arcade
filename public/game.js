@@ -690,15 +690,24 @@ document.getElementById("pick-reaction").addEventListener("click", () => {
 function startCountdown(onComplete) {
   showScreen("screen-faceoff");
 
-  // Assign streams to faceoff screen
+  // Assign local video to faceoff screen
   if (localStream) {
-    const el = document.getElementById("video-faceoff-local");
-    if (el) el.srcObject = localStream;
+    const lv = document.getElementById("video-faceoff-local");
+    if (lv) lv.srcObject = localStream;
   }
-  if (window._remoteStream) {
-    const el = document.getElementById("video-faceoff-remote");
-    if (el) { el.srcObject = window._remoteStream; el.play().catch(() => {}); }
-  }
+
+  // Retry assigning remote stream every second during countdown
+  const assignRemote = () => {
+    if (!window._remoteStream) return;
+    const rv = document.getElementById("video-faceoff-remote");
+    if (!rv) return;
+    rv.srcObject = window._remoteStream;
+    const tryPlay = () => rv.play().catch(() => {});
+    rv.onloadedmetadata = tryPlay;
+    setTimeout(tryPlay, 100);
+  };
+  assignRemote();
+  const remoteRetry = setInterval(assignRemote, 1000);
 
   let count = 10;
   const el = document.getElementById("countdown-number");
@@ -706,14 +715,10 @@ function startCountdown(onComplete) {
   el.style.color = "#00ff88";
 
   const tick = setInterval(() => {
-    // Keep trying to show remote video during countdown
-    if (window._remoteStream) {
-      const fr = document.getElementById("video-faceoff-remote");
-      if (fr && !fr.srcObject) { fr.srcObject = window._remoteStream; fr.play().catch(() => {}); }
-    }
     count--;
     if (count <= 0) {
       clearInterval(tick);
+      clearInterval(remoteRetry);
       el.textContent = "GO!";
       el.style.color = "#ff3366";
       setTimeout(onComplete, 700);
@@ -1272,11 +1277,17 @@ socket.on("both_camera_ready", () => {
       startRenderLoop();
     }
     socket.emit("player_ready", { roomId });
-    // Ensure remote stream is assigned to the now-visible side panel
+
+    // Stream arrives before game screen is visible — reassign now it's showing
     if (window._remoteStream) {
       ["video-remote","video-mobile-remote"].forEach(id => {
         const el = document.getElementById(id);
-        if (el) { el.srcObject = window._remoteStream; el.play().catch(() => {}); }
+        if (!el) return;
+        el.srcObject = window._remoteStream;
+        const tryPlay = () => el.play().catch(() => {});
+        el.onloadedmetadata = tryPlay;
+        setTimeout(tryPlay, 100);
+        setTimeout(tryPlay, 600);
       });
     }
   });
