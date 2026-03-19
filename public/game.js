@@ -204,13 +204,20 @@ async function getCamera() {
 
 // ── Camera permission helper ──────────────────────────────────────
 async function requestCameraThenProceed(destination) {
+  // Try camera — if it succeeds (already granted or user allows), proceed silently
   const hasCam = await getCamera();
   if (hasCam) {
     showScreen(destination);
-  } else {
-    showOverlay("overlay-camera");
-    // Store where to go after camera decision
+    return;
+  }
+  // Only show custom overlay if camera is definitely blocked (not just pending)
+  const permissionStatus = await navigator.permissions?.query({ name: "camera" }).catch(() => null);
+  if (permissionStatus?.state === "denied") {
     window._cameraDestination = destination;
+    showOverlay("overlay-camera");
+  } else {
+    // Permission prompt was dismissed or unavailable — just proceed without camera
+    showScreen(destination);
   }
 }
 
@@ -255,6 +262,13 @@ document.getElementById("pick-raid").addEventListener("click", () => {
 
 // ── Sound effects ─────────────────────────────────────────────────
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+// Resume audio context on first user interaction (browser policy)
+function resumeAudio() {
+  if (audioCtx.state === "suspended") audioCtx.resume();
+}
+document.addEventListener("click",     resumeAudio, { once: false });
+document.addEventListener("touchstart", resumeAudio, { once: false });
 
 function playHitSound() {
   try {
@@ -397,7 +411,7 @@ function raidPlaceShip(x, y) {
   if (raidState.currentShipIdx < RAID_SHIPS.length) {
     btns[raidState.currentShipIdx].classList.add("active");
     const remaining = RAID_SHIPS.length - raidState.currentShipIdx;
-    document.getElementById("raid-placement-status").textContent = `${remaining} ship${remaining > 1 ? "s" : ""} left to place`;
+    document.getElementById("raid-placement-status").textContent = `${remaining} building${remaining > 1 ? "s" : ""} left to place`;
   } else {
     document.getElementById("raid-placement-status").textContent = "All buildings placed — ready to battle!";
     document.getElementById("raid-ready-btn").style.display = "block";
