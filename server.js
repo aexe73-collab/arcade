@@ -51,11 +51,40 @@ app.post("/api/subscribe", (req, res) => {
 });
 
 // Separate waiting queues per game
-const waitingQueues = { pong: null, snake: null, reaction: null };
+const waitingQueues = { pong: null, snake: null, reaction: null, raid: null };
 const rooms = new Map();
 
 function generateRoomId() {
   return Math.random().toString(36).substring(2, 9);
+}
+
+// ── Raid (Battleship) state ───────────────────────────────────────
+const RAID_SHIPS = [4, 3, 2, 2]; // ship sizes
+const GRID = 8;
+
+function createRaidState() {
+  return {
+    game: "raid",
+    phase: "placement", // placement | combat | done
+    boards: {
+      left:  { ships: [], shots: [], sunk: 0 },
+      right: { ships: [], shots: [], sunk: 0 }
+    },
+    turn: "left", // whose turn to fire
+    readyCount: 0,
+    turnTimer: null,
+    winner: null
+  };
+}
+
+function checkSunk(board) {
+  // Count fully sunk ships
+  let sunk = 0;
+  for (const ship of board.ships) {
+    const hits = ship.cells.filter(c => board.shots.some(s => s.x === c.x && s.y === c.y && s.hit));
+    if (hits.length === ship.cells.length) sunk++;
+  }
+  return sunk;
 }
 
 // ── Pong state ────────────────────────────────────────────────────
@@ -129,8 +158,9 @@ io.on("connection", (socket) => {
       io.sockets.sockets.get(player1)?.join(roomId);
       socket.join(roomId);
 
-      const gameState = game === "snake" ? createSnakeState()
+      const gameState = game === "snake"    ? createSnakeState()
                       : game === "reaction" ? createReactionState()
+                      : game === "raid"     ? createRaidState()
                       : createPongState();
       rooms.set(roomId, {
         players: [player1, player2],
@@ -242,6 +272,84 @@ io.on("connection", (socket) => {
     const clean = text.trim().substring(0, 120);
     socket.to(roomId).emit("chat_msg", { text: clean });
   });
+
+  // ── Raid: player places ships ─────────────────────────────────
+  socket.on("raid_place_ships", ({ roomId, role, ships }) => {
+    const room = rooms.get(roomId);
+    if (!room || !room.gameState || room.gameState.game !== "raid") return;
+    const gs = room.gameState;
+    if (gs.phase !== "placement") return;
+
+    gs.boards[role].ships = ships;
+    gs.readyCount++;
+
+    io.to(roomId).emit("raid_player_placed", { role });
+
+    if (gs.readyCount >= 2) {
+      gs.phase = "combat";
+      gs.turn  = "left";
+      io.to(roomId).emit("raid_combat_start", { turn: gs.turn });
+      startRaidTurnTimer(roomId);
+    }
+  });
+
+  // ── Raid: player fires ────────────────────────────────────────
+  socket.on("raid_fire", ({ roomId, role, x, y }) => {
+    const room = rooms.get(roomId);
+    if (!room || !room.gameState || room.gameState.game !== "raid") return;
+    const gs = room.gameState;
+
+    if (gs.phase !== "combat") return;
+    if (gs.turn !== role) return; // not your turn
+
+    // Clear turn timer
+    if (room.turnTimer) { clearTimeout(room.turnTimer); room.turnTimer = null; }
+
+    // Target the opponent's board
+    const targetRole  = role === "left" ? "right" : "left";
+    const targetBoard = gs.boards[targetRole];
+
+    // Already shot here?
+    if (targetBoard.shots.some(s => s.x === x && s.y === y)) return;
+
+    // Check hit
+    let hit = false;
+    let sunkShip = null;
+    for (const ship of targetBoard.ships) {
+      if (ship.cells.some(c => c.x === x && c.y === y)) {
+        hit = true;
+        // Check if this shot sinks the ship
+        const hitCells = ship.cells.filter(c =>
+          targetBoard.shots.some(s => s.x === c.x && s.y === c.y && s.hit) ||
+          (c.x === x && c.y === y)
+        );
+        if (hitCells.length === ship.cells.length) sunkShip = ship;
+        break;
+      }
+    }
+
+    targetBoard.shots.push({ x, y, hit });
+    if (sunkShip) targetBoard.sunk++;
+
+    io.to(roomId).emit("raid_shot_result", {
+      role, x, y, hit,
+      sunk: sunkShip ? sunkShip : null,
+      targetSunk: targetBoard.sunk
+    });
+
+    // Check win — all 4 ships sunk
+    if (targetBoard.sunk >= RAID_SHIPS.length) {
+      gs.phase  = "done";
+      gs.winner = role;
+      endGame(roomId, role);
+      return;
+    }
+
+    // Switch turn
+    gs.turn = targetRole;
+    io.to(roomId).emit("raid_turn", { turn: gs.turn });
+    startRaidTurnTimer(roomId);
+  });
   socket.on("request_rematch", ({ roomId }) => {
     const room = rooms.get(roomId);
     if (!room) return;
@@ -263,8 +371,9 @@ io.on("connection", (socket) => {
     }
     for (const [roomId, room] of rooms.entries()) {
       if (room.players.includes(socket.id)) {
-        if (room.gameLoop) clearInterval(room.gameLoop);
+        if (room.gameLoop)   clearInterval(room.gameLoop);
         if (room.reactionTimer) clearTimeout(room.reactionTimer);
+        if (room.turnTimer)  clearTimeout(room.turnTimer);
         socket.to(roomId).emit("opponent_left");
         rooms.delete(roomId);
         break;
@@ -404,6 +513,30 @@ function startReactionRound(roomId) {
     r.gameState.flashTime = Date.now();
     io.to(roomId).emit("reaction_go");
   }, delay);
+}
+
+// ── Raid turn timer ───────────────────────────────────────────────
+function startRaidTurnTimer(roomId) {
+  const room = rooms.get(roomId);
+  if (!room) return;
+  room.turnTimer = setTimeout(() => {
+    const r = rooms.get(roomId);
+    if (!r || !r.gameState || r.gameState.game !== "raid") return;
+    const gs = r.gameState;
+    if (gs.phase !== "combat") return;
+    // Auto-fire a random untried cell for the current player
+    const targetRole  = gs.turn === "left" ? "right" : "left";
+    const targetBoard = gs.boards[targetRole];
+    const tried = new Set(targetBoard.shots.map(s => `${s.x},${s.y}`));
+    let x, y;
+    do {
+      x = Math.floor(Math.random() * GRID);
+      y = Math.floor(Math.random() * GRID);
+    } while (tried.has(`${x},${y}`));
+    io.to(roomId).emit("raid_timeout", { role: gs.turn });
+    // Process as a regular shot
+    io.to(roomId).emit("raid_fire", { roomId, role: gs.turn, x, y });
+  }, 15000);
 }
 
 function endGame(roomId, winner) {
