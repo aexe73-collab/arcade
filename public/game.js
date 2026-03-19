@@ -698,13 +698,7 @@ function startCountdown(onComplete) {
 
   // Retry assigning remote stream every second during countdown
   const assignRemote = () => {
-    if (!window._remoteStream) return;
-    const rv = document.getElementById("video-faceoff-remote");
-    if (!rv) return;
-    rv.srcObject = window._remoteStream;
-    const tryPlay = () => rv.play().catch(() => {});
-    rv.onloadedmetadata = tryPlay;
-    setTimeout(tryPlay, 100);
+    if (window._remoteStream) assignRemoteStream(window._remoteStream);
   };
   assignRemote();
   const remoteRetry = setInterval(assignRemote, 1000);
@@ -746,19 +740,31 @@ async function startPeerConnection(isInitiator) {
   peerConn = new RTCPeerConnection(ICE_SERVERS);
   if (localStream) localStream.getTracks().forEach(t => peerConn.addTrack(t, localStream));
 
+function assignRemoteStream(s) {
+  if (!s) return;
+  ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.srcObject !== s) el.srcObject = s;
+    // Poll play() until it succeeds — works regardless of visibility or Safari quirks
+    let attempts = 0;
+    const tryPlay = () => {
+      if (attempts++ > 20) return; // give up after 10 seconds
+      el.play().then(() => {
+        console.log("[RTC] playing:", id);
+      }).catch(() => {
+        setTimeout(tryPlay, 500);
+      });
+    };
+    tryPlay();
+  });
+}
+
   peerConn.ontrack = (event) => {
     const s = event.streams[0];
     console.log("[RTC] ontrack! tracks:", s.getTracks().map(t=>t.kind), "stream active:", s.active);
     window._remoteStream = s;
-    ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.srcObject = s;
-      const tryPlay = () => el.play().catch(() => {});
-      el.onloadedmetadata = tryPlay;
-      setTimeout(tryPlay, 300);
-      setTimeout(tryPlay, 1000);
-    });
+    assignRemoteStream(s);
   };
 
   peerConn.oniceconnectionstatechange = () => {
@@ -1279,17 +1285,7 @@ socket.on("both_camera_ready", () => {
     socket.emit("player_ready", { roomId });
 
     // Stream arrives before game screen is visible — reassign now it's showing
-    if (window._remoteStream) {
-      ["video-remote","video-mobile-remote"].forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.srcObject = window._remoteStream;
-        const tryPlay = () => el.play().catch(() => {});
-        el.onloadedmetadata = tryPlay;
-        setTimeout(tryPlay, 100);
-        setTimeout(tryPlay, 600);
-      });
-    }
+    if (window._remoteStream) assignRemoteStream(window._remoteStream);
   });
 });
 
