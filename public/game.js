@@ -696,14 +696,7 @@ function startCountdown(onComplete) {
     if (lv) lv.srcObject = localStream;
   }
 
-  // Retry assigning remote stream during countdown only if not yet playing
-  const assignRemote = () => {
-    if (!window._remoteStream) return;
-    const rv = document.getElementById("video-faceoff-remote");
-    if (rv && rv.paused) assignRemoteStream(window._remoteStream);
-  };
-  assignRemote();
-  const remoteRetry = setInterval(assignRemote, 2000);
+  const remoteRetry = null; // no retry needed — canplay event handles it
 
   let count = 10;
   const el = document.getElementById("countdown-number");
@@ -738,28 +731,38 @@ const ICE_SERVERS = {
   ]
 };
 
-// Track pending play timers to avoid AbortError from overlapping calls
-const _playTimers = {};
+let _remoteStreamAssigned = false;
 
 function assignRemoteStream(s) {
   if (!s) return;
+  if (_remoteStreamAssigned) return; // only assign once per match
+  _remoteStreamAssigned = true;
+  console.log("[RTC] assigning stream to all video elements");
   ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    // Already playing this stream on this element — skip
-    if (el.srcObject === s && !el.paused) return;
-    // Cancel any pending assignment for this element
-    if (_playTimers[id]) { clearTimeout(_playTimers[id]); delete _playTimers[id]; }
     el.muted = true;
     el.srcObject = s;
-    _playTimers[id] = setTimeout(() => {
-      delete _playTimers[id];
+    // Use canplay event — fires when browser is ready, avoids AbortError
+    const onCanPlay = () => {
+      el.removeEventListener("canplay", onCanPlay);
       el.play().then(() => {
         console.log("[RTC] playing:", id);
         el.muted = false;
         el.volume = 1.0;
-      }).catch(e => console.warn("[RTC] play failed:", id, e.name, e.message));
-    }, 200);
+      }).catch(e => console.warn("[RTC] canplay play failed:", id, e.name));
+    };
+    el.addEventListener("canplay", onCanPlay);
+    // Fallback: if canplay already fired or won't fire, try after delay
+    setTimeout(() => {
+      if (el.paused) {
+        el.play().then(() => {
+          console.log("[RTC] fallback playing:", id);
+          el.muted = false;
+          el.volume = 1.0;
+        }).catch(() => {});
+      }
+    }, 1000);
   });
 }
 
@@ -1271,6 +1274,7 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
   currentGame = game;
   clearChat();
   window._remoteStream = null;
+  _remoteStreamAssigned = false;
 
   // Ensure camera is acquired before starting WebRTC
   if (!localStream) await getCamera();
@@ -1291,8 +1295,7 @@ socket.on("both_camera_ready", () => {
     }
     socket.emit("player_ready", { roomId });
 
-    // Stream arrives before game screen is visible — reassign now it's showing
-    if (window._remoteStream) assignRemoteStream(window._remoteStream);
+    // Stream already assigned via ontrack — no reassignment needed
   });
 });
 
