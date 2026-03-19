@@ -204,21 +204,10 @@ async function getCamera() {
 
 // ── Camera permission helper ──────────────────────────────────────
 async function requestCameraThenProceed(destination) {
-  // Try camera — if it succeeds (already granted or user allows), proceed silently
-  const hasCam = await getCamera();
-  if (hasCam) {
-    showScreen(destination);
-    return;
-  }
-  // Only show custom overlay if camera is definitely blocked (not just pending)
-  const permissionStatus = await navigator.permissions?.query({ name: "camera" }).catch(() => null);
-  if (permissionStatus?.state === "denied") {
-    window._cameraDestination = destination;
-    showOverlay("overlay-camera");
-  } else {
-    // Permission prompt was dismissed or unavailable — just proceed without camera
-    showScreen(destination);
-  }
+  // Request camera silently — browser shows its own prompt if needed
+  // Never show custom overlay — it flashes and confuses users
+  await getCamera();
+  showScreen(destination);
 }
 
 // ── Game picker (guest — home screen click) ───────────────────────
@@ -536,8 +525,14 @@ socket.on("raid_turn", ({ turn }) => {
 });
 
 socket.on("raid_timeout", ({ role }) => {
+  if (raidState.timerInterval) clearInterval(raidState.timerInterval);
+  const label = document.getElementById("raid-turn-label");
   if (role === myRole) {
-    document.getElementById("raid-turn-label").textContent = "TIME UP — AUTO FIRED";
+    label.textContent = "TIME UP — YOU LOSE!";
+    label.style.color = "var(--accent2)";
+  } else {
+    label.textContent = "TIME UP — YOU WIN!";
+    label.style.color = "var(--accent)";
   }
 });
 
@@ -613,7 +608,11 @@ async function startPeerConnection(isInitiator) {
     const s = event.streams[0];
     ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.srcObject = s;
+      if (el) {
+        el.srcObject = s;
+        // Ensure audio plays by attempting play after stream is set
+        el.play().catch(() => {});
+      }
     });
   };
 
