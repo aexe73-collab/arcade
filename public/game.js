@@ -230,7 +230,247 @@ document.getElementById("pick-pong").addEventListener("click", () => {
   showScreen("screen-waiting");
 });
 
-document.getElementById("pick-reaction").addEventListener("click", () => {
+document.getElementById("pick-raid").addEventListener("click", () => {
+  currentGame = "raid";
+  document.getElementById("waiting-sub").textContent = "Finding a Raid opponent\u2026";
+  socket.emit("find_match", { game: "raid" });
+  showScreen("screen-waiting");
+});
+
+// ── Raid game logic ───────────────────────────────────────────────
+const RAID_SHIPS = [4, 3, 2, 2];
+const GRID_SIZE  = 8;
+
+let raidState = {
+  myShips:      [],   // placed ships [{cells:[{x,y}]}]
+  shipsToPlace: [...RAID_SHIPS],
+  currentShipIdx: 0,
+  orientation: "h",  // h | v
+  myShots:      [],   // shots I've fired
+  theirShots:   [],   // shots fired at me
+  myTurn:       false,
+  timerInterval: null
+};
+
+function buildRaidGrid(containerId, clickable, isEnemy) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const cell = document.createElement("div");
+      cell.className = "raid-cell";
+      cell.dataset.x = x;
+      cell.dataset.y = y;
+      if (clickable) {
+        cell.addEventListener("click",       () => isEnemy ? raidFire(x, y) : raidPlaceShip(x, y));
+        cell.addEventListener("mouseenter",  () => !isEnemy && raidPreview(x, y, true));
+        cell.addEventListener("mouseleave",  () => !isEnemy && raidClearPreview());
+      }
+      container.appendChild(cell);
+    }
+  }
+}
+
+function getRaidCell(containerId, x, y) {
+  return document.querySelector(`#${containerId} [data-x="${x}"][data-y="${y}"]`);
+}
+
+function raidPreview(x, y, show) {
+  raidClearPreview();
+  if (!show) return;
+  const size   = RAID_SHIPS[raidState.currentShipIdx];
+  const orient = raidState.orientation;
+  const cells  = getShipCells(x, y, size, orient);
+  const valid  = cells && !collidesWithPlaced(cells);
+  cells?.forEach(c => {
+    const el = getRaidCell("raid-my-grid-place", c.x, c.y);
+    if (el) el.classList.add(valid ? "preview" : "preview-invalid");
+  });
+}
+
+function raidClearPreview() {
+  document.querySelectorAll("#raid-my-grid-place .preview, #raid-my-grid-place .preview-invalid")
+    .forEach(el => { el.classList.remove("preview", "preview-invalid"); });
+}
+
+function getShipCells(x, y, size, orient) {
+  const cells = [];
+  for (let i = 0; i < size; i++) {
+    const cx = orient === "h" ? x + i : x;
+    const cy = orient === "v" ? y + i : y;
+    if (cx >= GRID_SIZE || cy >= GRID_SIZE) return null;
+    cells.push({ x: cx, y: cy });
+  }
+  return cells;
+}
+
+function collidesWithPlaced(cells) {
+  for (const ship of raidState.myShips) {
+    for (const c of cells) {
+      if (ship.cells.some(sc => sc.x === c.x && sc.y === c.y)) return true;
+    }
+  }
+  return false;
+}
+
+function raidPlaceShip(x, y) {
+  if (raidState.currentShipIdx >= RAID_SHIPS.length) return;
+  const size  = RAID_SHIPS[raidState.currentShipIdx];
+  const cells = getShipCells(x, y, size, raidState.orientation);
+  if (!cells || collidesWithPlaced(cells)) return;
+
+  raidState.myShips.push({ cells, size });
+
+  // Mark cells on grid
+  cells.forEach(c => {
+    const el = getRaidCell("raid-my-grid-place", c.x, c.y);
+    if (el) { el.classList.remove("preview", "preview-invalid"); el.classList.add("ship"); }
+  });
+
+  // Mark ship as placed in UI
+  const btns = document.querySelectorAll(".raid-ship-btn");
+  btns[raidState.currentShipIdx].classList.remove("active");
+  btns[raidState.currentShipIdx].classList.add("placed");
+  raidState.currentShipIdx++;
+
+  if (raidState.currentShipIdx < RAID_SHIPS.length) {
+    btns[raidState.currentShipIdx].classList.add("active");
+  } else {
+    // All ships placed — show ready button
+    document.getElementById("raid-ready-btn").style.display = "block";
+  }
+}
+
+function raidFire(x, y) {
+  if (!raidState.myTurn) return;
+  if (raidState.myShots.some(s => s.x === x && s.y === y)) return;
+  socket.emit("raid_fire", { roomId, role: myRole, x, y });
+}
+
+function raidUpdateMyGrid() {
+  // Show their shots on my grid
+  raidState.theirShots.forEach(shot => {
+    const el = getRaidCell("raid-my-grid-combat", shot.x, shot.y);
+    if (!el) return;
+    el.classList.add(shot.hit ? "hit" : "miss");
+    el.classList.add("no-click");
+  });
+  // Show my ships on my grid
+  raidState.myShips.forEach(ship => {
+    ship.cells.forEach(c => {
+      const el = getRaidCell("raid-my-grid-combat", c.x, c.y);
+      if (el && !el.classList.contains("hit")) el.classList.add("ship");
+    });
+  });
+}
+
+function raidUpdateEnemyGrid() {
+  raidState.myShots.forEach(shot => {
+    const el = getRaidCell("raid-enemy-grid", shot.x, shot.y);
+    if (!el) return;
+    el.classList.add(shot.hit ? "hit" : "miss");
+    el.classList.add("no-click");
+  });
+}
+
+function raidStartTimer(seconds) {
+  if (raidState.timerInterval) clearInterval(raidState.timerInterval);
+  const fill = document.getElementById("raid-timer-fill");
+  if (!fill) return;
+  fill.style.transition = "none";
+  fill.style.width = "100%";
+  fill.classList.remove("urgent");
+  let remaining = seconds;
+  setTimeout(() => {
+    fill.style.transition = `width ${seconds}s linear`;
+    fill.style.width = "0%";
+  }, 50);
+  raidState.timerInterval = setInterval(() => {
+    remaining--;
+    if (remaining <= 5) fill.classList.add("urgent");
+    if (remaining <= 0) clearInterval(raidState.timerInterval);
+  }, 1000);
+}
+
+// Raid socket events
+socket.on("raid_player_placed", ({ role }) => {
+  const label = document.getElementById("raid-phase-label") || document.getElementById("raid-turn-label");
+  if (role !== myRole && label) label.textContent = "OPPONENT READY — WAITING FOR YOU...";
+});
+
+socket.on("raid_combat_start", ({ turn }) => {
+  document.getElementById("raid-placement").classList.add("hidden");
+  document.getElementById("raid-combat").classList.remove("hidden");
+  buildRaidGrid("raid-my-grid-combat",  false, false);
+  buildRaidGrid("raid-enemy-grid",      true,  true);
+  raidUpdateMyGrid();
+  raidState.myTurn = turn === myRole;
+  const label = document.getElementById("raid-turn-label");
+  label.textContent = raidState.myTurn ? "YOUR TURN — FIRE!" : "THEIR TURN";
+  label.className = "raid-turn-label" + (raidState.myTurn ? "" : " their-turn");
+  raidStartTimer(15);
+});
+
+socket.on("raid_shot_result", ({ role, x, y, hit, sunk, targetSunk }) => {
+  const iMyShot = role === myRole;
+
+  if (iMyShot) {
+    raidState.myShots.push({ x, y, hit });
+    raidUpdateEnemyGrid();
+    if (sunk) {
+      sunk.cells.forEach(c => {
+        const el = getRaidCell("raid-enemy-grid", c.x, c.y);
+        if (el) el.classList.add("sunk");
+      });
+    }
+    document.getElementById("raid-their-sunk").textContent = targetSunk;
+  } else {
+    raidState.theirShots.push({ x, y, hit });
+    raidUpdateMyGrid();
+    if (sunk) {
+      sunk.cells.forEach(c => {
+        const el = getRaidCell("raid-my-grid-combat", c.x, c.y);
+        if (el) el.classList.add("sunk");
+      });
+    }
+    document.getElementById("raid-my-sunk").textContent = targetSunk;
+  }
+});
+
+socket.on("raid_turn", ({ turn }) => {
+  raidState.myTurn = turn === myRole;
+  const label = document.getElementById("raid-turn-label");
+  label.textContent = raidState.myTurn ? "YOUR TURN — FIRE!" : "THEIR TURN";
+  label.className = "raid-turn-label" + (raidState.myTurn ? "" : " their-turn");
+  raidStartTimer(15);
+});
+
+socket.on("raid_timeout", ({ role }) => {
+  if (role === myRole) {
+    document.getElementById("raid-turn-label").textContent = "TIME UP — AUTO FIRED";
+  }
+});
+
+// Raid orientation toggle
+document.getElementById("raid-orient-h").addEventListener("click", () => {
+  raidState.orientation = "h";
+  document.getElementById("raid-orient-h").classList.add("active");
+  document.getElementById("raid-orient-v").classList.remove("active");
+});
+
+document.getElementById("raid-orient-v").addEventListener("click", () => {
+  raidState.orientation = "v";
+  document.getElementById("raid-orient-v").classList.add("active");
+  document.getElementById("raid-orient-h").classList.remove("active");
+});
+
+// Raid ready button
+document.getElementById("raid-ready-btn").addEventListener("click", () => {
+  socket.emit("raid_place_ships", { roomId, role: myRole, ships: raidState.myShips });
+  document.getElementById("raid-ready-btn").textContent = "WAITING FOR OPPONENT...";
+  document.getElementById("raid-ready-btn").disabled = true;
+  document.querySelectorAll(".raid-cell").forEach(el => el.style.cursor = "default");
+});
   currentGame = "reaction";
   document.getElementById("waiting-sub").textContent = "Finding a Reflex player\u2026";
   socket.emit("find_match", { game: "reaction" });
@@ -393,20 +633,46 @@ function setupGameUI(game) {
   const bannerGameFixed= document.getElementById("banner-game-fixed");
   const canvas         = document.getElementById("pong-canvas");
   const reactionUI     = document.getElementById("reaction-ui");
-  const gameName       = game === "snake" ? "SNAKE" : game === "reaction" ? "REFLEX" : "PONG";
-
+  const raidUI         = document.getElementById("raid-ui");
+  const gameName = game === "snake" ? "SNAKE" : game === "reaction" ? "REFLEX" : game === "raid" ? "RAID" : "PONG";
   if (bannerGame)      bannerGame.textContent      = gameName;
   if (bannerGameFixed) bannerGameFixed.textContent = gameName;
 
   if (game === "reaction") {
     canvas.style.display     = "none";
     reactionUI.style.display = "flex";
+    raidUI.style.display     = "none";
     hint.innerHTML           = '<span>Tap the circle when it turns green!</span>';
     status.textContent       = "FIRST TO 3";
     dpad.style.display       = "none";
+  } else if (game === "raid") {
+    canvas.style.display     = "none";
+    reactionUI.style.display = "none";
+    raidUI.style.display     = "flex";
+    hint.innerHTML           = '<span>Place your ships — then fire!</span>';
+    status.textContent       = "SINK ALL 4";
+    dpad.style.display       = "none";
+    // Init raid state
+    raidState = {
+      myShips: [], shipsToPlace: [...RAID_SHIPS], currentShipIdx: 0,
+      orientation: "h", myShots: [], theirShots: [], myTurn: false, timerInterval: null
+    };
+    document.getElementById("raid-placement").classList.remove("hidden");
+    document.getElementById("raid-combat").classList.add("hidden");
+    document.getElementById("raid-ready-btn").style.display = "none";
+    document.getElementById("raid-ready-btn").disabled = false;
+    document.getElementById("raid-ready-btn").textContent = "READY — FIRE!";
+    document.querySelectorAll(".raid-ship-btn").forEach((b, i) => {
+      b.classList.remove("active", "placed");
+      if (i === 0) b.classList.add("active");
+    });
+    document.getElementById("raid-orient-h").classList.add("active");
+    document.getElementById("raid-orient-v").classList.remove("active");
+    buildRaidGrid("raid-my-grid-place", true, false);
   } else {
     canvas.style.display     = "block";
     reactionUI.style.display = "none";
+    raidUI.style.display     = "none";
     if (game === "snake") {
       hint.innerHTML     = '<span>Arrow keys / WASD &nbsp;&mdash;&nbsp; steer</span>';
       status.textContent = "FIRST TO 3 ROUNDS";
