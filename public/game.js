@@ -685,22 +685,15 @@ document.getElementById("pick-reaction").addEventListener("click", () => {
 function startCountdown(onComplete) {
   showScreen("screen-faceoff");
 
-  // Assign local video to faceoff screen
+  // Assign streams to faceoff screen
   if (localStream) {
-    const fl = document.getElementById("video-faceoff-local");
-    if (fl) fl.srcObject = localStream;
+    const el = document.getElementById("video-faceoff-local");
+    if (el) el.srcObject = localStream;
   }
-
-  // Retry remote stream assignment every second during countdown
-  const streamRetry = setInterval(() => {
-    if (window._remoteStream) {
-      const fr = document.getElementById("video-faceoff-remote");
-      if (fr && (!fr.srcObject || fr.readyState === 0)) {
-        fr.srcObject = window._remoteStream;
-        fr.play().catch(() => {});
-      }
-    }
-  }, 500);
+  if (window._remoteStream) {
+    const el = document.getElementById("video-faceoff-remote");
+    if (el) { el.srcObject = window._remoteStream; el.play().catch(() => {}); }
+  }
 
   let count = 10;
   const el = document.getElementById("countdown-number");
@@ -708,10 +701,14 @@ function startCountdown(onComplete) {
   el.style.color = "#00ff88";
 
   const tick = setInterval(() => {
+    // Keep trying to show remote video during countdown
+    if (window._remoteStream) {
+      const fr = document.getElementById("video-faceoff-remote");
+      if (fr && !fr.srcObject) { fr.srcObject = window._remoteStream; fr.play().catch(() => {}); }
+    }
     count--;
     if (count <= 0) {
       clearInterval(tick);
-      clearInterval(streamRetry);
       el.textContent = "GO!";
       el.style.color = "#ff3366";
       setTimeout(onComplete, 700);
@@ -741,18 +738,11 @@ async function startPeerConnection(isInitiator) {
 
   peerConn.ontrack = (event) => {
     const s = event.streams[0];
-    console.log("ontrack fired, streams:", event.streams.length, "tracks:", s?.getTracks().length);
+    window._remoteStream = s;
     ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
       const el = document.getElementById(id);
-      if (el) {
-        el.srcObject = s;
-        el.muted = false;
-        el.volume = 1.0;
-        el.play().catch(() => {});
-      }
+      if (el) { el.srcObject = s; el.muted = false; el.volume = 1.0; el.play().catch(() => {}); }
     });
-    // Store stream reference for reassignment
-    window._remoteStream = s;
   };
 
   peerConn.onicecandidate = (e) => {
@@ -1274,14 +1264,6 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
 
 // Server tells us both players are camera-ready — start countdown
 socket.on("both_camera_ready", () => {
-  // Assign local stream to all local video elements
-  if (localStream) {
-    ["video-local","video-faceoff-local","video-mobile-local","video-postgame-local"].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.srcObject = localStream;
-    });
-  }
-
   startCountdown(() => {
     setupGameUI(currentGame);
     showScreen("screen-game");
@@ -1289,21 +1271,6 @@ socket.on("both_camera_ready", () => {
       startRenderLoop();
     }
     socket.emit("player_ready", { roomId });
-
-    // Re-assign remote stream now that game screen is visible
-    setTimeout(() => {
-      const s = window._remoteStream || (() => {
-        if (!peerConn) return null;
-        const tracks = peerConn.getReceivers().map(r => r.track).filter(t => t && t.readyState === "live");
-        return tracks.length > 0 ? new MediaStream(tracks) : null;
-      })();
-      if (s) {
-        ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) { el.srcObject = s; el.muted = false; el.volume = 1.0; el.play().catch(() => {}); }
-        });
-      }
-    }, 300);
   });
 });
 
