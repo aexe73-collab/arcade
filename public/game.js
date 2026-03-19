@@ -9,7 +9,7 @@ let localStream = null;
 let peerConn    = null;
 let animFrameId = null;
 let currentUser = null;   // Supabase user object
-let playMode    = "stranger"; // stranger | friend | group
+let playMode    = "random"; // random | friend | group
 
 const canvas = document.getElementById("pong-canvas");
 const ctx    = canvas.getContext("2d");
@@ -120,7 +120,7 @@ document.getElementById("btn-mode-back").addEventListener("click", () => {
 });
 
 document.getElementById("mode-stranger").addEventListener("click", () => {
-  playMode = "stranger";
+  playMode = "random";
   showScreen("screen-picker");
 });
 
@@ -237,14 +237,14 @@ document.getElementById("btn-skip-camera").addEventListener("click", () => {
 
 document.getElementById("pick-pong").addEventListener("click", () => {
   currentGame = "pong";
-  document.getElementById("waiting-sub").textContent = "Finding a Pong player\u2026";
+  document.getElementById("waiting-sub").textContent = "Finding a Pong match\u2026";
   socket.emit("find_match", { game: "pong" });
   showScreen("screen-waiting");
 });
 
 document.getElementById("pick-raid").addEventListener("click", () => {
   currentGame = "raid";
-  document.getElementById("waiting-sub").textContent = "Finding a Raid opponent\u2026";
+  document.getElementById("waiting-sub").textContent = "Finding a Raid match\u2026";
   socket.emit("find_match", { game: "raid" });
   showScreen("screen-waiting");
 });
@@ -560,7 +560,7 @@ document.getElementById("raid-ready-btn").addEventListener("click", () => {
 
 document.getElementById("pick-fourdots").addEventListener("click", () => {
   currentGame = "fourdots";
-  document.getElementById("waiting-sub").textContent = "Finding a 4 Dots opponent\u2026";
+  document.getElementById("waiting-sub").textContent = "Finding a 4 Dots match\u2026";
   socket.emit("find_match", { game: "fourdots" });
   showScreen("screen-waiting");
 });
@@ -676,7 +676,7 @@ socket.on("fourdots_timeout", ({ role }) => {
 
 document.getElementById("pick-reaction").addEventListener("click", () => {
   currentGame = "reaction";
-  document.getElementById("waiting-sub").textContent = "Finding a Reflex player\u2026";
+  document.getElementById("waiting-sub").textContent = "Finding a Reflex match\u2026";
   socket.emit("find_match", { game: "reaction" });
   showScreen("screen-waiting");
 });
@@ -1377,7 +1377,7 @@ document.getElementById("btn-rematch").addEventListener("click", () => {
   socket.emit("request_rematch", { roomId });
 });
 
-document.getElementById("btn-next-stranger").addEventListener("click", () => {
+document.getElementById("btn-next-match").addEventListener("click", () => {
   if (peerConn) { peerConn.close(); peerConn = null; }
   roomId = null; myRole = null; gameState = null;
   showScreen("screen-picker");
