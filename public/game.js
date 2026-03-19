@@ -253,7 +253,52 @@ document.getElementById("pick-raid").addEventListener("click", () => {
   showScreen("screen-waiting");
 });
 
-// ── Raid game logic ───────────────────────────────────────────────
+// ── Sound effects ─────────────────────────────────────────────────
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playHitSound() {
+  try {
+    const osc  = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(55, audioCtx.currentTime + 0.3);
+    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+  } catch(e) {}
+}
+
+function playMissSound() {
+  try {
+    const osc  = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(330, audioCtx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+  } catch(e) {}
+}
+
+function playSunkSound() {
+  try {
+    [0, 0.1, 0.2].forEach(delay => {
+      const osc  = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.type = "square";
+      osc.frequency.setValueAtTime(150 - delay * 200, audioCtx.currentTime + delay);
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + 0.2);
+      osc.start(audioCtx.currentTime + delay);
+      osc.stop(audioCtx.currentTime + delay + 0.2);
+    });
+  } catch(e) {}
+}
 const RAID_SHIPS = [4, 3, 2, 2];
 const GRID_SIZE  = 8;
 
@@ -354,7 +399,7 @@ function raidPlaceShip(x, y) {
     const remaining = RAID_SHIPS.length - raidState.currentShipIdx;
     document.getElementById("raid-placement-status").textContent = `${remaining} ship${remaining > 1 ? "s" : ""} left to place`;
   } else {
-    document.getElementById("raid-placement-status").textContent = "All ships placed — ready to battle!";
+    document.getElementById("raid-placement-status").textContent = "All buildings placed — ready to battle!";
     document.getElementById("raid-ready-btn").style.display = "block";
   }
 }
@@ -416,7 +461,7 @@ socket.on("raid_player_placed", ({ role }) => {
     // Opponent placed their ships — notify me
     const status = document.getElementById("raid-placement-status");
     const waiting = document.getElementById("raid-waiting-msg");
-    if (status) status.textContent = "Opponent is ready — place your ships!";
+    if (status) status.textContent = "Opponent is ready — place your buildings!";
     // If I've already clicked ready, update my waiting message
     if (waiting && !waiting.classList.contains("hidden")) {
       waiting.textContent = "Both ready — starting battle!";
@@ -439,6 +484,11 @@ socket.on("raid_combat_start", ({ turn }) => {
 
 socket.on("raid_shot_result", ({ role, x, y, hit, sunk, targetSunk }) => {
   const iMyShot = role === myRole;
+
+  // Play sound
+  if (sunk) playSunkSound();
+  else if (hit) playHitSound();
+  else playMissSound();
 
   if (iMyShot) {
     raidState.myShots.push({ x, y, hit });
@@ -495,7 +545,7 @@ document.getElementById("raid-ready-btn").addEventListener("click", () => {
   socket.emit("raid_place_ships", { roomId, role: myRole, ships: raidState.myShips });
   document.getElementById("raid-ready-btn").style.display = "none";
   document.getElementById("raid-waiting-msg").classList.remove("hidden");
-  document.getElementById("raid-placement-status").textContent = "Waiting for opponent...";
+  document.getElementById("raid-placement-status").textContent = "Waiting for opponent to place buildings...";
   document.querySelectorAll("#raid-my-grid-place .raid-cell").forEach(el => el.style.cursor = "default");
 });
 
@@ -678,7 +728,7 @@ function setupGameUI(game) {
     canvas.style.display     = "none";
     reactionUI.style.display = "none";
     raidUI.style.display     = "flex";
-    hint.innerHTML           = '<span>Place your ships — then fire!</span>';
+    hint.innerHTML           = '<span>Place buildings — then fire!</span>';
     status.textContent       = "SINK ALL 4";
     dpad.style.display       = "none";
     // Init raid state
@@ -692,7 +742,7 @@ function setupGameUI(game) {
     document.getElementById("raid-ready-btn").disabled = false;
     document.getElementById("raid-ready-btn").innerHTML = "&#9654; READY — START BATTLE";
     document.getElementById("raid-waiting-msg").classList.add("hidden");
-    document.getElementById("raid-placement-status").textContent = "Place all 4 ships to continue";
+    document.getElementById("raid-placement-status").textContent = "Place all 4 buildings to continue";
     document.querySelectorAll(".raid-ship-btn").forEach((b, i) => {
       b.classList.remove("active", "placed");
       if (i === 0) b.classList.add("active");
@@ -791,7 +841,7 @@ socket.on("reaction_first_tap", ({ role, time }) => {
     res.textContent = `Your time: ${time}ms — waiting for opponent...`;
     res.style.color = "#6666aa";
     setReactionLight("");
-    document.getElementById("reaction-instruction").textContent = "Waiting for opponent...";
+    document.getElementById("reaction-instruction").textContent = "Waiting for opponent to place buildings...";
   } else {
     res.textContent = `Opponent tapped first — tap now!`;
     res.style.color = "#ff3366";
