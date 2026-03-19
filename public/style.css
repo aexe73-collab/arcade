@@ -1225,6 +1225,36 @@ body {
 .raid-placement { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
 .raid-combat    { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
 
+/* ── Pong mobile slider ────────────────────────────────── */
+.pong-slider-wrap {
+  display: none; /* shown only on mobile during pong */
+  width: 100%;
+  padding: 12px 20px 8px;
+  touch-action: none;
+}
+
+.pong-slider-track {
+  position: relative;
+  width: 100%;
+  height: 52px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.pong-slider-thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 60px;
+  background: var(--accent);
+  border-radius: 3px;
+  left: calc(50% - 30px);
+  pointer-events: none;
+  transition: background 0.1s;
+}
+
 /* ── Mobile footer ─────────────────────────────────────── */
 .mobile-footer {
   display: none;
