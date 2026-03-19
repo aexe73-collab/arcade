@@ -140,18 +140,32 @@ document.getElementById("mode-group").addEventListener("click", () => {
 
 // ── Friend challenge ──────────────────────────────────────────────
 function showFriendChallenge() {
-  // Generate a unique challenge room ID
   const challengeId = Math.random().toString(36).substring(2, 8).toUpperCase();
-  const link = `${window.location.origin}?challenge=${challengeId}`;
-  showScreen("screen-picker");
-  // Store challenge ID so matchmaking uses it
+  const link = `https://www.arcadeface.com?challenge=${challengeId}`;
   window._challengeId = challengeId;
-  // Show copy link nudge
-  setTimeout(() => {
-    const copied = confirm(`Share this link with your friend:\n\n${link}\n\nClick OK to copy it.`);
-    if (copied) navigator.clipboard?.writeText(link).catch(() => {});
-  }, 100);
+
+  // Show branded modal
+  document.getElementById("challenge-link-input").value = link;
+  showOverlay("overlay-challenge");
+  showScreen("screen-picker");
 }
+
+document.getElementById("btn-copy-link").addEventListener("click", () => {
+  const input = document.getElementById("challenge-link-input");
+  navigator.clipboard?.writeText(input.value).catch(() => {
+    input.select();
+    document.execCommand("copy");
+  });
+  const btn = document.getElementById("btn-copy-link");
+  const copied = document.getElementById("challenge-copied");
+  btn.textContent = "✓";
+  copied.style.display = "block";
+  setTimeout(() => { btn.textContent = "COPY"; copied.style.display = "none"; }, 2000);
+});
+
+document.getElementById("btn-challenge-close").addEventListener("click", () => {
+  hideOverlay("overlay-challenge");
+});
 
 // Check if arriving via challenge link
 function checkChallengeLink() {
