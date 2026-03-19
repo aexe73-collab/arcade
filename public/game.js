@@ -749,9 +749,14 @@ async function startPeerConnection(isInitiator) {
   peerConn.oniceconnectionstatechange = () => {
     const state = peerConn.iceConnectionState;
     console.log("[ICE]", state);
-    // Visible debug — remove later
     const dbg = document.getElementById("rtc-debug");
     if (dbg) dbg.textContent = "ICE: " + state;
+  };
+
+  peerConn.onsignalingstatechange = () => {
+    const dbg = document.getElementById("rtc-debug");
+    if (dbg) dbg.textContent = "SIG: " + peerConn.signalingState;
+    console.log("[SIG]", peerConn.signalingState);
   };
 
   peerConn.onicecandidate = (e) => {
@@ -762,6 +767,9 @@ async function startPeerConnection(isInitiator) {
     const offer = await peerConn.createOffer();
     await peerConn.setLocalDescription(offer);
     socket.emit("webrtc_offer", { roomId, offer });
+    console.log("[WS] sent offer");
+    const dbg = document.getElementById("rtc-debug");
+    if (dbg) dbg.textContent = "sent offer";
   }
 }
 
@@ -1245,6 +1253,9 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
   myRole      = role;
   currentGame = game;
   clearChat();
+  console.log("[WS] match_found, role:", role);
+  const dbg = document.getElementById("rtc-debug");
+  if (dbg) dbg.textContent = "match! role:" + role;
   await startPeerConnection(role === "left");
   startCountdown(() => {
     setupGameUI(currentGame);
@@ -1258,11 +1269,16 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
 
 
 socket.on("webrtc_offer", async ({ offer }) => {
+  console.log("[WS] got offer");
+  const dbg = document.getElementById("rtc-debug");
+  if (dbg) dbg.textContent = "got offer";
   if (!peerConn) await startPeerConnection(false);
   await peerConn.setRemoteDescription(new RTCSessionDescription(offer));
   const answer = await peerConn.createAnswer();
   await peerConn.setLocalDescription(answer);
   socket.emit("webrtc_answer", { roomId, answer });
+  console.log("[WS] sent answer");
+  if (dbg) dbg.textContent = "sent answer";
 });
 
 socket.on("webrtc_answer", async ({ answer }) => {
