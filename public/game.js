@@ -255,11 +255,6 @@ const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 // Resume audio context on first user interaction (browser policy)
 function resumeAudio() {
   if (audioCtx.state === "suspended") audioCtx.resume();
-  // Unmute remote videos after user interaction
-  ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el && el.muted && el.srcObject) { el.muted = false; el.volume = 1.0; }
-  });
 }
 document.addEventListener("click",      resumeAudio, { once: false });
 document.addEventListener("touchstart", resumeAudio, { once: false });
