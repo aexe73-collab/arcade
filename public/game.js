@@ -218,20 +218,20 @@ async function getCamera() {
 
 // ── Camera permission helper ──────────────────────────────────────
 async function requestCameraThenProceed(destination) {
-  // Request camera silently — browser shows its own prompt if needed
-  // Never show custom overlay — it flashes and confuses users
-  await getCamera();
+  // Show screen immediately — don't wait for camera
   showScreen(destination);
+  // Request camera in background
+  getCamera();
 }
 
 // ── Game picker (guest — home screen click) ───────────────────────
-document.getElementById("btn-find-match").addEventListener("click", async () => {
-  await requestCameraThenProceed("screen-picker");
+document.getElementById("btn-find-match").addEventListener("click", () => {
+  requestCameraThenProceed("screen-picker");
 });
 
 // ── Play button (signed in) ───────────────────────────────────────
-document.getElementById("btn-play-modes").addEventListener("click", async () => {
-  await requestCameraThenProceed("screen-mode");
+document.getElementById("btn-play-modes").addEventListener("click", () => {
+  requestCameraThenProceed("screen-mode");
 });
 
 document.getElementById("btn-allow-camera").addEventListener("click", async () => {
