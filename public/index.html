@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ARCADEFACE — Play Strangers</title>
+  <title>ARCADEFACE — Random Matches &amp; Friends</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
@@ -17,7 +17,7 @@
       <div class="logo-block">
         <div class="logo-eyebrow">INSERT COIN</div>
         <h1 class="logo">ARCADE<span class="logo-accent">FACE</span></h1>
-        <p class="tagline">Play face to face. Strangers welcome.</p>
+        <p class="tagline">Play face to face. Anyone, anywhere.</p>
       </div>
 
       <!-- Signed-in state (hidden until auth) -->
@@ -34,13 +34,13 @@
       <!-- Guest state -->
       <div class="home-guest" id="home-guest">
         <button class="btn-primary" id="btn-find-match">
-          <span class="btn-icon">&#9654;</span> PLAY A STRANGER
+          <span class="btn-icon">&#9654;</span> RANDOM MATCH
         </button>
         <div class="home-divider"><span>or</span></div>
         <button class="btn-ghost" id="btn-goto-signin">
-          SIGN IN &mdash; PLAY FRIENDS &amp; GROUPS
+          SIGN IN &mdash; FRIENDS &amp; GROUPS
         </button>
-        <p class="home-sub">No account needed to play strangers</p>
+        <p class="home-sub">No account needed</p>
       </div>
     </div>
     <div class="home-deco"><div class="pixel-ball"></div></div>
@@ -78,8 +78,8 @@
 
         <button class="mode-card" id="mode-stranger">
           <div class="mode-card-icon">&#63;</div>
-          <div class="mode-card-name">STRANGER</div>
-          <div class="mode-card-sub">Random opponent</div>
+          <div class="mode-card-name">RANDOM</div>
+          <div class="mode-card-sub">Get matched instantly</div>
           <div class="mode-card-tag free">FREE</div>
         </button>
 
@@ -373,7 +373,7 @@
 
       <div class="gameover-actions">
         <button class="btn-primary" id="btn-rematch">&#8635; REMATCH</button>
-        <button class="btn-ghost"   id="btn-next-stranger">NEXT STRANGER &#8594;</button>
+        <button class="btn-ghost"   id="btn-next-match">NEXT MATCH &#8594;</button>
       </div>
       <div class="rematch-status" id="rematch-status"></div>
 
