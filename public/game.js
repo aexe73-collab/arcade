@@ -696,12 +696,14 @@ function startCountdown(onComplete) {
     if (lv) lv.srcObject = localStream;
   }
 
-  // Retry assigning remote stream every second during countdown
+  // Retry assigning remote stream during countdown only if not yet playing
   const assignRemote = () => {
-    if (window._remoteStream) assignRemoteStream(window._remoteStream);
+    if (!window._remoteStream) return;
+    const rv = document.getElementById("video-faceoff-remote");
+    if (rv && rv.paused) assignRemoteStream(window._remoteStream);
   };
   assignRemote();
-  const remoteRetry = setInterval(assignRemote, 1000);
+  const remoteRetry = setInterval(assignRemote, 2000);
 
   let count = 10;
   const el = document.getElementById("countdown-number");
@@ -736,22 +738,28 @@ const ICE_SERVERS = {
   ]
 };
 
+// Track pending play timers to avoid AbortError from overlapping calls
+const _playTimers = {};
+
 function assignRemoteStream(s) {
   if (!s) return;
   ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    // Clear then reassign — forces Safari to reinitialise media pipeline
+    // Already playing this stream on this element — skip
+    if (el.srcObject === s && !el.paused) return;
+    // Cancel any pending assignment for this element
+    if (_playTimers[id]) { clearTimeout(_playTimers[id]); delete _playTimers[id]; }
     el.muted = true;
-    el.srcObject = null;
-    setTimeout(() => {
-      el.srcObject = s;
+    el.srcObject = s;
+    _playTimers[id] = setTimeout(() => {
+      delete _playTimers[id];
       el.play().then(() => {
         console.log("[RTC] playing:", id);
         el.muted = false;
         el.volume = 1.0;
       }).catch(e => console.warn("[RTC] play failed:", id, e.name, e.message));
-    }, 50);
+    }, 200);
   });
 }
 
