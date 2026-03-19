@@ -471,6 +471,8 @@ document.getElementById("raid-ready-btn").addEventListener("click", () => {
   document.getElementById("raid-ready-btn").disabled = true;
   document.querySelectorAll(".raid-cell").forEach(el => el.style.cursor = "default");
 });
+
+document.getElementById("pick-reaction").addEventListener("click", () => {
   currentGame = "reaction";
   document.getElementById("waiting-sub").textContent = "Finding a Reflex player\u2026";
   socket.emit("find_match", { game: "reaction" });
