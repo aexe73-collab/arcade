@@ -739,46 +739,35 @@ const ICE_SERVERS = {
 
 async function startPeerConnection(isInitiator) {
   peerConn = new RTCPeerConnection(ICE_SERVERS);
-
-  console.log("[WebRTC] Starting, initiator:", isInitiator, "localStream:", !!localStream, "tracks:", localStream?.getTracks().length);
-  if (localStream) localStream.getTracks().forEach(t => {
-    peerConn.addTrack(t, localStream);
-    console.log("[WebRTC] Added track:", t.kind);
-  });
+  if (localStream) localStream.getTracks().forEach(t => peerConn.addTrack(t, localStream));
 
   peerConn.ontrack = (event) => {
     const s = event.streams[0];
-    console.log("[WebRTC] ontrack fired, streams:", event.streams.length, "tracks:", s?.getTracks().map(t=>t.kind));
+    console.log("[RTC] ontrack! tracks:", s.getTracks().map(t=>t.kind), "stream active:", s.active);
     window._remoteStream = s;
     ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
       const el = document.getElementById(id);
-      if (el) {
-        el.srcObject = s;
-        el.play().catch(e => console.log("[Video] play failed:", id, e.message));
-        setTimeout(() => el.play().catch(() => {}), 500);
-        setTimeout(() => el.play().catch(() => {}), 1500);
-      }
+      if (el) { el.srcObject = s; el.play().catch(e => console.warn("[RTC] play failed:", id, e.message)); }
     });
   };
 
   peerConn.oniceconnectionstatechange = () => {
-    console.log("[WebRTC] ICE state:", peerConn.iceConnectionState);
+    console.log("[RTC] ICE state:", peerConn.iceConnectionState);
   };
 
   peerConn.onicecandidate = (e) => {
     if (e.candidate) socket.emit("webrtc_ice", { roomId, candidate: e.candidate });
   };
 
-  // Don't create offer here — wait until camera_ready so tracks are confirmed added
-  peerConn._isInitiator = isInitiator;
+  if (isInitiator) {
+    const offer = await peerConn.createOffer();
+    await peerConn.setLocalDescription(offer);
+    socket.emit("webrtc_offer", { roomId, offer });
+    console.log("[RTC] offer sent, senders:", peerConn.getSenders().length);
+  }
 }
 
-async function sendOffer() {
-  if (!peerConn || !peerConn._isInitiator) return;
-  const offer = await peerConn.createOffer();
-  await peerConn.setLocalDescription(offer);
-  socket.emit("webrtc_offer", { roomId, offer });
-}
+async function sendOffer() {} // no-op, kept for compatibility
 
 // ── Canvas / grid constants ───────────────────────────────────────
 const W = 800, H = 400;
@@ -1259,43 +1248,13 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
   currentGame = game;
   clearChat();
   window._remoteStream = null;
+
+  // Ensure camera is acquired before starting WebRTC
+  if (!localStream) await getCamera();
+
+  // Start peer connection — tracks added inside
   await startPeerConnection(role === "left");
 
-  // If camera not yet acquired, try now
-  if (!localStream) {
-    const hasCam = await getCamera();
-    if (!hasCam) {
-      window._cameraDestination = null;
-      showOverlay("overlay-camera");
-      await new Promise(resolve => {
-        const onDecide = async () => {
-          hideOverlay("overlay-camera");
-          if (!localStream) await getCamera();
-          document.getElementById("btn-allow-camera").removeEventListener("click", onDecide);
-          document.getElementById("btn-skip-camera").removeEventListener("click", onDecide);
-          resolve();
-        };
-        document.getElementById("btn-allow-camera").addEventListener("click", onDecide, { once: true });
-        document.getElementById("btn-skip-camera").addEventListener("click", onDecide, { once: true });
-      });
-    }
-  }
-
-  // Add tracks now that camera is confirmed (in case localStream wasn't ready at connection time)
-  if (localStream && peerConn) {
-    const senders = peerConn.getSenders();
-    localStream.getTracks().forEach(track => {
-      if (!senders.find(s => s.track === track)) {
-        peerConn.addTrack(track, localStream);
-        console.log("[WebRTC] Added track after camera:", track.kind);
-      }
-    });
-  }
-
-  // Now send the offer (initiator only) — tracks are guaranteed added
-  await sendOffer();
-
-  // Signal server we're ready
   socket.emit("camera_ready", { roomId });
 });
 
@@ -1320,12 +1279,13 @@ socket.on("both_camera_ready", () => {
 
 socket.on("webrtc_offer", async ({ offer }) => {
   if (!peerConn) await startPeerConnection(false);
-  // Ensure local tracks are added before answering
+  // Ensure our tracks are in the connection before answering
   if (localStream) {
-    const senders = peerConn.getSenders();
-    localStream.getTracks().forEach(track => {
-      if (!senders.find(s => s.track === track)) {
-        peerConn.addTrack(track, localStream);
+    const existingTracks = peerConn.getSenders().map(s => s.track?.id);
+    localStream.getTracks().forEach(t => {
+      if (!existingTracks.includes(t.id)) {
+        peerConn.addTrack(t, localStream);
+        console.log("[RTC] non-initiator added track:", t.kind);
       }
     });
   }
@@ -1333,6 +1293,7 @@ socket.on("webrtc_offer", async ({ offer }) => {
   const answer = await peerConn.createAnswer();
   await peerConn.setLocalDescription(answer);
   socket.emit("webrtc_answer", { roomId, answer });
+  console.log("[RTC] answer sent");
 });
 
 socket.on("webrtc_answer", async ({ answer }) => {
