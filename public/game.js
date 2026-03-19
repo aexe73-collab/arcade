@@ -746,7 +746,13 @@ async function startPeerConnection(isInitiator) {
     window._remoteStream = s;
     ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
       const el = document.getElementById(id);
-      if (el) { el.srcObject = s; el.muted = false; el.volume = 1.0; el.play().catch(() => {}); }
+      if (el) {
+        el.srcObject = s;
+        el.play().catch(() => {});
+        // Retry play after short delay in case element not yet visible
+        setTimeout(() => el.play().catch(() => {}), 500);
+        setTimeout(() => el.play().catch(() => {}), 1500);
+      }
     });
   };
 
