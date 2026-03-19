@@ -558,6 +558,122 @@ document.getElementById("raid-ready-btn").addEventListener("click", () => {
   document.querySelectorAll("#raid-my-grid-place .raid-cell").forEach(el => el.style.cursor = "default");
 });
 
+document.getElementById("pick-fourdots").addEventListener("click", () => {
+  currentGame = "fourdots";
+  document.getElementById("waiting-sub").textContent = "Finding a 4 Dots opponent\u2026";
+  socket.emit("find_match", { game: "fourdots" });
+  showScreen("screen-waiting");
+});
+
+// ── 4 Dots game logic ─────────────────────────────────────────────
+const FD_COLS = 7, FD_ROWS = 6;
+let fdTimerInterval = null;
+
+function buildFourDotsBoard() {
+  const board  = document.getElementById("fourdots-board");
+  const colBtns = document.getElementById("fourdots-col-btns");
+  board.innerHTML = "";
+  colBtns.innerHTML = "";
+
+  for (let c = 0; c < FD_COLS; c++) {
+    const btn = document.createElement("button");
+    btn.className = "fourdots-col-btn";
+    btn.innerHTML = "&#9660;";
+    btn.dataset.col = c;
+    btn.addEventListener("click", () => fdDropPiece(c));
+    colBtns.appendChild(btn);
+  }
+
+  for (let r = 0; r < FD_ROWS; r++) {
+    for (let c = 0; c < FD_COLS; c++) {
+      const cell = document.createElement("div");
+      cell.className = "fourdots-cell";
+      cell.id = `fd-${r}-${c}`;
+      board.appendChild(cell);
+    }
+  }
+}
+
+function fdDropPiece(col) {
+  if (!gameState || gameState.game !== "fourdots") return;
+  socket.emit("fourdots_drop", { roomId, role: myRole, col });
+}
+
+function fdRenderBoard(board) {
+  for (let r = 0; r < FD_ROWS; r++) {
+    for (let c = 0; c < FD_COLS; c++) {
+      const cell = document.getElementById(`fd-${r}-${c}`);
+      if (!cell) continue;
+      cell.className = "fourdots-cell";
+      if (board[r][c]) cell.classList.add(board[r][c]);
+    }
+  }
+}
+
+function fdSetMyTurn(isMyTurn) {
+  const label   = document.getElementById("fourdots-turn-label");
+  const colBtns = document.querySelectorAll(".fourdots-col-btn");
+  label.textContent = isMyTurn ? "YOUR TURN — DROP!" : "THEIR TURN";
+  label.className   = "fourdots-turn-label" + (isMyTurn ? "" : " their-turn");
+  colBtns.forEach(btn => {
+    btn.classList.toggle("disabled", !isMyTurn);
+  });
+}
+
+function fdStartTimer(seconds) {
+  if (fdTimerInterval) clearInterval(fdTimerInterval);
+  const fill = document.getElementById("fourdots-timer-fill");
+  if (!fill) return;
+  fill.style.transition = "none";
+  fill.style.width      = "100%";
+  fill.classList.remove("urgent");
+  setTimeout(() => {
+    fill.style.transition = `width ${seconds}s linear`;
+    fill.style.width      = "0%";
+  }, 30);
+  let remaining = seconds;
+  fdTimerInterval = setInterval(() => {
+    remaining--;
+    if (remaining <= 2) fill.classList.add("urgent");
+    if (remaining <= 0) clearInterval(fdTimerInterval);
+  }, 1000);
+}
+
+// 4 Dots socket events
+socket.on("fourdots_turn", ({ turn, board }) => {
+  fdRenderBoard(board);
+  const isMyTurn = turn === myRole;
+  fdSetMyTurn(isMyTurn);
+  fdStartTimer(5);
+});
+
+socket.on("fourdots_drop", ({ col, row, role, board, result }) => {
+  fdRenderBoard(board);
+
+  // Play sound
+  if (result?.winner) playSunkSound();
+  else playHitSound();
+
+  if (result?.cells) {
+    // Highlight winning cells
+    result.cells.forEach(({ r, c }) => {
+      const cell = document.getElementById(`fd-${r}-${c}`);
+      if (cell) cell.classList.add("win");
+    });
+  }
+});
+
+socket.on("fourdots_timeout", ({ role }) => {
+  const label = document.getElementById("fourdots-turn-label");
+  if (role === myRole) {
+    label.textContent = "TIME UP — SKIPPED!";
+    label.style.color = "var(--accent2)";
+  } else {
+    label.textContent = "THEY RAN OUT OF TIME";
+    label.style.color = "var(--muted)";
+  }
+});
+
 document.getElementById("pick-reaction").addEventListener("click", () => {
   currentGame = "reaction";
   document.getElementById("waiting-sub").textContent = "Finding a Reflex player\u2026";
@@ -727,24 +843,27 @@ function setupGameUI(game) {
   const canvas         = document.getElementById("pong-canvas");
   const reactionUI     = document.getElementById("reaction-ui");
   const raidUI         = document.getElementById("raid-ui");
-  const gameName = game === "snake" ? "SNAKE" : game === "reaction" ? "REFLEX" : game === "raid" ? "RAID" : "PONG";
+  const fourdotsUI     = document.getElementById("fourdots-ui");
+  const gameName = game === "snake" ? "SNAKE" : game === "reaction" ? "REFLEX" : game === "raid" ? "RAID" : game === "fourdots" ? "4 DOTS" : "PONG";
   if (bannerGame)      bannerGame.textContent      = gameName;
   if (bannerGameFixed) bannerGameFixed.textContent = gameName;
 
   if (game === "reaction") {
-    canvas.style.display     = "none";
-    reactionUI.style.display = "flex";
-    raidUI.style.display     = "none";
-    hint.innerHTML           = '<span>Tap the circle when it turns green!</span>';
-    status.textContent       = "FIRST TO 3";
-    dpad.style.display       = "none";
+    canvas.style.display      = "none";
+    reactionUI.style.display  = "flex";
+    raidUI.style.display      = "none";
+    fourdotsUI.style.display  = "none";
+    hint.innerHTML    = '<span>Tap the circle when it turns green!</span>';
+    status.textContent = "FIRST TO 3";
+    dpad.style.display = "none";
   } else if (game === "raid") {
-    canvas.style.display     = "none";
-    reactionUI.style.display = "none";
-    raidUI.style.display     = "flex";
-    hint.innerHTML           = '<span>Place buildings — then fire!</span>';
-    status.textContent       = "RAID ALL 4";
-    dpad.style.display       = "none";
+    canvas.style.display      = "none";
+    reactionUI.style.display  = "none";
+    raidUI.style.display      = "flex";
+    fourdotsUI.style.display  = "none";
+    hint.innerHTML    = '<span>Place buildings — then fire!</span>';
+    status.textContent = "RAID ALL 4";
+    dpad.style.display = "none";
     // Init raid state
     raidState = {
       myShips: [], shipsToPlace: [...RAID_SHIPS], currentShipIdx: 0,
@@ -764,10 +883,21 @@ function setupGameUI(game) {
     document.getElementById("raid-orient-h").classList.add("active");
     document.getElementById("raid-orient-v").classList.remove("active");
     buildRaidGrid("raid-my-grid-place", true, false);
+  } else if (game === "fourdots") {
+    canvas.style.display      = "none";
+    reactionUI.style.display  = "none";
+    raidUI.style.display      = "none";
+    fourdotsUI.style.display  = "flex";
+    hint.innerHTML    = '<span>Click a column to drop your dot</span>';
+    status.textContent = "CONNECT 4";
+    dpad.style.display = "none";
+    buildFourDotsBoard();
+    fdSetMyTurn(false);
   } else {
-    canvas.style.display     = "block";
-    reactionUI.style.display = "none";
-    raidUI.style.display     = "none";
+    canvas.style.display      = "block";
+    reactionUI.style.display  = "none";
+    raidUI.style.display      = "none";
+    fourdotsUI.style.display  = "none";
     if (game === "snake") {
       hint.innerHTML     = '<span>Arrow keys / WASD &nbsp;&mdash;&nbsp; steer</span>';
       status.textContent = "FIRST TO 3 ROUNDS";
