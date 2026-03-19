@@ -127,6 +127,12 @@
           <div class="game-card-sub">First to 3 taps wins</div>
           <div class="game-card-controls">Tap when it turns green!</div>
         </button>
+        <button class="game-card raid-card" id="pick-raid">
+          <div class="game-card-icon">&#9632;&#9632;<br>&#9632;&#9632;</div>
+          <div class="game-card-name">RAID</div>
+          <div class="game-card-sub">Sink their fleet</div>
+          <div class="game-card-controls">Tap to fire — 15s per turn</div>
+        </button>
       </div>
       <button class="btn-text" id="btn-picker-back">&#8592; Back</button>
     </div>
@@ -224,6 +230,46 @@
             </div>
           </div>
           <canvas id="pong-canvas" width="800" height="400"></canvas>
+
+          <!-- Raid UI -->
+          <div class="raid-ui" id="raid-ui">
+            <!-- Placement phase -->
+            <div class="raid-placement" id="raid-placement">
+              <div class="raid-phase-label">PLACE YOUR SHIPS</div>
+              <div class="raid-ships-to-place" id="raid-ships-to-place">
+                <div class="raid-ship-btn active" data-size="4">████ (4)</div>
+                <div class="raid-ship-btn" data-size="3">███ (3)</div>
+                <div class="raid-ship-btn" data-size="2">██ (2)</div>
+                <div class="raid-ship-btn" data-size="2">██ (2)</div>
+              </div>
+              <div class="raid-orient-row">
+                <button class="raid-orient-btn active" id="raid-orient-h">— H</button>
+                <button class="raid-orient-btn" id="raid-orient-v">| V</button>
+              </div>
+              <div class="raid-grid-wrap">
+                <div class="raid-grid" id="raid-my-grid-place"></div>
+              </div>
+              <button class="btn-primary" id="raid-ready-btn" style="display:none">READY — FIRE!</button>
+            </div>
+
+            <!-- Combat phase -->
+            <div class="raid-combat hidden" id="raid-combat">
+              <div class="raid-turn-label" id="raid-turn-label">YOUR TURN</div>
+              <div class="raid-timer-bar"><div class="raid-timer-fill" id="raid-timer-fill"></div></div>
+              <div class="raid-grids-row">
+                <div class="raid-grid-col">
+                  <div class="raid-grid-title them">THEIR WATERS</div>
+                  <div class="raid-grid" id="raid-enemy-grid"></div>
+                  <div class="raid-sunk-count">Sunk: <span id="raid-their-sunk">0</span>/4</div>
+                </div>
+                <div class="raid-grid-col">
+                  <div class="raid-grid-title you">YOUR WATERS</div>
+                  <div class="raid-grid" id="raid-my-grid-combat"></div>
+                  <div class="raid-sunk-count">Lost: <span id="raid-my-sunk">0</span>/4</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- Reaction game UI (shown instead of canvas for reaction game) -->
           <div class="reaction-ui" id="reaction-ui">
