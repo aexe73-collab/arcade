@@ -736,32 +736,29 @@ const ICE_SERVERS = {
   ]
 };
 
-async function startPeerConnection(isInitiator) {
-  peerConn = new RTCPeerConnection(ICE_SERVERS);
-  if (localStream) localStream.getTracks().forEach(t => peerConn.addTrack(t, localStream));
-
 function assignRemoteStream(s) {
   if (!s) return;
   ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     if (el.srcObject !== s) el.srcObject = s;
-    el.muted = true; // must be muted to autoplay in Safari
+    el.muted = true;
     let attempts = 0;
     const tryPlay = () => {
       if (attempts++ > 20) return;
       el.play().then(() => {
         console.log("[RTC] playing:", id);
-        // Unmute after playback starts — user has interacted by this point
         el.muted = false;
         el.volume = 1.0;
-      }).catch(() => {
-        setTimeout(tryPlay, 500);
-      });
+      }).catch(() => setTimeout(tryPlay, 500));
     };
     tryPlay();
   });
 }
+
+async function startPeerConnection(isInitiator) {
+  peerConn = new RTCPeerConnection(ICE_SERVERS);
+  if (localStream) localStream.getTracks().forEach(t => peerConn.addTrack(t, localStream));
 
   peerConn.ontrack = (event) => {
     const s = event.streams[0];
