@@ -745,12 +745,15 @@ function assignRemoteStream(s) {
     el.muted = true;
     let attempts = 0;
     const tryPlay = () => {
-      if (attempts++ > 20) return;
+      if (attempts++ > 20) { console.error("[RTC] gave up on:", id); return; }
       el.play().then(() => {
         console.log("[RTC] playing:", id);
         el.muted = false;
         el.volume = 1.0;
-      }).catch(() => setTimeout(tryPlay, 500));
+      }).catch(e => {
+        console.warn("[RTC] play attempt", attempts, id, e.name, e.message);
+        setTimeout(tryPlay, 500);
+      });
     };
     tryPlay();
   });
