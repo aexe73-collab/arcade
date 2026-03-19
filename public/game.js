@@ -114,6 +114,10 @@ document.getElementById("btn-play-modes").addEventListener("click", () => {
   showScreen("screen-mode");
 });
 
+document.getElementById("btn-picker-back").addEventListener("click", () => {
+  currentUser ? showScreen("screen-mode") : showScreen("screen-home");
+});
+
 document.getElementById("btn-mode-back").addEventListener("click", () => {
   showScreen("screen-home");
 });
