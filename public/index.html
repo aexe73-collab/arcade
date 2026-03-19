@@ -130,7 +130,7 @@
         <button class="game-card raid-card" id="pick-raid">
           <div class="game-card-icon">&#9632;&#9632;<br>&#9632;&#9632;</div>
           <div class="game-card-name">RAID</div>
-          <div class="game-card-sub">Sink their fleet</div>
+          <div class="game-card-sub">Destroy their buildings</div>
           <div class="game-card-controls">Tap to fire — 15s per turn</div>
         </button>
       </div>
@@ -235,8 +235,8 @@
           <div class="raid-ui" id="raid-ui">
             <!-- Placement phase -->
             <div class="raid-placement" id="raid-placement">
-              <div class="raid-phase-label">PLACE YOUR FLEET</div>
-              <p style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;margin:0">Select a ship → toggle direction → click grid to place</p>
+              <div class="raid-phase-label">PLACE YOUR BUILDINGS</div>
+              <p style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;margin:0">Select a building → toggle direction → click grid to place</p>
               <div class="raid-ships-to-place" id="raid-ships-to-place">
                 <div class="raid-ship-btn active" data-size="4">████ 4</div>
                 <div class="raid-ship-btn" data-size="3">███ 3</div>
@@ -250,10 +250,10 @@
               <div class="raid-grid-wrap">
                 <div class="raid-grid" id="raid-my-grid-place"></div>
               </div>
-              <div class="raid-placement-status" id="raid-placement-status">Place all 4 ships to continue</div>
+              <div class="raid-placement-status" id="raid-placement-status">Place all 4 buildings to continue</div>
               <button class="btn-primary" id="raid-ready-btn" style="display:none">&#9654; READY — START BATTLE</button>
               <div class="raid-waiting-msg hidden" id="raid-waiting-msg">
-                <span class="dot-anim">&#9632;&#9632;&#9632;</span> Waiting for opponent to place ships...
+                <span class="dot-anim">&#9632;&#9632;&#9632;</span> Waiting for opponent to place buildings...
               </div>
             </div>
 
@@ -265,7 +265,7 @@
                 <div class="raid-grid-col">
                   <div class="raid-grid-title them">THEIR WATERS</div>
                   <div class="raid-grid" id="raid-enemy-grid"></div>
-                  <div class="raid-sunk-count">Sunk: <span id="raid-their-sunk">0</span>/4</div>
+                  <div class="raid-sunk-count">Destroyed: <span id="raid-their-sunk">0</span>/4</div>
                 </div>
                 <div class="raid-grid-col">
                   <div class="raid-grid-title you">YOUR WATERS</div>
