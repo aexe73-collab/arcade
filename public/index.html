@@ -133,6 +133,12 @@
           <div class="game-card-sub">Destroy their buildings</div>
           <div class="game-card-controls">Tap to fire — 15s per turn</div>
         </button>
+        <button class="game-card fourdots-card" id="pick-fourdots">
+          <div class="game-card-icon">&#9679;&#9679;<br>&#9679;&#9679;</div>
+          <div class="game-card-name">4 DOTS</div>
+          <div class="game-card-sub">Connect 4 to win</div>
+          <div class="game-card-controls">5 seconds per turn</div>
+        </button>
       </div>
       <button class="btn-text" id="btn-picker-back">&#8592; Back</button>
     </div>
@@ -231,8 +237,17 @@
           </div>
           <canvas id="pong-canvas" width="800" height="400"></canvas>
 
-          <!-- Raid UI -->
-          <div class="raid-ui" id="raid-ui">
+          <!-- 4 Dots UI -->
+          <div class="fourdots-ui" id="fourdots-ui">
+            <div class="fourdots-status">
+              <div class="fourdots-turn-label" id="fourdots-turn-label">YOUR TURN</div>
+              <div class="fourdots-timer-bar"><div class="fourdots-timer-fill" id="fourdots-timer-fill"></div></div>
+            </div>
+            <div class="fourdots-board-wrap">
+              <div class="fourdots-col-btns" id="fourdots-col-btns"></div>
+              <div class="fourdots-board" id="fourdots-board"></div>
+            </div>
+          </div>
             <!-- Placement phase -->
             <div class="raid-placement" id="raid-placement">
               <div class="raid-phase-label">PLACE YOUR BUILDINGS</div>
