@@ -610,7 +610,8 @@ async function startPeerConnection(isInitiator) {
       const el = document.getElementById(id);
       if (el) {
         el.srcObject = s;
-        // Ensure audio plays by attempting play after stream is set
+        el.muted = false;
+        el.volume = 1.0;
         el.play().catch(() => {});
       }
     });
@@ -742,7 +743,7 @@ function setupGameUI(game) {
     reactionUI.style.display = "none";
     raidUI.style.display     = "flex";
     hint.innerHTML           = '<span>Place buildings — then fire!</span>';
-    status.textContent       = "SINK ALL 4";
+    status.textContent       = "RAID ALL 4";
     dpad.style.display       = "none";
     // Init raid state
     raidState = {
