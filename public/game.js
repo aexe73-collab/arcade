@@ -739,21 +739,30 @@ const ICE_SERVERS = {
 
 async function startPeerConnection(isInitiator) {
   peerConn = new RTCPeerConnection(ICE_SERVERS);
-  if (localStream) localStream.getTracks().forEach(t => peerConn.addTrack(t, localStream));
+
+  console.log("[WebRTC] Starting, initiator:", isInitiator, "localStream:", !!localStream, "tracks:", localStream?.getTracks().length);
+  if (localStream) localStream.getTracks().forEach(t => {
+    peerConn.addTrack(t, localStream);
+    console.log("[WebRTC] Added track:", t.kind);
+  });
 
   peerConn.ontrack = (event) => {
     const s = event.streams[0];
+    console.log("[WebRTC] ontrack fired, streams:", event.streams.length, "tracks:", s?.getTracks().map(t=>t.kind));
     window._remoteStream = s;
     ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.srcObject = s;
-        el.play().catch(() => {});
-        // Retry play after short delay in case element not yet visible
+        el.play().catch(e => console.log("[Video] play failed:", id, e.message));
         setTimeout(() => el.play().catch(() => {}), 500);
         setTimeout(() => el.play().catch(() => {}), 1500);
       }
     });
+  };
+
+  peerConn.oniceconnectionstatechange = () => {
+    console.log("[WebRTC] ICE state:", peerConn.iceConnectionState);
   };
 
   peerConn.onicecandidate = (e) => {
