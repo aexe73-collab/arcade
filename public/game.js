@@ -858,7 +858,19 @@ function startRenderLoop() {
   function loop() {
     if (gameState) {
       if (gameState.game === "snake") drawSnake(gameState);
-      else drawPong(gameState);
+      else if (gameState.game === "pong") {
+        drawPong(gameState);
+        // Sync slider thumb position with paddle
+        const track = document.getElementById("pong-slider-track");
+        const thumb = document.getElementById("pong-slider-thumb");
+        if (track && thumb && track.offsetWidth > 0) {
+          const myY    = myRole === "left" ? gameState.paddles.left : gameState.paddles.right;
+          const ratio  = myY / (H - PADDLE_H);
+          const thumbW = thumb.offsetWidth;
+          const trackW = track.offsetWidth;
+          thumb.style.left = Math.round(ratio * (trackW - thumbW)) + "px";
+        }
+      }
     }
     animFrameId = requestAnimationFrame(loop);
   }
@@ -892,6 +904,7 @@ function setupGameUI(game) {
     hint.innerHTML    = '<span>Tap the circle when it turns green!</span>';
     status.textContent = "FIRST TO 3";
     dpad.style.display = "none";
+    document.getElementById("pong-slider-wrap").style.display = "none";
   } else if (game === "raid") {
     canvas.style.display      = "none";
     reactionUI.style.display  = "none";
@@ -900,6 +913,7 @@ function setupGameUI(game) {
     hint.innerHTML    = '<span>Place buildings — then fire!</span>';
     status.textContent = "RAID ALL 4";
     dpad.style.display = "none";
+    document.getElementById("pong-slider-wrap").style.display = "none";
     // Init raid state
     raidState = {
       myShips: [], shipsToPlace: [...RAID_SHIPS], currentShipIdx: 0,
@@ -927,6 +941,7 @@ function setupGameUI(game) {
     hint.innerHTML    = '<span>Click a column to drop your dot</span>';
     status.textContent = "CONNECT 4";
     dpad.style.display = "none";
+    document.getElementById("pong-slider-wrap").style.display = "none";
     buildFourDotsBoard();
     fdSetMyTurn(false);
   } else {
@@ -938,10 +953,12 @@ function setupGameUI(game) {
       hint.innerHTML     = '<span>Arrow keys / WASD &nbsp;&mdash;&nbsp; steer</span>';
       status.textContent = "FIRST TO 3 ROUNDS";
       dpad.style.display = "grid";
+      document.getElementById("pong-slider-wrap").style.display = "none";
     } else {
-      hint.innerHTML     = '<span>W / S &nbsp;&mdash;&nbsp; move paddle</span><span class="hint-sep"> | </span><span>Or drag</span>';
+      hint.innerHTML     = '<span>W / S &nbsp;&mdash;&nbsp; move paddle</span><span class="hint-sep"> | </span><span>Or use slider below</span>';
       status.textContent = "FIRST TO 5";
       dpad.style.display = "none";
+      document.getElementById("pong-slider-wrap").style.display = "block";
     }
   }
 }
@@ -1244,10 +1261,36 @@ canvas.addEventListener("mousemove", (e) => {
 canvas.addEventListener("touchmove", (e) => {
   if (!gameState || gameState.game !== "pong" || !myRole) return;
   e.preventDefault();
-  const rect = canvas.getBoundingClientRect();
-  const newY = Math.max(0, Math.min(H-PADDLE_H, (e.touches[0].clientY-rect.top)*(H/rect.height)-PADDLE_H/2));
-  if (myRole==="left") gameState.paddles.left=newY; else gameState.paddles.right=newY;
+  // On mobile, canvas touch is disabled — slider handles it
+}, { passive: false });
+
+// ── Pong mobile slider ────────────────────────────────────────────
+const sliderTrack = document.getElementById("pong-slider-track");
+const sliderThumb = document.getElementById("pong-slider-thumb");
+
+function pongSliderMove(clientX) {
+  if (!gameState || gameState.game !== "pong" || !myRole) return;
+  const rect    = sliderTrack.getBoundingClientRect();
+  const thumbW  = sliderThumb.offsetWidth;
+  const trackW  = rect.width;
+  const rawX    = clientX - rect.left - thumbW / 2;
+  const clampX  = Math.max(0, Math.min(trackW - thumbW, rawX));
+  const ratio   = clampX / (trackW - thumbW);
+  sliderThumb.style.left = clampX + "px";
+  const newY = Math.round(ratio * (H - PADDLE_H));
+  if (myRole === "left")  gameState.paddles.left  = newY;
+  else                    gameState.paddles.right = newY;
   socket.emit("paddle_move", { roomId, role: myRole, y: newY });
+}
+
+sliderTrack.addEventListener("touchstart", (e) => {
+  e.preventDefault();
+  pongSliderMove(e.touches[0].clientX);
+}, { passive: false });
+
+sliderTrack.addEventListener("touchmove", (e) => {
+  e.preventDefault();
+  pongSliderMove(e.touches[0].clientX);
 }, { passive: false });
 
 // ── Socket events ─────────────────────────────────────────────────
@@ -1300,6 +1343,7 @@ socket.on("game_state", ({ gameState: gs }) => {
 
 socket.on("game_over", ({ winner, scores }) => {
   stopRenderLoop();
+  if (fdTimerInterval) clearInterval(fdTimerInterval);
   const badge = document.getElementById("result-badge");
   if (winner === "draw") {
     badge.textContent = "DRAW!";
@@ -1310,16 +1354,15 @@ socket.on("game_over", ({ winner, scores }) => {
     badge.className   = "result-badge" + (iWon ? "" : " loss");
   }
 
-  // Scores — opponent left, you right
-  const myScore   = myRole === "left" ? scores.left  : scores.right;
-  const themScore = myRole === "left" ? scores.right : scores.left;
+  const safeScores = scores || { left: 0, right: 0 };
+  const myScore   = myRole === "left" ? safeScores.left  : safeScores.right;
+  const themScore = myRole === "left" ? safeScores.right : safeScores.left;
   document.getElementById("gameover-score-you").textContent  = myScore;
   document.getElementById("gameover-score-them").textContent = themScore;
 
-  // Keep final-score for share card compatibility
   document.getElementById("rematch-status").textContent = "";
 
-  setTimeout(() => generateShareCard(scores, winner), 200);
+  setTimeout(() => generateShareCard(safeScores, winner), 200);
   showScreen("screen-gameover");
 });
 
