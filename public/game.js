@@ -696,6 +696,12 @@ function startCountdown(onComplete) {
     if (lv) lv.srcObject = localStream;
   }
 
+  // Faceoff screen is now visible — assign remote stream
+  if (window._remoteStream) {
+    _remoteStreamAssigned = false;
+    assignRemoteStream(window._remoteStream);
+  }
+
   const remoteRetry = null; // no retry needed — canplay event handles it
 
   let count = 10;
@@ -1286,6 +1292,9 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
       startRenderLoop();
     }
     socket.emit("player_ready", { roomId });
+    // Now screen is visible — assign stream to video elements so play() succeeds
+    _remoteStreamAssigned = false;
+    if (window._remoteStream) assignRemoteStream(window._remoteStream);
   });
 });
 
