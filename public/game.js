@@ -401,8 +401,16 @@ function raidStartTimer(seconds) {
 
 // Raid socket events
 socket.on("raid_player_placed", ({ role }) => {
-  const label = document.getElementById("raid-phase-label") || document.getElementById("raid-turn-label");
-  if (role !== myRole && label) label.textContent = "OPPONENT READY — WAITING FOR YOU...";
+  if (role !== myRole) {
+    // Opponent placed their ships — notify me
+    const status = document.getElementById("raid-placement-status");
+    const waiting = document.getElementById("raid-waiting-msg");
+    if (status) status.textContent = "Opponent is ready — place your ships!";
+    // If I've already clicked ready, update my waiting message
+    if (waiting && !waiting.classList.contains("hidden")) {
+      waiting.textContent = "Both ready — starting battle!";
+    }
+  }
 });
 
 socket.on("raid_combat_start", ({ turn }) => {
@@ -671,7 +679,7 @@ function setupGameUI(game) {
     document.getElementById("raid-combat").classList.add("hidden");
     document.getElementById("raid-ready-btn").style.display = "none";
     document.getElementById("raid-ready-btn").disabled = false;
-    document.getElementById("raid-ready-btn").textContent = "&#9654; READY — START BATTLE";
+    document.getElementById("raid-ready-btn").innerHTML = "&#9654; READY — START BATTLE";
     document.getElementById("raid-waiting-msg").classList.add("hidden");
     document.getElementById("raid-placement-status").textContent = "Place all 4 ships to continue";
     document.querySelectorAll(".raid-ship-btn").forEach((b, i) => {
@@ -1009,9 +1017,51 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
   myRole      = role;
   currentGame = game;
   clearChat();
+
+  // Show waiting screen first while we sort camera
+  showScreen("screen-waiting");
+  document.getElementById("waiting-title").textContent = "OPPONENT FOUND!";
+  document.getElementById("waiting-sub").textContent   = "Setting up camera\u2026";
+
   await startPeerConnection(role === "left");
+
+  // Handle camera permission before signalling ready
+  if (!localStream) {
+    const hasCam = await getCamera();
+    if (!hasCam) {
+      // Show camera overlay — user must choose allow or skip
+      showOverlay("overlay-camera");
+      // Wait for their choice before continuing
+      await new Promise(resolve => {
+        const allowBtn = document.getElementById("btn-allow-camera");
+        const skipBtn  = document.getElementById("btn-skip-camera");
+        const onAllow = async () => {
+          hideOverlay("overlay-camera");
+          await getCamera();
+          allowBtn.removeEventListener("click", onAllow);
+          skipBtn.removeEventListener("click", onSkip);
+          resolve();
+        };
+        const onSkip = () => {
+          hideOverlay("overlay-camera");
+          allowBtn.removeEventListener("click", onAllow);
+          skipBtn.removeEventListener("click", onSkip);
+          resolve();
+        };
+        allowBtn.addEventListener("click", onAllow);
+        skipBtn.addEventListener("click", onSkip);
+      });
+    }
+  }
+
+  // Signal server we're camera-ready
+  socket.emit("camera_ready", { roomId });
+});
+
+// Server tells us both players are camera-ready — start countdown
+socket.on("both_camera_ready", () => {
   startCountdown(() => {
-    setupGameUI(game);
+    setupGameUI(currentGame);
     showScreen("screen-game");
     startRenderLoop();
     socket.emit("player_ready", { roomId });
