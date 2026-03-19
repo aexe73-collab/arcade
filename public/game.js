@@ -746,12 +746,15 @@ function assignRemoteStream(s) {
     const el = document.getElementById(id);
     if (!el) return;
     if (el.srcObject !== s) el.srcObject = s;
-    // Poll play() until it succeeds — works regardless of visibility or Safari quirks
+    el.muted = true; // must be muted to autoplay in Safari
     let attempts = 0;
     const tryPlay = () => {
-      if (attempts++ > 20) return; // give up after 10 seconds
+      if (attempts++ > 20) return;
       el.play().then(() => {
         console.log("[RTC] playing:", id);
+        // Unmute after playback starts — user has interacted by this point
+        el.muted = false;
+        el.volume = 1.0;
       }).catch(() => {
         setTimeout(tryPlay, 500);
       });
