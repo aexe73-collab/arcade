@@ -747,7 +747,12 @@ async function startPeerConnection(isInitiator) {
     window._remoteStream = s;
     ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
       const el = document.getElementById(id);
-      if (el) { el.srcObject = s; el.play().catch(e => console.warn("[RTC] play failed:", id, e.message)); }
+      if (!el) return;
+      el.srcObject = s;
+      const tryPlay = () => el.play().catch(() => {});
+      el.onloadedmetadata = tryPlay;
+      setTimeout(tryPlay, 300);
+      setTimeout(tryPlay, 1000);
     });
   };
 
