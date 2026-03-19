@@ -747,7 +747,11 @@ async function startPeerConnection(isInitiator) {
   };
 
   peerConn.oniceconnectionstatechange = () => {
-    console.log("[ICE]", peerConn.iceConnectionState);
+    const state = peerConn.iceConnectionState;
+    console.log("[ICE]", state);
+    // Visible debug — remove later
+    const dbg = document.getElementById("rtc-debug");
+    if (dbg) dbg.textContent = "ICE: " + state;
   };
 
   peerConn.onicecandidate = (e) => {
