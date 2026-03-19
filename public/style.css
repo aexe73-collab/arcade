@@ -549,7 +549,7 @@ body {
 
 /* Side video panels — big face energy */
 .side-panel {
-  width: clamp(160px, 20vw, 280px);
+  width: clamp(200px, 25vw, 400px);
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
