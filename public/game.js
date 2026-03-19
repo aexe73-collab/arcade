@@ -26,25 +26,28 @@ function initSupabase() {
     auth: { detectSessionInUrl: true, persistSession: true, flowType: "pkce" }
   });
 
-  // Explicitly handle PKCE code in URL
   const params = new URLSearchParams(window.location.search);
   const code = params.get("code");
   if (code) {
     console.log("Found OAuth code in URL, exchanging...");
-    // Manually restore verifier if Supabase can't find it
     const verifierKey = Object.keys(localStorage).find(k => k.includes("code-verifier"));
-    console.log("Verifier key:", verifierKey, "value:", verifierKey ? localStorage.getItem(verifierKey)?.substring(0, 20) + "..." : "MISSING");
+    const verifier = verifierKey ? localStorage.getItem(verifierKey) : null;
+    console.log("Verifier found:", !!verifier);
+
+    // Supabase expects the verifier under a specific key — set it directly
+    if (verifier) {
+      const expectedKey = `sb-${SUPABASE_URL.split("//")[1].split(".")[0]}-auth-token-code-verifier`;
+      localStorage.setItem(expectedKey, verifier);
+      // Also try the exact supabase internal key format
+      localStorage.setItem("supabase.auth.pkce.code_verifier", verifier);
+    }
+
     sbClient.auth.exchangeCodeForSession(code).then(({ data, error }) => {
       console.log("Exchange result:", data?.session?.user?.email || error?.message);
       if (data?.session) {
         setUser(data.session.user);
         showScreen("screen-home");
         window.history.replaceState({}, document.title, window.location.pathname);
-      } else {
-        // Verifier mismatch — try getting session directly
-        sbClient.auth.getSession().then(({ data: { session } }) => {
-          if (session) { setUser(session.user); showScreen("screen-home"); }
-        });
       }
     });
     return;
