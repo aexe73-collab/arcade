@@ -737,9 +737,11 @@ const ICE_SERVERS = {
 };
 
 function assignRemoteStream(s) {
-  if (!s) return;
+  if (!s) { console.warn("[RTC] assignRemoteStream called with no stream"); return; }
+  console.log("[RTC] assignRemoteStream called");
   ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
     const el = document.getElementById(id);
+    console.log("[RTC] element", id, "->", el ? "found" : "NULL");
     if (!el) return;
     if (el.srcObject !== s) el.srcObject = s;
     el.muted = true;
