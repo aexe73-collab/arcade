@@ -568,9 +568,19 @@ function endGame(roomId, winner) {
   const room = rooms.get(roomId);
   if (!room) return;
   if (room.gameLoop) clearInterval(room.gameLoop);
+  if (room.turnTimer) clearTimeout(room.turnTimer);
   room.gameState.running = false;
   room.gameState.winner  = winner;
-  io.to(roomId).emit("game_over", { winner, scores: room.gameState.scores });
+
+  // Build scores for game_over event — raid uses sunk counts
+  let scores = room.gameState.scores;
+  if (room.gameState.game === "raid") {
+    scores = {
+      left:  room.gameState.boards.left.sunk,
+      right: room.gameState.boards.right.sunk
+    };
+  }
+  io.to(roomId).emit("game_over", { winner, scores });
 }
 
 const PORT = process.env.PORT || 3000;
