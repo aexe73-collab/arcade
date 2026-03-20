@@ -867,15 +867,15 @@ function startRenderLoop() {
       if (gameState.game === "snake") drawSnake(gameState);
       else if (gameState.game === "pong") {
         drawPong(gameState);
-        // Sync slider thumb position with paddle
+        // Sync vertical slider thumb position with paddle
         const track = document.getElementById("pong-slider-track");
         const thumb = document.getElementById("pong-slider-thumb");
-        if (track && thumb && track.offsetWidth > 0) {
+        if (track && thumb && track.offsetHeight > 0) {
           const myY    = myRole === "left" ? gameState.paddles.left : gameState.paddles.right;
           const ratio  = myY / (H - PADDLE_H);
-          const thumbW = thumb.offsetWidth;
-          const trackW = track.offsetWidth;
-          thumb.style.left = Math.round(ratio * (trackW - thumbW)) + "px";
+          const thumbH = thumb.offsetHeight;
+          const trackH = track.offsetHeight;
+          thumb.style.top = Math.round(ratio * (trackH - thumbH)) + "px";
         }
       }
     }
@@ -1271,19 +1271,19 @@ canvas.addEventListener("touchmove", (e) => {
   // On mobile, canvas touch is disabled — slider handles it
 }, { passive: false });
 
-// ── Pong mobile slider ────────────────────────────────────────────
+// ── Pong mobile slider (vertical) ────────────────────────────────
 const sliderTrack = document.getElementById("pong-slider-track");
 const sliderThumb = document.getElementById("pong-slider-thumb");
 
-function pongSliderMove(clientX) {
+function pongSliderMove(clientY) {
   if (!gameState || gameState.game !== "pong" || !myRole) return;
   const rect    = sliderTrack.getBoundingClientRect();
-  const thumbW  = sliderThumb.offsetWidth;
-  const trackW  = rect.width;
-  const rawX    = clientX - rect.left - thumbW / 2;
-  const clampX  = Math.max(0, Math.min(trackW - thumbW, rawX));
-  const ratio   = clampX / (trackW - thumbW);
-  sliderThumb.style.left = clampX + "px";
+  const thumbH  = sliderThumb.offsetHeight;
+  const trackH  = rect.height;
+  const rawY    = clientY - rect.top - thumbH / 2;
+  const clampY  = Math.max(0, Math.min(trackH - thumbH, rawY));
+  const ratio   = clampY / (trackH - thumbH);
+  sliderThumb.style.top = clampY + "px";
   const newY = Math.round(ratio * (H - PADDLE_H));
   if (myRole === "left")  gameState.paddles.left  = newY;
   else                    gameState.paddles.right = newY;
@@ -1292,12 +1292,12 @@ function pongSliderMove(clientX) {
 
 sliderTrack.addEventListener("touchstart", (e) => {
   e.preventDefault();
-  pongSliderMove(e.touches[0].clientX);
+  pongSliderMove(e.touches[0].clientY);
 }, { passive: false });
 
 sliderTrack.addEventListener("touchmove", (e) => {
   e.preventDefault();
-  pongSliderMove(e.touches[0].clientX);
+  pongSliderMove(e.touches[0].clientY);
 }, { passive: false });
 
 // ── Socket events ─────────────────────────────────────────────────
@@ -1351,26 +1351,43 @@ socket.on("game_state", ({ gameState: gs }) => {
 socket.on("game_over", ({ winner, scores }) => {
   stopRenderLoop();
   if (fdTimerInterval) clearInterval(fdTimerInterval);
-  const badge = document.getElementById("result-badge");
-  if (winner === "draw") {
-    badge.textContent = "DRAW!";
-    badge.className   = "result-badge";
-  } else {
-    const iWon = winner === myRole;
-    badge.textContent = iWon ? "YOU WIN!" : "YOU LOSE";
-    badge.className   = "result-badge" + (iWon ? "" : " loss");
-  }
 
+  const iWon = winner === myRole;
+  const isDraw = winner === "draw";
   const safeScores = scores || { left: 0, right: 0 };
   const myScore   = myRole === "left" ? safeScores.left  : safeScores.right;
   const themScore = myRole === "left" ? safeScores.right : safeScores.left;
-  document.getElementById("gameover-score-you").textContent  = myScore;
-  document.getElementById("gameover-score-them").textContent = themScore;
 
-  document.getElementById("rematch-status").textContent = "";
+  // Show result flash overlay on the game screen
+  const overlay = document.getElementById("result-flash-overlay");
+  const overlayText = document.getElementById("result-flash-text");
+  if (overlay && overlayText) {
+    overlayText.textContent = isDraw ? "DRAW!" : iWon ? "YOU WIN!" : "YOU LOSE";
+    overlayText.style.color = isDraw ? "var(--text)" : iWon ? "var(--accent)" : "var(--accent2)";
+    overlay.style.display = "flex";
+  }
 
-  setTimeout(() => generateShareCard(safeScores, winner), 200);
-  showScreen("screen-gameover");
+  // Capture game snapshot while still on game screen
+  setTimeout(() => {
+    // Generate share card while game screen still visible (captures final state)
+    generateShareCard(safeScores, winner);
+
+    // Now set up game-over screen
+    const badge = document.getElementById("result-badge");
+    if (isDraw) {
+      badge.textContent = "DRAW!";
+      badge.className   = "result-badge";
+    } else {
+      badge.textContent = iWon ? "YOU WIN!" : "YOU LOSE";
+      badge.className   = "result-badge" + (iWon ? "" : " loss");
+    }
+    document.getElementById("gameover-score-you").textContent  = myScore;
+    document.getElementById("gameover-score-them").textContent = themScore;
+    document.getElementById("rematch-status").textContent = "";
+
+    if (overlay) overlay.style.display = "none";
+    showScreen("screen-gameover");
+  }, 2500);
 });
 
 // ── Post-game chat ────────────────────────────────────────────────
@@ -1430,6 +1447,15 @@ document.getElementById("btn-email").addEventListener("click", async () => {
   document.getElementById("email-capture").querySelector(".email-capture-row").classList.add("hidden");
   document.getElementById("email-done").classList.remove("hidden");
 });
+document.getElementById("btn-share-toggle").addEventListener("click", () => {
+  const inner  = document.getElementById("share-card-inner");
+  const toggle = document.getElementById("btn-share-toggle");
+  const isOpen = inner.style.display !== "none";
+  inner.style.display  = isOpen ? "none" : "flex";
+  toggle.textContent   = isOpen ? "▼ SHOW MATCH CARD" : "▲ HIDE MATCH CARD";
+  toggle.classList.toggle("open", !isOpen);
+});
+
 document.getElementById("btn-share").addEventListener("click", () => {
   const sc = document.getElementById("share-canvas");
   const link = document.createElement("a");
