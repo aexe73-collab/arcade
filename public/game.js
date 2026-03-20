@@ -1093,8 +1093,10 @@ function updateScoreDisplay(scores) {
 // ── Share card generator ──────────────────────────────────────────
 function generateShareCard(scores, winner) {
   const sc  = document.getElementById("share-canvas");
+  sc.width  = 800;
+  sc.height = 620; // taller to fit game snapshot
   const ctx = sc.getContext("2d");
-  const W   = 800, H = 420;
+  const W   = 800, H = 620;
 
   // Background
   ctx.fillStyle = "#0a0a0f";
@@ -1102,96 +1104,137 @@ function generateShareCard(scores, winner) {
 
   // Top banner strip
   ctx.fillStyle = "#ff3366";
-  ctx.fillRect(0, 0, W, 6);
+  ctx.fillRect(0, 0, W, 5);
 
   // Bottom banner strip
   ctx.fillStyle = "#00ff88";
-  ctx.fillRect(0, H - 6, W, 6);
+  ctx.fillRect(0, H - 5, W, 5);
 
-  // Draw video frames if available — them on left, you on right
+  // ── Row 1: Faces + score ──────────────────────────────────────────
   const vidThem = document.getElementById("video-remote");
   const vidYou  = document.getElementById("video-local");
-  const faceW   = 240, faceH = 200, faceY = 50;
+  const faceW = 200, faceH = 160, faceY = 20;
 
-  // Face frame backgrounds
   ctx.fillStyle = "#1a1a26";
-  ctx.fillRect(40, faceY, faceW, faceH);
-  ctx.fillRect(W - 40 - faceW, faceY, faceW, faceH);
+  ctx.fillRect(20, faceY, faceW, faceH);
+  ctx.fillRect(W - 20 - faceW, faceY, faceW, faceH);
 
-  // Draw video frames (if stream is live)
   try {
     if (vidThem && vidThem.readyState >= 2) {
       ctx.save();
-      ctx.rect(40, faceY, faceW, faceH);
-      ctx.clip();
-      ctx.drawImage(vidThem, 40, faceY, faceW, faceH);
+      ctx.beginPath(); ctx.rect(20, faceY, faceW, faceH); ctx.clip();
+      ctx.drawImage(vidThem, 20, faceY, faceW, faceH);
       ctx.restore();
     }
     if (vidYou && vidYou.readyState >= 2) {
       ctx.save();
-      ctx.rect(W - 40 - faceW, faceY, faceW, faceH);
-      ctx.clip();
-      // Mirror local video
-      ctx.translate(W - 40 - faceW + faceW, faceY);
+      ctx.beginPath(); ctx.rect(W - 20 - faceW, faceY, faceW, faceH); ctx.clip();
+      ctx.translate(W - 20 - faceW + faceW, faceY);
       ctx.scale(-1, 1);
       ctx.drawImage(vidYou, 0, 0, faceW, faceH);
       ctx.restore();
     }
-  } catch (e) {
-    console.warn("Share card video draw:", e.message);
-  }
+  } catch (e) {}
 
   // Face borders
-  ctx.strokeStyle = "#ff3366";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(40, faceY, faceW, faceH);
+  ctx.strokeStyle = "#ff3366"; ctx.lineWidth = 3;
+  ctx.strokeRect(20, faceY, faceW, faceH);
   ctx.strokeStyle = "#00ff88";
-  ctx.strokeRect(W - 40 - faceW, faceY, faceW, faceH);
+  ctx.strokeRect(W - 20 - faceW, faceY, faceW, faceH);
 
-  // OPPONENT / YOU labels under faces
-  ctx.font = "bold 11px 'Courier New', monospace";
-  ctx.fillStyle = "#ff3366";
+  // Labels under faces
+  ctx.font = "bold 10px 'Courier New', monospace";
   ctx.textAlign = "center";
-  ctx.fillText("OPPONENT", 40 + faceW / 2, faceY + faceH + 22);
+  ctx.fillStyle = "#ff3366";
+  ctx.fillText("OPPONENT", 20 + faceW / 2, faceY + faceH + 16);
   ctx.fillStyle = "#00ff88";
-  ctx.fillText("YOU", W - 40 - faceW / 2, faceY + faceH + 22);
+  ctx.fillText("YOU", W - 20 - faceW / 2, faceY + faceH + 16);
 
   // Centre score
   const myScore   = myRole === "left" ? scores.left  : scores.right;
   const themScore = myRole === "left" ? scores.right : scores.left;
+  const resultText   = winner === "draw" ? "DRAW" : winner === myRole ? "WIN" : "LOSS";
+  const resultColour = resultText === "WIN" ? "#00ff88" : resultText === "LOSS" ? "#ff3366" : "#ffffff";
 
-  ctx.font = "bold 64px 'Courier New', monospace";
+  ctx.font = "bold 56px 'Courier New', monospace";
   ctx.textAlign = "center";
   ctx.fillStyle = "#ff3366";
-  ctx.fillText(themScore, W / 2 - 50, faceY + faceH / 2 + 20);
+  ctx.fillText(themScore, W / 2 - 44, faceY + faceH / 2 + 18);
   ctx.fillStyle = "#2a2a3e";
-  ctx.fillText(":", W / 2, faceY + faceH / 2 + 20);
+  ctx.fillText(":", W / 2, faceY + faceH / 2 + 18);
   ctx.fillStyle = "#00ff88";
-  ctx.fillText(myScore, W / 2 + 50, faceY + faceH / 2 + 20);
+  ctx.fillText(myScore, W / 2 + 44, faceY + faceH / 2 + 18);
 
-  // Result text
-  const resultText = winner === "draw" ? "DRAW" : winner === myRole ? "WIN" : "LOSS";
-  const resultColour = resultText === "WIN" ? "#00ff88" : resultText === "LOSS" ? "#ff3366" : "#ffffff";
-  ctx.font = "bold 28px 'Courier New', monospace";
+  ctx.font = "bold 22px 'Courier New', monospace";
   ctx.fillStyle = resultColour;
-  ctx.fillText(resultText, W / 2, faceY + faceH / 2 + 58);
+  ctx.fillText(resultText, W / 2, faceY + faceH / 2 + 48);
 
-  // Game type label
-  ctx.font = "12px 'Courier New', monospace";
+  ctx.font = "10px 'Courier New', monospace";
   ctx.fillStyle = "#6666aa";
-  ctx.fillText(currentGame ? currentGame.toUpperCase() : "PONG", W / 2, faceY + faceH / 2 + 82);
+  ctx.fillText(currentGame ? currentGame.toUpperCase() : "", W / 2, faceY + faceH / 2 + 66);
 
-  // ARCADEFACE branding — bottom centre
-  ctx.font = "bold 18px 'Courier New', monospace";
+  // ── Row 2: Game screen snapshot ───────────────────────────────────
+  const snapY = faceY + faceH + 30;
+  const snapH = 260;
+  const snapW = W - 40;
+  const snapX = 20;
+
+  ctx.fillStyle = "#12121a";
+  ctx.fillRect(snapX, snapY, snapW, snapH);
+  ctx.strokeStyle = "#2a2a3e"; ctx.lineWidth = 2;
+  ctx.strokeRect(snapX, snapY, snapW, snapH);
+
+  // Try to capture the game canvas (pong/snake) or the fourdots/raid UI
+  const gameCanvas = document.getElementById("pong-canvas");
+  const fourdotsEl = document.getElementById("fourdots-ui");
+  const raidEl     = document.getElementById("raid-combat");
+
+  try {
+    if (currentGame === "pong" || currentGame === "snake") {
+      // Draw the pong/snake canvas
+      if (gameCanvas) {
+        ctx.drawImage(gameCanvas, snapX + 2, snapY + 2, snapW - 4, snapH - 4);
+      }
+    } else if (currentGame === "fourdots" && fourdotsEl) {
+      // Render fourdots board cells from game state
+      if (gameState && gameState.board) {
+        const board = gameState.board;
+        const rows = board.length, cols = board[0].length;
+        const cellSize = Math.min((snapW - 20) / cols, (snapH - 20) / rows);
+        const boardW = cellSize * cols, boardH = cellSize * rows;
+        const bx = snapX + (snapW - boardW) / 2;
+        const by = snapY + (snapH - boardH) / 2;
+        ctx.fillStyle = "#1a1a26";
+        ctx.fillRect(bx - 4, by - 4, boardW + 8, boardH + 8);
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const cell = board[r][c];
+            ctx.fillStyle = cell === "left" ? "#ff3366" : cell === "right" ? "#00ff88" : "#0a0a0f";
+            ctx.beginPath();
+            ctx.arc(bx + c * cellSize + cellSize / 2, by + r * cellSize + cellSize / 2, cellSize / 2 - 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+    } else {
+      // Generic: draw text placeholder for other games
+      ctx.font = "bold 16px 'Courier New', monospace";
+      ctx.fillStyle = "#2a2a3e";
+      ctx.textAlign = "center";
+      ctx.fillText("ARCADEFACE.COM", snapX + snapW / 2, snapY + snapH / 2);
+    }
+  } catch(e) {}
+
+  // ── Branding ──────────────────────────────────────────────────────
+  ctx.font = "bold 16px 'Courier New', monospace";
+  ctx.textAlign = "center";
   ctx.fillStyle = "#e8e8f0";
-  ctx.fillText("ARCADE", W / 2 - 46, H - 22);
+  ctx.fillText("ARCADE", W / 2 - 38, H - 16);
   ctx.fillStyle = "#ff3366";
-  ctx.fillText("FACE", W / 2 + 46, H - 22);
-
-  // Hashtag
-  ctx.font = "11px 'Courier New', monospace";
+  ctx.fillText("FACE", W / 2 + 38, H - 16);
+  ctx.font = "10px 'Courier New', monospace";
   ctx.fillStyle = "#6666aa";
-  ctx.fillText("#ArcadeFace", W / 2 + 120, H - 22);
+  ctx.fillText("#ArcadeFace  ·  arcadeface.com", W / 2 + 160, H - 16);
 }
 
 // ── Keyboard controls ─────────────────────────────────────────────
