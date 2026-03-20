@@ -193,9 +193,23 @@ io.on("connection", (socket) => {
 
   // Player selects a game and joins that queue
   socket.on("find_match", ({ game }) => {
+    // Clear this socket from any existing queue first
+    for (const g of Object.keys(waitingQueues)) {
+      if (waitingQueues[g] === socket.id) waitingQueues[g] = null;
+    }
+
     const queue = waitingQueues[game];
 
     if (queue && queue !== socket.id) {
+      // Verify the waiting player is still connected
+      const waitingSocket = io.sockets.sockets.get(queue);
+      if (!waitingSocket) {
+        // Stale queue entry — replace with current player
+        waitingQueues[game] = socket.id;
+        socket.emit("waiting", { game });
+        return;
+      }
+
       // Match found
       const roomId = generateRoomId();
       const player1 = queue;
