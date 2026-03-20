@@ -491,6 +491,7 @@ body {
   align-items: stretch;
   justify-content: stretch;
   padding: 0;
+  position: relative;
 }
 
 .game-layout {
@@ -1232,30 +1233,41 @@ body {
 
 /* ── Pong mobile slider ────────────────────────────────── */
 .pong-slider-wrap {
-  display: none; /* shown only on mobile during pong */
-  width: 100%;
-  padding: 12px 20px 8px;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
   touch-action: none;
+  width: 100%;
+}
+
+.pong-slider-label {
+  font-family: var(--pixel);
+  font-size: 7px;
+  color: var(--muted);
+  letter-spacing: 2px;
 }
 
 .pong-slider-track {
   position: relative;
-  width: 100%;
-  height: 52px;
+  width: 64px;
+  height: 180px;
   background: var(--surface);
   border: 2px solid var(--border);
   border-radius: 4px;
   cursor: pointer;
+  touch-action: none;
 }
 
 .pong-slider-thumb {
   position: absolute;
-  top: 4px;
-  bottom: 4px;
-  width: 60px;
+  left: 4px;
+  right: 4px;
+  height: 48px;
   background: var(--accent);
   border-radius: 3px;
-  left: calc(50% - 30px);
+  top: calc(50% - 24px);
   pointer-events: none;
   transition: background 0.1s;
 }
@@ -1426,6 +1438,29 @@ body {
   gap: 8px;
   width: 100%;
 }
+
+.share-card-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.btn-share-toggle {
+  font-family: var(--pixel);
+  font-size: 9px;
+  padding: 10px 20px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  letter-spacing: 2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.btn-share-toggle:hover { color: var(--text); border-color: var(--muted); }
+.btn-share-toggle.open  { color: var(--accent); border-color: var(--accent); }
 
 #share-canvas {
   display: block;
