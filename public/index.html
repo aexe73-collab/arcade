@@ -325,6 +325,7 @@
             <span>W / S &nbsp;&mdash;&nbsp; move paddle</span>
           </div>
           <div class="pong-slider-wrap" id="pong-slider-wrap">
+            <div class="pong-slider-label">DRAG TO MOVE</div>
             <div class="pong-slider-track" id="pong-slider-track">
               <div class="pong-slider-thumb" id="pong-slider-thumb"></div>
             </div>
@@ -346,6 +347,10 @@
         </div>
 
       </div>
+    </div>
+    <!-- Result flash overlay -->
+    <div id="result-flash-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.78);z-index:50;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
+      <div id="result-flash-text" style="font-family:'Press Start 2P',monospace;font-size:clamp(28px,5vw,56px);letter-spacing:4px;text-align:center"></div>
     </div>
   </div>
 
@@ -373,11 +378,14 @@
         </div>
       </div>
 
-      <!-- Shareable result card -->
+      <!-- Shareable result card — collapsed by default -->
       <div class="share-card" id="share-card">
-        <canvas id="share-canvas" width="800" height="420"></canvas>
-        <button class="btn-share" id="btn-share">&#8681; SAVE &amp; SHARE</button>
-        <p class="share-hint">Screenshot or save &mdash; tag <strong>#ArcadeFace</strong></p>
+        <button class="btn-share-toggle" id="btn-share-toggle">&#9660; SHOW MATCH CARD</button>
+        <div class="share-card-inner" id="share-card-inner" style="display:none">
+          <canvas id="share-canvas" width="800" height="420"></canvas>
+          <button class="btn-share" id="btn-share">&#8681; SAVE &amp; SHARE</button>
+          <p class="share-hint">Screenshot or save &mdash; tag <strong>#ArcadeFace</strong></p>
+        </div>
       </div>
 
       <div class="gameover-actions">
