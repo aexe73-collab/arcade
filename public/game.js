@@ -1404,6 +1404,17 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
   currentGame = game;
   clearChat();
   await startPeerConnection(role === "left");
+
+  // Show my avatar on my panel
+  if (myAvatar) {
+    refreshMyAvatarCanvases();
+    // Broadcast to opponent after a short delay (let WebRTC establish)
+    setTimeout(() => socket.emit("player_avatar", { roomId, avatar: myAvatar }), 2000);
+  }
+  // Clear opponent avatar
+  theirAvatar = null;
+  const theirEl = document.getElementById("panel-avatar-them");
+  if (theirEl) theirEl.getContext("2d").clearRect(0, 0, 48, 48);
   startCountdown(() => {
     setupGameUI(currentGame);
     showScreen("screen-game");
@@ -1620,5 +1631,229 @@ document.getElementById("btn-left-home").addEventListener("click", () => {
 });
 
 // ── Init ──────────────────────────────────────────────────────────
+// ── Avatar System ─────────────────────────────────────────────────
+let myAvatar    = null; // 16x16 array of hex color strings
+let theirAvatar = null;
+
+const RANDOM_SUBJECTS = [
+  "fire dragon","space robot","ninja cat","pixel wizard","zombie unicorn",
+  "cyber shark","ghost samurai","electric fox","iron golem","neon frog",
+  "lava bird","storm wolf","crystal bear","shadow panther","rocket penguin"
+];
+
+function drawAvatarOnCanvas(canvas, grid) {
+  if (!canvas || !grid) return;
+  const ctx  = canvas.getContext("2d");
+  const size = canvas.width;
+  const cell = size / 16;
+  ctx.clearRect(0, 0, size, size);
+  for (let r = 0; r < 16; r++) {
+    for (let c = 0; c < 16; c++) {
+      const color = grid[r]?.[c];
+      if (color && color !== "#000000" && color !== "transparent") {
+        ctx.fillStyle = color;
+        ctx.fillRect(Math.floor(c * cell), Math.floor(r * cell), Math.ceil(cell), Math.ceil(cell));
+      }
+    }
+  }
+}
+
+function refreshMyAvatarCanvases() {
+  if (!myAvatar) return;
+  ["avatar-canvas-guest","avatar-canvas-signedin","panel-avatar-you"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) drawAvatarOnCanvas(el, myAvatar);
+  });
+}
+
+// ── Photo upload → pixel avatar ───────────────────────────────────
+function imageToPixelGrid(imgEl, size = 16) {
+  const offscreen = document.createElement("canvas");
+  offscreen.width = offscreen.height = size;
+  const ctx = offscreen.getContext("2d");
+  ctx.drawImage(imgEl, 0, 0, size, size);
+  const data = ctx.getImageData(0, 0, size, size).data;
+  const grid = [];
+  for (let r = 0; r < size; r++) {
+    const row = [];
+    for (let c = 0; c < size; c++) {
+      const i = (r * size + c) * 4;
+      const R = data[i], G = data[i+1], B = data[i+2], A = data[i+3];
+      if (A < 30) { row.push("#000000"); continue; }
+      // Quantize to retro palette by snapping to nearest 32
+      const qr = Math.round(R / 32) * 32;
+      const qg = Math.round(G / 32) * 32;
+      const qb = Math.round(B / 32) * 32;
+      row.push(`#${qr.toString(16).padStart(2,"0")}${qg.toString(16).padStart(2,"0")}${qb.toString(16).padStart(2,"0")}`);
+    }
+    grid.push(row);
+  }
+  return grid;
+}
+
+document.getElementById("avatar-file-input").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => {
+      // Crop to square from centre
+      const min = Math.min(img.width, img.height);
+      const offscreen = document.createElement("canvas");
+      offscreen.width = offscreen.height = min;
+      const ctx = offscreen.getContext("2d");
+      ctx.drawImage(img,
+        (img.width - min) / 2, (img.height - min) / 2, min, min,
+        0, 0, min, min
+      );
+      const grid = imageToPixelGrid(offscreen, 16);
+      showAvatarPreview(grid, "Photo pixelated!");
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+// ── Claude API generation ─────────────────────────────────────────
+async function generateAvatar(description) {
+  document.getElementById("avatar-generating").style.display = "flex";
+  document.getElementById("avatar-gen-label").textContent    = "GENERATING...";
+  document.getElementById("avatar-actions").style.display    = "none";
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        messages: [{ role: "user", content:
+          `Create a 16x16 pixel art sprite of "${description}" in retro Game Boy style.
+Return ONLY valid JSON, no other text:
+{"grid":[["#rrggbb",...16 values],...16 rows]}
+Rules: use vivid retro colors, black (#000000) for background, make subject recognisable and centred.` }]
+      })
+    });
+    const data = await response.json();
+    const text = data.content?.map(b => b.text || "").join("") || "";
+    const clean = text.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean);
+    showAvatarPreview(parsed.grid, `"${description}"`);
+  } catch(e) {
+    document.getElementById("avatar-preview-label").textContent = "Failed — try again";
+    console.warn("Avatar gen error:", e);
+  }
+  document.getElementById("avatar-generating").style.display = "none";
+}
+
+function showAvatarPreview(grid, label) {
+  window._pendingAvatar = grid;
+  const preview = document.getElementById("avatar-preview-canvas");
+  drawAvatarOnCanvas(preview, grid);
+  document.getElementById("avatar-preview-label").textContent = label;
+  document.getElementById("avatar-actions").style.display = "flex";
+  document.getElementById("avatar-generating").style.display = "none";
+}
+
+// ── Avatar creator screen controls ───────────────────────────────
+document.getElementById("btn-generate-avatar").addEventListener("click", () => {
+  const input = document.getElementById("avatar-input").value.trim();
+  if (!input) return;
+  generateAvatar(input);
+});
+
+document.getElementById("avatar-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("btn-generate-avatar").click();
+});
+
+document.getElementById("btn-random-avatar").addEventListener("click", () => {
+  const subject = RANDOM_SUBJECTS[Math.floor(Math.random() * RANDOM_SUBJECTS.length)];
+  document.getElementById("avatar-input").value = subject;
+  generateAvatar(subject);
+});
+
+document.getElementById("btn-use-avatar").addEventListener("click", () => {
+  if (!window._pendingAvatar) return;
+  myAvatar = window._pendingAvatar;
+  try { localStorage.setItem("arcadeface_avatar", JSON.stringify(myAvatar)); } catch(e) {}
+  refreshMyAvatarCanvases();
+  if (roomId) socket.emit("player_avatar", { roomId, avatar: myAvatar });
+  showScreen("screen-home");
+});
+
+document.getElementById("btn-regen-avatar").addEventListener("click", () => {
+  const input = document.getElementById("avatar-input").value.trim();
+  if (input) generateAvatar(input);
+  else document.getElementById("btn-random-avatar").click();
+});
+
+document.getElementById("btn-skip-avatar").addEventListener("click", () => {
+  showScreen("screen-home");
+});
+
+// Open avatar creator — gate photo upload to signed-in users
+function openAvatarCreator() {
+  document.getElementById("avatar-input").value = "";
+  document.getElementById("avatar-actions").style.display    = "none";
+  document.getElementById("avatar-generating").style.display = "none";
+  document.getElementById("avatar-preview-label").textContent = "Choose an option below";
+  const prev = document.getElementById("avatar-preview-canvas");
+  if (prev) {
+    prev.getContext("2d").clearRect(0, 0, 128, 128);
+    if (myAvatar) {
+      drawAvatarOnCanvas(prev, myAvatar);
+      document.getElementById("avatar-preview-label").textContent = "Current icon";
+      document.getElementById("avatar-actions").style.display = "flex";
+      window._pendingAvatar = myAvatar;
+    }
+  }
+
+  // Gate photo upload to signed-in users
+  const isSignedIn = !!currentUser;
+  const uploadLabel = document.getElementById("avatar-upload-label");
+  const photoBadge  = document.getElementById("avatar-photo-badge");
+  const photoSub    = document.getElementById("avatar-photo-sub");
+  if (isSignedIn) {
+    uploadLabel.classList.remove("disabled");
+    photoBadge.textContent = "FREE";
+    photoBadge.classList.remove("locked","free-badge");
+    photoBadge.classList.add("free-badge");
+    photoBadge.style.borderColor = "var(--accent)";
+    photoBadge.style.color = "var(--accent)";
+    photoSub.textContent = "Pixelate a selfie or any image";
+  } else {
+    uploadLabel.classList.add("disabled");
+    photoBadge.textContent = "SIGN IN";
+    photoBadge.classList.add("locked");
+    photoSub.textContent = "Sign in free to unlock photo upload";
+  }
+
+  showScreen("screen-avatar");
+}
+
+["avatar-btn-guest","avatar-btn-signedin"].forEach(id => {
+  document.getElementById(id).addEventListener("click", openAvatarCreator);
+});
+
+// Load saved avatar on startup
+function loadSavedAvatar() {
+  try {
+    const saved = localStorage.getItem("arcadeface_avatar");
+    if (saved) {
+      myAvatar = JSON.parse(saved);
+      refreshMyAvatarCanvases();
+    }
+  } catch(e) {}
+}
+
+// Avatar socket events
+socket.on("player_avatar", ({ avatar }) => {
+  theirAvatar = avatar;
+  const el = document.getElementById("panel-avatar-them");
+  if (el) drawAvatarOnCanvas(el, avatar);
+});
+
 initSupabase();
 checkFriendLink();
+loadSavedAvatar();
