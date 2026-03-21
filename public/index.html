@@ -144,6 +144,52 @@
     </div>
   </div>
 
+  <!-- SCREEN: Friend Lobby -->
+  <div id="screen-friend-lobby" class="screen">
+    <div class="friend-lobby-layout">
+      <div class="friend-lobby-header">
+        <div class="friend-lobby-status" id="friend-lobby-status">Waiting for friend...</div>
+        <div class="friend-lobby-code" id="friend-lobby-code"></div>
+      </div>
+      <div class="friend-lobby-videos">
+        <div class="friend-lobby-pip pip-them">
+          <video id="video-friend-remote" autoplay playsinline></video>
+          <span>FRIEND</span>
+        </div>
+        <div class="friend-lobby-pip pip-you">
+          <video id="video-friend-local" autoplay muted playsinline></video>
+          <span>YOU</span>
+        </div>
+      </div>
+      <div class="friend-lobby-pick">
+        <div class="friend-lobby-pick-label" id="friend-pick-label">Pick a game to start</div>
+        <div class="friend-game-grid">
+          <button class="friend-game-btn" data-game="pong">
+            <div class="friend-game-icon">&#9646;&#9646;</div>
+            <div class="friend-game-name">PONG</div>
+          </button>
+          <button class="friend-game-btn" data-game="snake">
+            <div class="friend-game-icon">&#9632;&#9632;&#9632;</div>
+            <div class="friend-game-name">SNAKE</div>
+          </button>
+          <button class="friend-game-btn" data-game="reaction">
+            <div class="friend-game-icon">&#9654;</div>
+            <div class="friend-game-name">REFLEX</div>
+          </button>
+          <button class="friend-game-btn" data-game="raid">
+            <div class="friend-game-icon">&#9632;&#9632;</div>
+            <div class="friend-game-name">RAID</div>
+          </button>
+          <button class="friend-game-btn" data-game="fourdots">
+            <div class="friend-game-icon">&#9679;&#9679;</div>
+            <div class="friend-game-name">4 DOTS</div>
+          </button>
+        </div>
+      </div>
+      <button class="btn-text friend-exit-btn" id="btn-friend-exit">&#8592; Leave room</button>
+    </div>
+  </div>
+
   <!-- SCREEN 3: Waiting / matchmaking -->
   <div id="screen-waiting" class="screen">
     <div class="scanlines"></div>
