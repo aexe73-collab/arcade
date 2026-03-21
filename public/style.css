@@ -1231,6 +1231,140 @@ body {
 .raid-placement { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
 .raid-combat    { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
 
+/* ── Friend Lobby ──────────────────────────────────────── */
+#screen-friend-lobby {
+  background: var(--bg);
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.friend-lobby-layout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.friend-lobby-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 20px 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.friend-lobby-status {
+  font-family: var(--pixel);
+  font-size: 10px;
+  color: var(--accent);
+  letter-spacing: 2px;
+}
+
+.friend-lobby-code {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
+.friend-lobby-videos {
+  display: flex;
+  gap: 4px;
+  height: 220px;
+  flex-shrink: 0;
+}
+
+.friend-lobby-pip {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg2);
+}
+
+.friend-lobby-pip video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.friend-lobby-pip.pip-you video { transform: scaleX(-1); }
+
+.friend-lobby-pip span {
+  position: absolute;
+  bottom: 6px;
+  left: 8px;
+  font-family: var(--pixel);
+  font-size: 7px;
+  letter-spacing: 2px;
+}
+
+.friend-lobby-pip.pip-them { border: 2px solid var(--accent2); }
+.friend-lobby-pip.pip-them span { color: var(--accent2); }
+.friend-lobby-pip.pip-you  { border: 2px solid var(--accent); }
+.friend-lobby-pip.pip-you  span { color: var(--accent); }
+
+.friend-lobby-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 16px 8px;
+  flex: 1;
+}
+
+.friend-lobby-pick-label {
+  font-family: var(--pixel);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.friend-game-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  width: 100%;
+}
+
+.friend-game-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  min-width: 90px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.friend-game-btn:hover  { border-color: var(--accent); background: var(--surface); }
+.friend-game-btn:active { background: var(--accent); }
+
+.friend-game-icon {
+  font-size: 16px;
+  color: var(--accent);
+  letter-spacing: 2px;
+}
+
+.friend-game-name {
+  font-family: var(--pixel);
+  font-size: 8px;
+  color: var(--text);
+  letter-spacing: 1px;
+}
+
+.friend-exit-btn {
+  margin: 8px auto 16px;
+  color: var(--muted);
+}
+
 /* ── Pong mobile slider ────────────────────────────────── */
 .pong-slider-wrap {
   display: none;
