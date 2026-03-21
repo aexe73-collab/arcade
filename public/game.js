@@ -140,53 +140,147 @@ document.getElementById("mode-stranger").addEventListener("click", () => {
 
 document.getElementById("mode-friend").addEventListener("click", () => {
   playMode = "friend";
-  showFriendChallenge();
+  enterFriendLobby();
 });
 
 document.getElementById("mode-group").addEventListener("click", () => {
-  playMode = "group";
-  // Groups coming soon — show nudge for now
-  alert("Group rooms coming soon! You'll be able to create a private group and challenge your friends to a leaderboard.");
+  alert("Group rooms coming soon!");
 });
 
-// ── Friend challenge ──────────────────────────────────────────────
-function showFriendChallenge() {
-  const challengeId = Math.random().toString(36).substring(2, 8).toUpperCase();
-  const link = `https://www.arcadeface.com?challenge=${challengeId}`;
-  window._challengeId = challengeId;
+// ── Friend Lobby ──────────────────────────────────────────────────
+let friendCode = null;
+let friendPeerConn = null;
 
-  // Show branded modal
-  document.getElementById("challenge-link-input").value = link;
-  showOverlay("overlay-challenge");
-  showScreen("screen-picker");
+function enterFriendLobby(code) {
+  // Generate or use existing code
+  if (!code) {
+    const params = new URLSearchParams(window.location.search);
+    code = params.get("friend") || Math.random().toString(36).substring(2, 8).toUpperCase();
+  }
+  friendCode = code;
+
+  // Update URL so it can be shared
+  const link = `https://www.arcadeface.com?friend=${code}`;
+  history.replaceState({}, "", `?friend=${code}`);
+
+  document.getElementById("friend-lobby-code").textContent = link;
+  document.getElementById("friend-lobby-status").textContent = "Waiting for friend...";
+  document.getElementById("friend-pick-label").textContent = "Pick a game to start";
+
+  // Assign local video
+  if (localStream) {
+    const lv = document.getElementById("video-friend-local");
+    if (lv) lv.srcObject = localStream;
+  }
+
+  showScreen("screen-friend-lobby");
+  socket.emit("friend_join", { code });
+  startFriendPeerConnection();
 }
 
-document.getElementById("btn-copy-link").addEventListener("click", () => {
-  const input = document.getElementById("challenge-link-input");
-  navigator.clipboard?.writeText(input.value).catch(() => {
-    input.select();
-    document.execCommand("copy");
+async function startFriendPeerConnection() {
+  if (friendPeerConn) { friendPeerConn.close(); friendPeerConn = null; }
+  friendPeerConn = new RTCPeerConnection(ICE_SERVERS);
+  if (localStream) localStream.getTracks().forEach(t => friendPeerConn.addTrack(t, localStream));
+
+  friendPeerConn.ontrack = (event) => {
+    const el = document.getElementById("video-friend-remote");
+    if (el) el.srcObject = event.streams[0];
+  };
+
+  friendPeerConn.onicecandidate = (e) => {
+    if (e.candidate) socket.emit("friend_ice", { code: friendCode, candidate: e.candidate });
+  };
+}
+
+// Friend game buttons
+document.querySelectorAll(".friend-game-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    if (!friendCode) return;
+    const game = btn.dataset.game;
+    document.getElementById("friend-pick-label").textContent = "Starting " + game.toUpperCase() + "...";
+    socket.emit("friend_pick_game", { code: friendCode, game });
   });
-  const btn = document.getElementById("btn-copy-link");
-  const copied = document.getElementById("challenge-copied");
-  btn.textContent = "✓";
-  copied.style.display = "block";
-  setTimeout(() => { btn.textContent = "COPY"; copied.style.display = "none"; }, 2000);
 });
 
-document.getElementById("btn-challenge-close").addEventListener("click", () => {
-  hideOverlay("overlay-challenge");
+document.getElementById("btn-friend-exit").addEventListener("click", () => {
+  if (friendCode) socket.emit("friend_exit", { code: friendCode });
+  friendCode = null;
+  history.replaceState({}, "", "/");
+  if (friendPeerConn) { friendPeerConn.close(); friendPeerConn = null; }
+  showScreen("screen-home");
 });
 
-// Check if arriving via challenge link
-function checkChallengeLink() {
+// Friend socket events
+socket.on("friend_waiting", ({ code }) => {
+  const link = `https://www.arcadeface.com?friend=${code}`;
+  document.getElementById("friend-lobby-status").textContent = "Share this link with your friend:";
+  document.getElementById("friend-lobby-code").textContent = link;
+
+  // Copy link to clipboard automatically
+  navigator.clipboard?.writeText(link).catch(() => {});
+});
+
+socket.on("friend_connected", async ({ code }) => {
+  document.getElementById("friend-lobby-status").textContent = "Friend connected — pick a game!";
+  document.getElementById("friend-lobby-code").textContent = `Room: ${code}`;
+
+  // Initiate WebRTC for friend lobby video
+  if (friendPeerConn) {
+    const offer = await friendPeerConn.createOffer();
+    await friendPeerConn.setLocalDescription(offer);
+    socket.emit("friend_offer", { code, offer });
+  }
+});
+
+socket.on("friend_offer", async ({ offer, code }) => {
+  if (!friendPeerConn) await startFriendPeerConnection();
+  await friendPeerConn.setRemoteDescription(new RTCSessionDescription(offer));
+  const answer = await friendPeerConn.createAnswer();
+  await friendPeerConn.setLocalDescription(answer);
+  socket.emit("friend_answer", { code, answer });
+});
+
+socket.on("friend_answer", async ({ answer }) => {
+  if (friendPeerConn) await friendPeerConn.setRemoteDescription(new RTCSessionDescription(answer));
+});
+
+socket.on("friend_ice", async ({ candidate }) => {
+  try { if (friendPeerConn) await friendPeerConn.addIceCandidate(new RTCIceCandidate(candidate)); }
+  catch(e) {}
+});
+
+socket.on("friend_game_starting", ({ game }) => {
+  // Both players start matchmaking for this game
+  currentGame = game;
+  playMode = "friend";
+  document.getElementById("waiting-sub").textContent = `Starting ${game.toUpperCase()} with friend...`;
+  showScreen("screen-waiting");
+  socket.emit("find_match", { game });
+});
+
+socket.on("friend_left", () => {
+  document.getElementById("friend-lobby-status").textContent = "Friend left the room";
+  document.getElementById("friend-pick-label").textContent = "Waiting for friend to rejoin...";
+  const rv = document.getElementById("video-friend-remote");
+  if (rv) rv.srcObject = null;
+});
+
+socket.on("friend_room_full", () => {
+  alert("This room is full — both players are active. Ask your friend to send you a new link, or wait for one of them to disconnect.");
+  history.replaceState({}, "", "/");
+  showScreen("screen-home");
+});
+
+// Check if arriving via friend link
+function checkFriendLink() {
   const params = new URLSearchParams(window.location.search);
-  const challenge = params.get("challenge");
-  if (challenge) {
-    window._challengeId = challenge;
+  const code = params.get("friend");
+  if (code) {
     playMode = "friend";
-    // Go straight to game picker
-    setTimeout(() => showScreen("screen-picker"), 500);
+    setTimeout(() => {
+      getCamera().then(() => enterFriendLobby(code));
+    }, 500);
   }
 }
 
@@ -1094,150 +1188,108 @@ function updateScoreDisplay(scores) {
 function generateShareCard(scores, winner) {
   const sc  = document.getElementById("share-canvas");
   sc.width  = 800;
-  sc.height = 620; // taller to fit game snapshot
+  sc.height = 680;
   const ctx = sc.getContext("2d");
-  const W   = 800, H = 620;
+  const W = 800, H = 680;
 
-  // Background
   ctx.fillStyle = "#0a0a0f";
   ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#ff3366"; ctx.fillRect(0, 0, W, 5);
+  ctx.fillStyle = "#00ff88"; ctx.fillRect(0, H - 5, W, 5);
 
-  // Top banner strip
-  ctx.fillStyle = "#ff3366";
-  ctx.fillRect(0, 0, W, 5);
-
-  // Bottom banner strip
-  ctx.fillStyle = "#00ff88";
-  ctx.fillRect(0, H - 5, W, 5);
-
-  // ── Row 1: Faces + score ──────────────────────────────────────────
+  // Faces
   const vidThem = document.getElementById("video-remote");
   const vidYou  = document.getElementById("video-local");
-  const faceW = 200, faceH = 160, faceY = 20;
-
+  const faceW = 180, faceH = 150, faceY = 18;
   ctx.fillStyle = "#1a1a26";
   ctx.fillRect(20, faceY, faceW, faceH);
   ctx.fillRect(W - 20 - faceW, faceY, faceW, faceH);
-
   try {
     if (vidThem && vidThem.readyState >= 2) {
-      ctx.save();
-      ctx.beginPath(); ctx.rect(20, faceY, faceW, faceH); ctx.clip();
-      ctx.drawImage(vidThem, 20, faceY, faceW, faceH);
-      ctx.restore();
+      ctx.save(); ctx.beginPath(); ctx.rect(20, faceY, faceW, faceH); ctx.clip();
+      ctx.drawImage(vidThem, 20, faceY, faceW, faceH); ctx.restore();
     }
     if (vidYou && vidYou.readyState >= 2) {
-      ctx.save();
-      ctx.beginPath(); ctx.rect(W - 20 - faceW, faceY, faceW, faceH); ctx.clip();
-      ctx.translate(W - 20 - faceW + faceW, faceY);
-      ctx.scale(-1, 1);
-      ctx.drawImage(vidYou, 0, 0, faceW, faceH);
-      ctx.restore();
+      ctx.save(); ctx.beginPath(); ctx.rect(W - 20 - faceW, faceY, faceW, faceH); ctx.clip();
+      ctx.translate(W - 20 - faceW + faceW, faceY); ctx.scale(-1, 1);
+      ctx.drawImage(vidYou, 0, 0, faceW, faceH); ctx.restore();
     }
-  } catch (e) {}
-
-  // Face borders
+  } catch(e) {}
   ctx.strokeStyle = "#ff3366"; ctx.lineWidth = 3;
   ctx.strokeRect(20, faceY, faceW, faceH);
   ctx.strokeStyle = "#00ff88";
   ctx.strokeRect(W - 20 - faceW, faceY, faceW, faceH);
+  ctx.font = "bold 10px 'Courier New', monospace"; ctx.textAlign = "center";
+  ctx.fillStyle = "#ff3366"; ctx.fillText("OPPONENT", 20 + faceW / 2, faceY + faceH + 16);
+  ctx.fillStyle = "#00ff88"; ctx.fillText("YOU", W - 20 - faceW / 2, faceY + faceH + 16);
 
-  // Labels under faces
-  ctx.font = "bold 10px 'Courier New', monospace";
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#ff3366";
-  ctx.fillText("OPPONENT", 20 + faceW / 2, faceY + faceH + 16);
-  ctx.fillStyle = "#00ff88";
-  ctx.fillText("YOU", W - 20 - faceW / 2, faceY + faceH + 16);
-
-  // Centre score
+  // Score
   const myScore   = myRole === "left" ? scores.left  : scores.right;
   const themScore = myRole === "left" ? scores.right : scores.left;
   const resultText   = winner === "draw" ? "DRAW" : winner === myRole ? "WIN" : "LOSS";
   const resultColour = resultText === "WIN" ? "#00ff88" : resultText === "LOSS" ? "#ff3366" : "#ffffff";
+  ctx.font = "bold 54px 'Courier New', monospace"; ctx.textAlign = "center";
+  ctx.fillStyle = "#ff3366"; ctx.fillText(themScore, W / 2 - 42, faceY + faceH / 2 + 16);
+  ctx.fillStyle = "#2a2a3e"; ctx.fillText(":", W / 2, faceY + faceH / 2 + 16);
+  ctx.fillStyle = "#00ff88"; ctx.fillText(myScore,   W / 2 + 42, faceY + faceH / 2 + 16);
+  ctx.font = "bold 20px 'Courier New', monospace";
+  ctx.fillStyle = resultColour; ctx.fillText(resultText, W / 2, faceY + faceH / 2 + 44);
+  ctx.font = "10px 'Courier New', monospace"; ctx.fillStyle = "#6666aa";
+  ctx.fillText(currentGame ? currentGame.toUpperCase() : "", W / 2, faceY + faceH / 2 + 62);
 
-  ctx.font = "bold 56px 'Courier New', monospace";
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#ff3366";
-  ctx.fillText(themScore, W / 2 - 44, faceY + faceH / 2 + 18);
-  ctx.fillStyle = "#2a2a3e";
-  ctx.fillText(":", W / 2, faceY + faceH / 2 + 18);
-  ctx.fillStyle = "#00ff88";
-  ctx.fillText(myScore, W / 2 + 44, faceY + faceH / 2 + 18);
-
-  ctx.font = "bold 22px 'Courier New', monospace";
-  ctx.fillStyle = resultColour;
-  ctx.fillText(resultText, W / 2, faceY + faceH / 2 + 48);
-
-  ctx.font = "10px 'Courier New', monospace";
-  ctx.fillStyle = "#6666aa";
-  ctx.fillText(currentGame ? currentGame.toUpperCase() : "", W / 2, faceY + faceH / 2 + 66);
-
-  // ── Row 2: Game screen snapshot ───────────────────────────────────
-  const snapY = faceY + faceH + 30;
-  const snapH = 260;
-  const snapW = W - 40;
-  const snapX = 20;
-
-  ctx.fillStyle = "#12121a";
-  ctx.fillRect(snapX, snapY, snapW, snapH);
-  ctx.strokeStyle = "#2a2a3e"; ctx.lineWidth = 2;
-  ctx.strokeRect(snapX, snapY, snapW, snapH);
-
-  // Try to capture the game canvas (pong/snake) or the fourdots/raid UI
+  // Game snapshot
+  const snapY = faceY + faceH + 36;
+  const snapH = 240, snapW = W - 40, snapX = 20;
+  ctx.fillStyle = "#12121a"; ctx.fillRect(snapX, snapY, snapW, snapH);
+  ctx.strokeStyle = "#2a2a3e"; ctx.lineWidth = 2; ctx.strokeRect(snapX, snapY, snapW, snapH);
+  ctx.font = "8px 'Courier New', monospace"; ctx.fillStyle = "#6666aa"; ctx.textAlign = "left";
+  ctx.fillText("FINAL POSITION", snapX + 8, snapY + 14);
   const gameCanvas = document.getElementById("pong-canvas");
-  const fourdotsEl = document.getElementById("fourdots-ui");
-  const raidEl     = document.getElementById("raid-combat");
-
   try {
-    if (currentGame === "pong" || currentGame === "snake") {
-      // Draw the pong/snake canvas
-      if (gameCanvas) {
-        ctx.drawImage(gameCanvas, snapX + 2, snapY + 2, snapW - 4, snapH - 4);
+    if ((currentGame === "pong" || currentGame === "snake") && gameCanvas) {
+      ctx.drawImage(gameCanvas, snapX + 2, snapY + 2, snapW - 4, snapH - 4);
+    } else if (currentGame === "fourdots" && gameState && gameState.board) {
+      const board = gameState.board;
+      const rows = board.length, cols = board[0].length;
+      const cs = Math.min((snapW - 20) / cols, (snapH - 24) / rows);
+      const bx = snapX + (snapW - cs * cols) / 2;
+      const by = snapY + 18 + (snapH - 18 - cs * rows) / 2;
+      ctx.fillStyle = "#1a1a26"; ctx.fillRect(bx - 4, by - 4, cs * cols + 8, cs * rows + 8);
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        ctx.fillStyle = board[r][c] === "left" ? "#ff3366" : board[r][c] === "right" ? "#00ff88" : "#0a0a0f";
+        ctx.beginPath(); ctx.arc(bx + c * cs + cs / 2, by + r * cs + cs / 2, cs / 2 - 2, 0, Math.PI * 2); ctx.fill();
       }
-    } else if (currentGame === "fourdots" && fourdotsEl) {
-      // Render fourdots board cells from game state
-      if (gameState && gameState.board) {
-        const board = gameState.board;
-        const rows = board.length, cols = board[0].length;
-        const cellSize = Math.min((snapW - 20) / cols, (snapH - 20) / rows);
-        const boardW = cellSize * cols, boardH = cellSize * rows;
-        const bx = snapX + (snapW - boardW) / 2;
-        const by = snapY + (snapH - boardH) / 2;
-        ctx.fillStyle = "#1a1a26";
-        ctx.fillRect(bx - 4, by - 4, boardW + 8, boardH + 8);
-        for (let r = 0; r < rows; r++) {
-          for (let c = 0; c < cols; c++) {
-            const cell = board[r][c];
-            ctx.fillStyle = cell === "left" ? "#ff3366" : cell === "right" ? "#00ff88" : "#0a0a0f";
-            ctx.beginPath();
-            ctx.arc(bx + c * cellSize + cellSize / 2, by + r * cellSize + cellSize / 2, cellSize / 2 - 3, 0, Math.PI * 2);
-            ctx.fill();
-          }
+    } else if (currentGame === "raid" && gameState && gameState.boards) {
+      const gs2 = 8;
+      const cs = Math.min((snapW / 2 - 30) / gs2, (snapH - 30) / gs2);
+      ["left","right"].forEach((side, i) => {
+        const board = gameState.boards[side]; if (!board) return;
+        const gx = snapX + 10 + i * (snapW / 2), gy = snapY + 20;
+        ctx.font = "8px 'Courier New', monospace"; ctx.fillStyle = side === "left" ? "#ff3366" : "#00ff88"; ctx.textAlign = "center";
+        ctx.fillText(side === "left" ? "OPPONENT" : "YOU", gx + (gs2 * cs) / 2, gy - 4);
+        for (let r = 0; r < gs2; r++) for (let c = 0; c < gs2; c++) {
+          const isHit = board.shots?.some(s => s.x === c && s.y === r && s.hit);
+          const isShot = board.shots?.some(s => s.x === c && s.y === r);
+          ctx.fillStyle = isHit ? "#ff3366" : isShot ? "#2a2a3e" : "#1a1a26";
+          ctx.fillRect(gx + c * cs + 1, gy + r * cs + 1, cs - 2, cs - 2);
         }
-      }
+      });
     } else {
-      // Generic: draw text placeholder for other games
-      ctx.font = "bold 16px 'Courier New', monospace";
-      ctx.fillStyle = "#2a2a3e";
-      ctx.textAlign = "center";
+      ctx.font = "bold 14px 'Courier New', monospace"; ctx.fillStyle = "#2a2a3e"; ctx.textAlign = "center";
       ctx.fillText("ARCADEFACE.COM", snapX + snapW / 2, snapY + snapH / 2);
     }
   } catch(e) {}
 
-  // ── Branding ──────────────────────────────────────────────────────
-  ctx.font = "bold 16px 'Courier New', monospace";
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#e8e8f0";
-  ctx.fillText("ARCADE", W / 2 - 38, H - 16);
-  ctx.fillStyle = "#ff3366";
-  ctx.fillText("FACE", W / 2 + 38, H - 16);
-  ctx.font = "10px 'Courier New', monospace";
-  ctx.fillStyle = "#6666aa";
-  ctx.fillText("#ArcadeFace  ·  arcadeface.com", W / 2 + 160, H - 16);
+  // Branding
+  const brandY = snapY + snapH + 22;
+  ctx.font = "bold 18px 'Courier New', monospace"; ctx.textAlign = "center";
+  ctx.fillStyle = "#e8e8f0"; ctx.fillText("ARCADE", W / 2 - 44, brandY);
+  ctx.fillStyle = "#ff3366"; ctx.fillText("FACE", W / 2 + 44, brandY);
+  ctx.font = "10px 'Courier New', monospace"; ctx.fillStyle = "#6666aa";
+  ctx.fillText("#ArcadeFace  ·  arcadeface.com", W / 2, brandY + 20);
 }
 
-// ── Keyboard controls ─────────────────────────────────────────────
+
 document.addEventListener("keydown", e => { keys[e.key] = true; });
 document.addEventListener("keyup",   e => { keys[e.key] = false; });
 
@@ -1429,7 +1481,24 @@ socket.on("game_over", ({ winner, scores }) => {
     document.getElementById("rematch-status").textContent = "";
 
     if (overlay) overlay.style.display = "none";
-    showScreen("screen-gameover");
+
+    if (playMode === "friend" && friendCode) {
+      // Friend mode — return to lobby, not game-over screen
+      showScreen("screen-friend-lobby");
+      document.getElementById("friend-lobby-status").textContent = "Game over — pick another!";
+      document.getElementById("friend-pick-label").textContent = "Pick a game to start";
+      // Reassign friend lobby videos
+      if (localStream) {
+        const lv = document.getElementById("video-friend-local");
+        if (lv) lv.srcObject = localStream;
+      }
+      if (window._remoteStream) {
+        const rv = document.getElementById("video-friend-remote");
+        if (rv) rv.srcObject = window._remoteStream;
+      }
+    } else {
+      showScreen("screen-gameover");
+    }
   }, 2500);
 });
 
@@ -1552,4 +1621,4 @@ document.getElementById("btn-left-home").addEventListener("click", () => {
 
 // ── Init ──────────────────────────────────────────────────────────
 initSupabase();
-checkChallengeLink();
+checkFriendLink();
