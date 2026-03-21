@@ -58,6 +58,17 @@ app.post("/api/subscribe", (req, res) => {
 const waitingQueues = { pong: null, snake: null, reaction: null, raid: null, fourdots: null };
 const rooms = new Map();
 
+// ── Friend rooms (persistent 24hr) ───────────────────────────────
+const friendRooms = new Map(); // code → { players: [socketId, socketId], createdAt, gameRoomId }
+
+function cleanOldFriendRooms() {
+  const now = Date.now();
+  for (const [code, room] of friendRooms) {
+    if (now - room.createdAt > 24 * 60 * 60 * 1000) friendRooms.delete(code);
+  }
+}
+setInterval(cleanOldFriendRooms, 60 * 60 * 1000); // clean every hour
+
 function generateRoomId() {
   return Math.random().toString(36).substring(2, 9);
 }
@@ -245,6 +256,64 @@ io.on("connection", (socket) => {
   socket.on("webrtc_offer",  ({ roomId, offer })     => socket.to(roomId).emit("webrtc_offer",  { offer }));
   socket.on("webrtc_answer", ({ roomId, answer })    => socket.to(roomId).emit("webrtc_answer", { answer }));
   socket.on("webrtc_ice",    ({ roomId, candidate }) => socket.to(roomId).emit("webrtc_ice",    { candidate }));
+
+  // Friend lobby WebRTC relay
+  socket.on("friend_offer",  ({ code, offer })     => socket.to("f_" + code.toUpperCase()).emit("friend_offer",  { offer, code }));
+  socket.on("friend_answer", ({ code, answer })    => socket.to("f_" + code.toUpperCase()).emit("friend_answer", { answer }));
+  socket.on("friend_ice",    ({ code, candidate }) => socket.to("f_" + code.toUpperCase()).emit("friend_ice",    { candidate }));
+
+  // ── Friend room: create or join ──────────────────────────────────
+  socket.on("friend_join", ({ code }) => {
+    code = code.toUpperCase().trim();
+    let froom = friendRooms.get(code);
+
+    if (!froom) {
+      // Create new friend room
+      froom = { players: [socket.id], createdAt: Date.now() };
+      friendRooms.set(code, froom);
+      socket.join("f_" + code);
+      socket.emit("friend_waiting", { code });
+      return;
+    }
+
+    // Check which existing players are still connected
+    froom.players = froom.players.filter(id => io.sockets.sockets.has(id));
+
+    if (froom.players.includes(socket.id)) {
+      // Rejoining same socket
+      socket.join("f_" + code);
+      if (froom.players.length === 2) io.to("f_" + code).emit("friend_connected", { code });
+      else socket.emit("friend_waiting", { code });
+      return;
+    }
+
+    if (froom.players.length === 0) {
+      // Room empty — take first slot
+      froom.players = [socket.id];
+      socket.join("f_" + code);
+      socket.emit("friend_waiting", { code });
+    } else if (froom.players.length === 1) {
+      // One slot open — join
+      froom.players.push(socket.id);
+      socket.join("f_" + code);
+      io.to("f_" + code).emit("friend_connected", { code });
+    } else {
+      // Both slots taken by active connections — full
+      socket.emit("friend_room_full");
+    }
+  });
+
+  socket.on("friend_pick_game", ({ code, game }) => {
+    io.to("f_" + code.toUpperCase()).emit("friend_game_starting", { game });
+  });
+
+  socket.on("friend_exit", ({ code }) => {
+    const c = code.toUpperCase();
+    socket.to("f_" + c).emit("friend_left");
+    socket.leave("f_" + c);
+    const froom = friendRooms.get(c);
+    if (froom) froom.players = froom.players.filter(id => id !== socket.id);
+  });
 
   // Rejoin room after reconnect
   socket.on("rejoin_room", ({ roomId, role }) => {
@@ -467,9 +536,10 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     // Clear from any waiting queue
-    for (const game of ["pong", "snake"]) {
+    for (const game of Object.keys(waitingQueues)) {
       if (waitingQueues[game] === socket.id) waitingQueues[game] = null;
     }
+    // Clear from game rooms
     for (const [roomId, room] of rooms.entries()) {
       if (room.players.includes(socket.id)) {
         if (room.gameLoop)      clearInterval(room.gameLoop);
@@ -477,6 +547,14 @@ io.on("connection", (socket) => {
         if (room.turnTimer)     clearTimeout(room.turnTimer);
         socket.to(roomId).emit("opponent_left");
         rooms.delete(roomId);
+        break;
+      }
+    }
+    // Remove from friend rooms — notify remaining player they can be replaced
+    for (const [code, froom] of friendRooms.entries()) {
+      if (froom.players.includes(socket.id)) {
+        froom.players = froom.players.filter(id => id !== socket.id);
+        socket.to("f_" + code).emit("friend_left");
         break;
       }
     }
