@@ -23,6 +23,10 @@
       <!-- Signed-in state (hidden until auth) -->
       <div class="home-signed-in hidden" id="home-signed-in">
         <div class="home-user-row">
+          <button class="avatar-btn" id="avatar-btn-signedin" title="Create your player icon">
+            <canvas class="avatar-canvas" id="avatar-canvas-signedin" width="32" height="32"></canvas>
+            <span class="avatar-btn-label">YOUR ICON</span>
+          </button>
           <span class="home-username" id="home-username">PLAYER</span>
           <button class="btn-text-small" id="btn-signout">sign out</button>
         </div>
@@ -33,6 +37,10 @@
 
       <!-- Guest state -->
       <div class="home-guest" id="home-guest">
+        <button class="avatar-btn" id="avatar-btn-guest" title="Create your player icon">
+          <canvas class="avatar-canvas" id="avatar-canvas-guest" width="32" height="32"></canvas>
+          <span class="avatar-btn-label">CREATE ICON</span>
+        </button>
         <button class="btn-primary" id="btn-find-match">
           <span class="btn-icon">&#9654;</span> RANDOM MATCH
         </button>
@@ -44,6 +52,76 @@
       </div>
     </div>
     <div class="home-deco"><div class="pixel-ball"></div></div>
+  </div>
+
+  <!-- SCREEN: Avatar Creator -->
+  <div id="screen-avatar" class="screen">
+    <div class="scanlines"></div>
+    <div class="avatar-creator-content">
+      <div class="avatar-creator-title">CREATE YOUR ICON</div>
+
+      <div class="avatar-preview-wrap">
+        <canvas id="avatar-preview-canvas" width="128" height="128"></canvas>
+        <div class="avatar-preview-label" id="avatar-preview-label">Choose an option below</div>
+      </div>
+
+      <!-- Option 1: Photo upload (signed-in only) -->
+      <div class="avatar-option" id="avatar-option-photo">
+        <div class="avatar-option-header">
+          <span class="avatar-option-icon">&#128247;</span>
+          <div>
+            <div class="avatar-option-title">UPLOAD A PHOTO</div>
+            <div class="avatar-option-sub" id="avatar-photo-sub">Pixelate a selfie or any image</div>
+          </div>
+          <span class="avatar-option-badge free-badge" id="avatar-photo-badge">SIGN IN</span>
+        </div>
+        <label class="btn-ghost avatar-upload-label" id="avatar-upload-label">
+          <input type="file" id="avatar-file-input" accept="image/*" style="display:none">
+          &#8679; CHOOSE PHOTO
+        </label>
+      </div>
+
+      <!-- Option 2: Describe it (free) -->
+      <div class="avatar-option">
+        <div class="avatar-option-header">
+          <span class="avatar-option-icon">&#9999;</span>
+          <div>
+            <div class="avatar-option-title">DESCRIBE IT</div>
+            <div class="avatar-option-sub">Dragon, astronaut, cactus...</div>
+          </div>
+          <span class="avatar-option-badge">FREE</span>
+        </div>
+        <div class="avatar-input-row">
+          <input type="text" id="avatar-input" placeholder="e.g. fire dragon" maxlength="40" autocomplete="off"/>
+          <button class="btn-primary" id="btn-generate-avatar">GO</button>
+        </div>
+      </div>
+
+      <!-- Option 3: Random (free) -->
+      <div class="avatar-option">
+        <div class="avatar-option-header">
+          <span class="avatar-option-icon">&#9682;</span>
+          <div>
+            <div class="avatar-option-title">SURPRISE ME</div>
+            <div class="avatar-option-sub">Random retro icon</div>
+          </div>
+          <span class="avatar-option-badge">FREE</span>
+        </div>
+        <button class="btn-ghost" id="btn-random-avatar">&#9682; RANDOM ICON</button>
+      </div>
+
+      <div class="avatar-generating" id="avatar-generating" style="display:none">
+        <div class="avatar-gen-dots">&#9632;&#9632;&#9632;</div>
+        <div class="avatar-gen-label" id="avatar-gen-label">GENERATING...</div>
+      </div>
+
+      <div class="avatar-actions" id="avatar-actions" style="display:none">
+        <button class="btn-primary" id="btn-use-avatar">&#10003; USE THIS ICON</button>
+        <button class="btn-text" id="btn-regen-avatar">Try again</button>
+      </div>
+
+      <button class="btn-text" id="btn-skip-avatar">Skip — play without an icon</button>
+    </div>
   </div>
 
   <!-- SCREEN 1b: Sign in -->
@@ -266,6 +344,7 @@
 
         <div class="side-panel panel-them">
           <video id="video-remote" autoplay playsinline></video>
+          <canvas class="panel-avatar" id="panel-avatar-them"></canvas>
           <div class="panel-label them">OPPONENT</div>
           <div class="panel-score" id="panel-score-them">0</div>
         </div>
@@ -388,6 +467,7 @@
 
         <div class="side-panel panel-you">
           <video id="video-local" autoplay muted playsinline></video>
+          <canvas class="panel-avatar" id="panel-avatar-you"></canvas>
           <div class="panel-label you">YOU</div>
           <div class="panel-score" id="panel-score-you">0</div>
         </div>
