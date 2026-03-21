@@ -61,6 +61,220 @@ body {
 .home-username { font-family: var(--pixel); font-size: 11px; color: var(--accent); letter-spacing: 2px; }
 .btn-text-small { font-family: var(--mono); font-size: 11px; color: var(--muted); background: none; border: none; cursor: pointer; text-decoration: underline; }
 .btn-text-small:hover { color: var(--text); }
+
+/* ── Avatar button (home screen) ───────────────────────── */
+.avatar-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  padding: 6px 8px;
+  transition: border-color 0.15s;
+}
+.avatar-btn:hover { border-color: var(--accent); }
+.avatar-canvas {
+  width: 40px;
+  height: 40px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+.avatar-btn-label {
+  font-family: var(--pixel);
+  font-size: 6px;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
+/* ── Avatar creator screen ─────────────────────────────── */
+#screen-avatar {
+  background: var(--bg);
+  overflow-y: auto;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.avatar-creator-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 32px 20px;
+  width: 100%;
+  max-width: 460px;
+  flex: 1;
+  justify-content: center;
+}
+
+.avatar-creator-title {
+  font-family: var(--pixel);
+  font-size: clamp(12px, 3vw, 18px);
+  color: var(--text);
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.avatar-creator-sub {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.avatar-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+#avatar-preview-canvas {
+  width: 128px;
+  height: 128px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border: 2px solid var(--border);
+  background: var(--bg2);
+}
+
+.avatar-preview-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.avatar-option {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.avatar-option-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar-option-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.avatar-option-title {
+  font-family: var(--pixel);
+  font-size: 9px;
+  color: var(--text);
+  letter-spacing: 1px;
+}
+
+.avatar-option-sub {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.avatar-option-badge {
+  font-family: var(--pixel);
+  font-size: 7px;
+  padding: 3px 7px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  letter-spacing: 1px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.avatar-option-badge.free-badge {
+  border-color: var(--muted);
+  color: var(--muted);
+}
+
+.avatar-option-badge.locked {
+  border-color: var(--accent2);
+  color: var(--accent2);
+}
+
+.avatar-upload-label {
+  display: inline-block;
+  cursor: pointer;
+  text-align: center;
+  width: 100%;
+}
+
+.avatar-upload-label.disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+
+.avatar-input-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.avatar-input-row input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 14px;
+  font-family: var(--mono);
+  font-size: 13px;
+  outline: none;
+}
+
+.avatar-input-row input:focus { border-color: var(--accent); }
+.avatar-input-row input::placeholder { color: var(--muted); }
+
+.avatar-generating {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatar-gen-dots {
+  font-size: 20px;
+  color: var(--accent);
+  animation: blink 0.8s step-end infinite;
+}
+
+.avatar-gen-label {
+  font-family: var(--pixel);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 2px;
+}
+
+.avatar-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+/* ── Avatar on side panels / faceoff ───────────────────── */
+.panel-avatar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border: 2px solid var(--border);
+}
 .home-divider { display: flex; align-items: center; gap: 12px; width: 100%; color: var(--muted); font-family: var(--mono); font-size: 11px; }
 .home-divider::before, .home-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
