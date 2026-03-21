@@ -152,22 +152,19 @@ let friendCode = null;
 let friendPeerConn = null;
 
 function enterFriendLobby(code) {
-  // Generate or use existing code
   if (!code) {
     const params = new URLSearchParams(window.location.search);
     code = params.get("friend") || Math.random().toString(36).substring(2, 8).toUpperCase();
   }
   friendCode = code;
-
-  // Update URL so it can be shared
-  const link = `https://www.arcadeface.com?friend=${code}`;
   history.replaceState({}, "", `?friend=${code}`);
 
-  document.getElementById("friend-lobby-code").textContent = link;
+  const link = `https://www.arcadeface.com?friend=${code}`;
+  document.getElementById("friend-lobby-code").textContent   = link;
   document.getElementById("friend-lobby-status").textContent = "Waiting for friend...";
-  document.getElementById("friend-pick-label").textContent = "Pick a game to start";
+  document.getElementById("friend-pick-label").textContent   = "Swipe & pick a game";
 
-  // Assign local video
+  // Assign local video immediately
   if (localStream) {
     const lv = document.getElementById("video-friend-local");
     if (lv) lv.srcObject = localStream;
@@ -193,8 +190,8 @@ async function startFriendPeerConnection() {
   };
 }
 
-// Friend game buttons
-document.querySelectorAll(".friend-game-btn").forEach(btn => {
+// Friend game cards (swipeable carousel)
+document.querySelectorAll(".friend-game-card").forEach(btn => {
   btn.addEventListener("click", () => {
     if (!friendCode) return;
     const game = btn.dataset.game;
@@ -223,9 +220,15 @@ socket.on("friend_waiting", ({ code }) => {
 
 socket.on("friend_connected", async ({ code }) => {
   document.getElementById("friend-lobby-status").textContent = "Friend connected — pick a game!";
-  document.getElementById("friend-lobby-code").textContent = `Room: ${code}`;
+  document.getElementById("friend-lobby-code").textContent   = `Room: ${code}`;
 
-  // Initiate WebRTC for friend lobby video
+  // Assign local video
+  if (localStream) {
+    const lv = document.getElementById("video-friend-local");
+    if (lv) lv.srcObject = localStream;
+  }
+
+  // Initiator (first to join) creates offer for friend lobby video
   if (friendPeerConn) {
     const offer = await friendPeerConn.createOffer();
     await friendPeerConn.setLocalDescription(offer);
@@ -1660,10 +1663,13 @@ function drawAvatarOnCanvas(canvas, grid) {
 
 function refreshMyAvatarCanvases() {
   if (!myAvatar) return;
-  ["avatar-canvas-guest","avatar-canvas-signedin","panel-avatar-you"].forEach(id => {
+  ["avatar-canvas-home", "panel-avatar-you"].forEach(id => {
     const el = document.getElementById(id);
     if (el) drawAvatarOnCanvas(el, myAvatar);
   });
+  // Update label when avatar exists
+  const label = document.getElementById("avatar-btn-home-label");
+  if (label) label.textContent = "YOUR ICON";
 }
 
 // ── Photo upload → pixel avatar ───────────────────────────────────
@@ -1722,27 +1728,20 @@ async function generateAvatar(description) {
   document.getElementById("avatar-actions").style.display    = "none";
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("/api/avatar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        messages: [{ role: "user", content:
-          `Create a 16x16 pixel art sprite of "${description}" in retro Game Boy style.
-Return ONLY valid JSON, no other text:
-{"grid":[["#rrggbb",...16 values],...16 rows]}
-Rules: use vivid retro colors, black (#000000) for background, make subject recognisable and centred.` }]
-      })
+      body: JSON.stringify({ description })
     });
+    if (!response.ok) throw new Error("Server error " + response.status);
     const data = await response.json();
-    const text = data.content?.map(b => b.text || "").join("") || "";
-    const clean = text.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean);
-    showAvatarPreview(parsed.grid, `"${description}"`);
+    if (!data.grid) throw new Error("No grid returned");
+    showAvatarPreview(data.grid, `"${description}"`);
   } catch(e) {
     document.getElementById("avatar-preview-label").textContent = "Failed — try again";
+    document.getElementById("avatar-generating").style.display  = "none";
     console.warn("Avatar gen error:", e);
+    return;
   }
   document.getElementById("avatar-generating").style.display = "none";
 }
@@ -1792,7 +1791,9 @@ document.getElementById("btn-skip-avatar").addEventListener("click", () => {
   showScreen("screen-home");
 });
 
-// Open avatar creator — gate photo upload to signed-in users
+// Open avatar creator — single button now
+document.getElementById("avatar-btn-home").addEventListener("click", openAvatarCreator);
+
 function openAvatarCreator() {
   document.getElementById("avatar-input").value = "";
   document.getElementById("avatar-actions").style.display    = "none";
@@ -1803,38 +1804,29 @@ function openAvatarCreator() {
     prev.getContext("2d").clearRect(0, 0, 128, 128);
     if (myAvatar) {
       drawAvatarOnCanvas(prev, myAvatar);
-      document.getElementById("avatar-preview-label").textContent = "Current icon";
+      document.getElementById("avatar-preview-label").textContent = "Current icon — make a new one below";
       document.getElementById("avatar-actions").style.display = "flex";
       window._pendingAvatar = myAvatar;
     }
   }
-
   // Gate photo upload to signed-in users
   const isSignedIn = !!currentUser;
   const uploadLabel = document.getElementById("avatar-upload-label");
   const photoBadge  = document.getElementById("avatar-photo-badge");
   const photoSub    = document.getElementById("avatar-photo-sub");
-  if (isSignedIn) {
-    uploadLabel.classList.remove("disabled");
-    photoBadge.textContent = "FREE";
-    photoBadge.classList.remove("locked","free-badge");
-    photoBadge.classList.add("free-badge");
-    photoBadge.style.borderColor = "var(--accent)";
-    photoBadge.style.color = "var(--accent)";
-    photoSub.textContent = "Pixelate a selfie or any image";
-  } else {
-    uploadLabel.classList.add("disabled");
-    photoBadge.textContent = "SIGN IN";
-    photoBadge.classList.add("locked");
-    photoSub.textContent = "Sign in free to unlock photo upload";
+  if (uploadLabel) {
+    if (isSignedIn) {
+      uploadLabel.classList.remove("disabled");
+      if (photoBadge) { photoBadge.textContent = "FREE"; photoBadge.style.color = "var(--accent)"; photoBadge.style.borderColor = "var(--accent)"; }
+      if (photoSub)   photoSub.textContent = "Pixelate a selfie or any image";
+    } else {
+      uploadLabel.classList.add("disabled");
+      if (photoBadge) { photoBadge.textContent = "SIGN IN"; photoBadge.style.color = "var(--accent2)"; photoBadge.style.borderColor = "var(--accent2)"; }
+      if (photoSub)   photoSub.textContent = "Sign in free to unlock photo upload";
+    }
   }
-
   showScreen("screen-avatar");
 }
-
-["avatar-btn-guest","avatar-btn-signedin"].forEach(id => {
-  document.getElementById(id).addEventListener("click", openAvatarCreator);
-});
 
 // Load saved avatar on startup
 function loadSavedAvatar() {
