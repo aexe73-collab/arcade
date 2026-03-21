@@ -257,6 +257,10 @@ io.on("connection", (socket) => {
   socket.on("webrtc_answer", ({ roomId, answer })    => socket.to(roomId).emit("webrtc_answer", { answer }));
   socket.on("webrtc_ice",    ({ roomId, candidate }) => socket.to(roomId).emit("webrtc_ice",    { candidate }));
 
+  socket.on("player_avatar", ({ roomId, avatar }) => {
+    socket.to(roomId).emit("player_avatar", { avatar, role: null });
+  });
+
   // Friend lobby WebRTC relay
   socket.on("friend_offer",  ({ code, offer })     => socket.to("f_" + code.toUpperCase()).emit("friend_offer",  { offer, code }));
   socket.on("friend_answer", ({ code, answer })    => socket.to("f_" + code.toUpperCase()).emit("friend_answer", { answer }));
