@@ -46,7 +46,10 @@ function initSupabase() {
 
   sbClient.auth.onAuthStateChange((event, session) => {
     console.log("Auth event:", event, "user:", session?.user?.email || "none");
-    if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
+    if (event === "PASSWORD_RECOVERY") {
+      // User clicked reset link — show set password screen instead of signing in
+      showScreen("screen-reset-password");
+    } else if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
       setUser(session.user);
       showScreen("screen-home");
       // Load their saved avatar from Supabase
@@ -56,6 +59,49 @@ function initSupabase() {
     }
   });
 }
+
+// ── Reset password screen ─────────────────────────────────────────
+document.getElementById("btn-set-password").addEventListener("click", async () => {
+  const newPw  = document.getElementById("reset-password-new").value;
+  const confPw = document.getElementById("reset-password-confirm").value;
+  const errEl  = document.getElementById("reset-error");
+
+  errEl.classList.add("hidden");
+
+  if (newPw.length < 6) {
+    errEl.textContent = "Password must be at least 6 characters";
+    errEl.classList.remove("hidden");
+    return;
+  }
+  if (newPw !== confPw) {
+    errEl.textContent = "Passwords don't match";
+    errEl.classList.remove("hidden");
+    return;
+  }
+
+  const btn = document.getElementById("btn-set-password");
+  btn.textContent = "SAVING...";
+  btn.disabled = true;
+
+  const { error } = await sbClient.auth.updateUser({ password: newPw });
+
+  btn.textContent = "SET PASSWORD";
+  btn.disabled = false;
+
+  if (error) {
+    errEl.textContent = error.message;
+    errEl.classList.remove("hidden");
+  } else {
+    // Password updated — sign them in and go home
+    errEl.textContent = "✓ Password updated!";
+    errEl.style.color = "var(--accent)";
+    errEl.classList.remove("hidden");
+    setTimeout(() => {
+      errEl.style.color = "";
+      showScreen("screen-home");
+    }, 1500);
+  }
+});
 
 function setUser(user) {
   currentUser = user;
@@ -254,10 +300,15 @@ async function startFriendPeerConnection() {
   friendPeerConn.ontrack = (event) => {
     const el = document.getElementById("video-friend-remote");
     if (el) el.srcObject = event.streams[0];
+    window._remoteStream = event.streams[0];
   };
 
   friendPeerConn.onicecandidate = (e) => {
     if (e.candidate) socket.emit("friend_ice", { code: friendCode, candidate: e.candidate });
+  };
+
+  friendPeerConn.oniceconnectionstatechange = () => {
+    console.log("[FRIEND ICE]", friendPeerConn.iceConnectionState);
   };
 }
 
@@ -397,7 +448,7 @@ function hideOverlay(id) { document.getElementById(id).classList.add("hidden"); 
 async function getCamera() {
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    ["video-local","video-faceoff-local","video-mobile-local","video-postgame-local"].forEach(id => {
+    ["video-local","video-faceoff-local","video-mobile-local","video-postgame-local","video-friend-local"].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.srcObject = localStream;
     });
