@@ -1648,6 +1648,7 @@ body {
   align-items: flex-start;
   justify-content: center;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .friend-lobby-layout {
@@ -1656,78 +1657,48 @@ body {
   width: 100%;
   max-width: 860px;
   min-height: 100%;
+  padding-bottom: env(safe-area-inset-bottom, 16px);
 }
 
-.friend-lobby-logo {
-  font-family: var(--pixel);
-  font-size: clamp(22px, 3vw, 34px);
-  letter-spacing: 3px;
-  text-align: center;
-  padding: 20px 0 14px;
-  color: var(--text);
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--border);
-}
+.friend-lobby-logo { font-family: var(--pixel); font-size: clamp(22px, 3vw, 34px); letter-spacing: 3px; text-align: center; padding: 20px 0 14px; color: var(--text); flex-shrink: 0; border-bottom: 1px solid var(--border); }
 .friend-lobby-logo span { color: var(--accent2); }
 .friend-lobby-main { display: contents; }
 .friend-lobby-header { display: none; }
 
+/* Square cameras using aspect-ratio */
 .friend-lobby-videos {
   display: flex;
   gap: 6px;
-  height: clamp(240px, 35vh, 420px);
   flex-shrink: 0;
   padding: 12px;
+  align-items: flex-start;
 }
 
 .friend-lobby-pip {
   flex: 1;
+  aspect-ratio: 1 / 1;
   position: relative;
   overflow: hidden;
   background: var(--bg2);
 }
-.friend-lobby-pip video { width: 100%; height: 100%; object-fit: cover; }
+.friend-lobby-pip video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .friend-lobby-pip.pip-you video { transform: scaleX(-1); }
-.friend-lobby-pip span {
-  position: absolute;
-  bottom: 6px;
-  left: 8px;
-  font-family: var(--pixel);
-  font-size: 8px;
-  letter-spacing: 2px;
-  padding: 3px 8px;
-  background: rgba(0,0,0,0.7);
-}
+.friend-lobby-pip span { position: absolute; bottom: 6px; left: 8px; font-family: var(--pixel); font-size: 8px; letter-spacing: 2px; padding: 3px 8px; background: rgba(0,0,0,0.7); z-index: 2; }
 .friend-lobby-pip.pip-them { border: 2px solid var(--accent2); }
 .friend-lobby-pip.pip-them span { color: var(--accent2); }
 .friend-lobby-pip.pip-you  { border: 2px solid var(--accent); }
 .friend-lobby-pip.pip-you  span { color: var(--accent); }
 
-.friend-lobby-avatar-wrap { position: absolute; top: 6px; display: flex; align-items: center; gap: 4px; }
+.friend-lobby-avatar-wrap { position: absolute; top: 6px; z-index: 2; display: flex; align-items: center; gap: 4px; }
 .friend-lobby-avatar-wrap.them { left: 6px; }
 .friend-lobby-avatar-wrap.you  { right: 6px; flex-direction: row-reverse; }
 .friend-lobby-avatar { width: 36px; height: 36px; image-rendering: pixelated; image-rendering: crisp-edges; border: 1px solid rgba(255,255,255,0.2); }
-
 .friend-lobby-centre { display: contents; }
 
-.friend-lobby-pick {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 12px 8px;
-  flex-shrink: 0;
-}
+.friend-lobby-pick { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px 12px 8px; flex-shrink: 0; }
 .friend-lobby-pick-label { font-family: var(--pixel); font-size: 9px; color: var(--muted); letter-spacing: 2px; text-align: center; }
 
-.friend-game-carousel-wrap {
-  width: 100%;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  padding: 4px 0 12px;
-}
+.friend-game-carousel-wrap { width: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding: 4px 0 12px; }
 .friend-game-carousel-wrap::-webkit-scrollbar { display: none; }
 .friend-game-carousel { display: flex; gap: 12px; padding: 0 16px; width: max-content; }
 .friend-game-card { scroll-snap-align: center; flex-shrink: 0; width: 150px; height: 150px; }
@@ -1738,14 +1709,7 @@ body {
   .friend-game-card { scroll-snap-align: unset; }
 }
 
-.friend-lobby-avatar-creator {
-  padding: 16px 24px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-}
+.friend-lobby-avatar-creator { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .friend-avatar-creator-title { font-family: var(--pixel); font-size: 9px; color: var(--text); letter-spacing: 2px; text-align: center; }
 .friend-avatar-row { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; max-width: 400px; }
 .friend-avatar-preview-canvas { width: 96px; height: 96px; image-rendering: pixelated; image-rendering: crisp-edges; border: 2px solid var(--border); background: var(--bg2); }
