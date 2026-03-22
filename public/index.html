@@ -63,6 +63,7 @@
     <!-- Friend room join prompt (shown when ?friend= in URL) -->
     <div id="friend-join-prompt" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:2px solid var(--accent);padding:16px 20px;flex-direction:column;align-items:center;gap:10px;z-index:200">
       <div style="font-family:var(--pixel);font-size:9px;color:var(--accent);letter-spacing:2px;text-align:center">FRIEND ROOM WAITING</div>
+      <div id="friend-join-code-label" style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center"></div>
       <button class="btn-primary" id="btn-join-friend-room" style="width:100%;max-width:320px">&#9654; JOIN LOBBY</button>
       <button class="btn-text" onclick="document.getElementById('friend-join-prompt').style.display='none';history.replaceState({},'','/')" style="font-size:11px;color:var(--muted)">Dismiss</button>
     </div>
