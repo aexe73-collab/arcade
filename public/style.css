@@ -1650,6 +1650,9 @@ body {
   overflow-y: scroll;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  scroll-behavior: auto;
+  /* Prevent iOS from locking scroll on re-entry */
+  will-change: scroll-position;
 }
 
 .friend-lobby-layout {
