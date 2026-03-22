@@ -14,20 +14,13 @@
   <div id="screen-home" class="screen active">
     <div class="scanlines"></div>
     <div class="home-content">
-
-      <!-- Single avatar button - shown always above logo -->
-      <button class="avatar-btn-home" id="avatar-btn-home" title="Create your player icon">
-        <canvas class="avatar-canvas-home" id="avatar-canvas-home" width="48" height="48"></canvas>
-        <span class="avatar-btn-home-label" id="avatar-btn-home-label">CREATE ICON</span>
-      </button>
-
       <div class="logo-block">
         <div class="logo-eyebrow">INSERT COIN</div>
         <h1 class="logo">ARCADE<span class="logo-accent">FACE</span></h1>
         <p class="tagline">Play face to face. Anyone, anywhere.</p>
       </div>
 
-      <!-- Signed-in state (hidden until auth) -->
+      <!-- Signed-in state -->
       <div class="home-signed-in hidden" id="home-signed-in">
         <div class="home-user-row">
           <span class="home-username" id="home-username">PLAYER</span>
@@ -35,6 +28,10 @@
         </div>
         <button class="btn-primary" id="btn-play-modes">
           <span class="btn-icon">&#9654;</span> PLAY
+        </button>
+        <button class="avatar-btn-home" id="avatar-btn-home" title="Create your player icon">
+          <canvas class="avatar-canvas-home" id="avatar-canvas-home" width="48" height="48"></canvas>
+          <span class="avatar-btn-home-label" id="avatar-btn-home-label">CREATE ICON</span>
         </button>
       </div>
 
@@ -48,6 +45,10 @@
           SIGN IN &mdash; FRIENDS &amp; GROUPS
         </button>
         <p class="home-sub">No account needed</p>
+        <button class="avatar-btn-home" id="avatar-btn-home-guest" title="Create your player icon">
+          <canvas class="avatar-canvas-home" id="avatar-canvas-home" width="48" height="48"></canvas>
+          <span class="avatar-btn-home-label" id="avatar-btn-home-label">CREATE ICON</span>
+        </button>
       </div>
     </div>
     <div class="home-deco"><div class="pixel-ball"></div></div>
