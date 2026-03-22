@@ -79,11 +79,10 @@ function initSupabase() {
       }
     } else if (event === "SIGNED_OUT") {
       setUser(null);
-      // Hide friend join prompt and clear the friend code from URL on sign-out
+      // Hide friend join prompt UI but keep the URL intact —
+      // if they sign back in, showFriendJoinPrompt will re-show it
       const prompt = document.getElementById("friend-join-prompt");
       if (prompt) prompt.style.display = "none";
-      friendCode = null;
-      history.replaceState({}, "", "/");
       showScreen("screen-home");
     }
   });
@@ -294,8 +293,6 @@ document.getElementById("btn-signout").addEventListener("click", async () => {
   setUser(null);
   const prompt = document.getElementById("friend-join-prompt");
   if (prompt) prompt.style.display = "none";
-  friendCode = null;
-  history.replaceState({}, "", "/");
   showScreen("screen-home");
 });
 
