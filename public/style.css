@@ -883,10 +883,11 @@ body {
   display: none;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 20px;
+  padding: 14px 20px;
   background: var(--bg2);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid var(--border);
   flex-shrink: 0;
+  gap: 8px;
 }
 
 .score-block {
@@ -1044,17 +1045,21 @@ body {
   .side-panel        { display: none; }
   .desktop-score     { display: none; }
   .score-bar         { display: flex; }
-  .canvas-wrap       { justify-content: flex-start; padding-top: 8px; }
-  .mobile-pips       { display: flex; gap: 8px; width: 100%; padding: 0 8px; }
-  .mobile-pip        { flex: 1; height: 120px; position: relative; overflow: hidden; background: var(--bg2); }
+  .canvas-wrap       { justify-content: flex-start; padding-top: 0; gap: 0; }
+  .mobile-pips       { display: flex; gap: 0; width: 100%; padding: 0; }
+  .mobile-pip        { flex: 1; height: 130px; position: relative; overflow: hidden; background: var(--bg2); }
   .mobile-pip video  { width: 100%; height: 100%; object-fit: cover; }
   .mobile-pip.pip-you video { transform: scaleX(-1); }
   .mobile-pip span   { position: absolute; bottom: 4px; left: 6px; font-family: var(--pixel); font-size: 7px; letter-spacing: 1px; }
-  .mobile-pip.pip-them { border: 1px solid var(--accent2); }
+  .mobile-pip.pip-them { border: 2px solid var(--accent2); border-right: 1px solid var(--accent2); }
   .mobile-pip.pip-them span { color: var(--accent2); }
-  .mobile-pip.pip-you  { border: 1px solid var(--accent); }
+  .mobile-pip.pip-you  { border: 2px solid var(--accent); border-left: 1px solid var(--accent); }
   .mobile-pip.pip-you  span { color: var(--accent); }
   .mobile-footer     { display: flex; }
+  /* Slider shown on mobile, on right side */
+  .pong-slider-wrap  { display: flex; }
+  /* Hide desktop-style keyboard hint on mobile */
+  .controls-hint     { display: none; }
   .picker-grid       { gap: 12px; }
   .game-card         { width: 140px; padding: 20px 12px; }
   .dpad              { display: grid; }
@@ -1092,8 +1097,8 @@ body {
   }
 
   /* Game over — scrollable, compact on mobile */
-  #screen-gameover     { align-items: flex-start; justify-content: flex-start; overflow-y: auto; padding-bottom: 32px; }
-  .gameover-content    { gap: 12px; padding: 12px 12px 24px; max-width: 100%; }
+  #screen-gameover     { align-items: flex-start; justify-content: flex-start; overflow-y: scroll; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding-bottom: 60px; }
+  .gameover-content    { gap: 12px; padding: 12px 12px 32px; max-width: 100%; flex-shrink: 0; }
   .gameover-brand-logo { font-size: 12px; }
   .result-badge        { font-size: 16px; padding: 8px 16px; }
   .gameover-scores     { gap: 12px; }
@@ -1739,10 +1744,11 @@ body {
 /* ── Pong mobile slider ────────────────────────────────── */
 .pong-slider-wrap {
   display: none;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 6px;
-  padding: 8px 0;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 12px 0 0;
   touch-action: none;
   width: 100%;
 }
@@ -1752,6 +1758,9 @@ body {
   font-size: 7px;
   color: var(--muted);
   letter-spacing: 2px;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
 }
 
 .pong-slider-track {
@@ -1759,7 +1768,7 @@ body {
   width: 64px;
   height: 180px;
   background: var(--surface);
-  border: 2px solid var(--border);
+  border: 2px solid var(--accent);
   border-radius: 4px;
   cursor: pointer;
   touch-action: none;
