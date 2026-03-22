@@ -141,6 +141,17 @@ function setUser(user) {
   }
 }
 
+// ── Logo click — return to home (except during game/lobby) ────────
+const NO_LOGO_NAV = new Set(["screen-game","screen-friend-lobby","screen-faceoff"]);
+document.querySelectorAll(".logo-link, .screen-logo a").forEach(el => {
+  el.addEventListener("click", (e) => {
+    e.preventDefault();
+    const active = document.querySelector(".screen.active");
+    if (active && NO_LOGO_NAV.has(active.id)) return;
+    showScreen("screen-home");
+  });
+});
+
 // ── Sign in screen handlers ───────────────────────────────────────
 let signinMode = "signin"; // "signin" | "create"
 
@@ -293,6 +304,9 @@ function enterFriendLobby(code) {
   // Show avatar immediately
   const myAvatarEl = document.getElementById("friend-avatar-you");
   if (myAvatarEl && myAvatar) drawAvatarOnCanvas(myAvatarEl, myAvatar);
+  // Also populate the inline preview
+  const prevEl = document.getElementById("friend-avatar-preview");
+  if (prevEl && myAvatar) { drawAvatarOnCanvas(prevEl, myAvatar); window._friendPendingAvatar = myAvatar; }
 
   showScreen("screen-friend-lobby");
   socket.emit("friend_join", { code });
@@ -2123,10 +2137,70 @@ function vaultRender() {
   });
 }
 
-// Friend lobby icon edit button — go to avatar creator, return to lobby
-document.getElementById("btn-friend-edit-icon").addEventListener("click", () => {
-  window._avatarReturnTo = "screen-friend-lobby";
-  openAvatarCreator();
+// ── Inline avatar creator in friend lobby ────────────────────────
+document.getElementById("btn-friend-generate").addEventListener("click", async () => {
+  const input = document.getElementById("friend-avatar-input").value.trim();
+  if (!input) return;
+  const status = document.getElementById("friend-avatar-gen-status");
+  status.textContent = "generating...";
+  try {
+    const res  = await fetch("/api/avatar", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({description:input}) });
+    const data = await res.json();
+    if (data.grid) {
+      drawAvatarOnCanvas(document.getElementById("friend-avatar-preview"), data.grid);
+      window._friendPendingAvatar = data.grid;
+      window._friendPendingLabel  = input;
+      document.getElementById("btn-friend-use-icon").classList.remove("hidden");
+      status.textContent = `"${input}"`;
+    }
+  } catch(e) { status.textContent = "failed — try again"; }
+});
+
+document.getElementById("friend-avatar-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("btn-friend-generate").click();
+});
+
+document.getElementById("btn-friend-random-icon").addEventListener("click", () => {
+  const subject = RANDOM_SUBJECTS[Math.floor(Math.random() * RANDOM_SUBJECTS.length)];
+  document.getElementById("friend-avatar-input").value = subject;
+  document.getElementById("btn-friend-generate").click();
+});
+
+document.getElementById("friend-avatar-file").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => {
+      const min = Math.min(img.width, img.height);
+      const off = document.createElement("canvas");
+      off.width = off.height = min;
+      off.getContext("2d").drawImage(img, (img.width-min)/2, (img.height-min)/2, min, min, 0, 0, min, min);
+      const grid = imageToPixelGrid(off, 16);
+      drawAvatarOnCanvas(document.getElementById("friend-avatar-preview"), grid);
+      window._friendPendingAvatar = grid;
+      window._friendPendingLabel  = "photo";
+      document.getElementById("btn-friend-use-icon").classList.remove("hidden");
+      document.getElementById("friend-avatar-gen-status").textContent = "Photo ready";
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById("btn-friend-use-icon").addEventListener("click", () => {
+  if (!window._friendPendingAvatar) return;
+  myAvatar = window._friendPendingAvatar;
+  try { localStorage.setItem("arcadeface_avatar", JSON.stringify(myAvatar)); } catch(e) {}
+  refreshMyAvatarCanvases();
+  // Update lobby avatar pip
+  const el = document.getElementById("friend-avatar-you");
+  if (el) drawAvatarOnCanvas(el, myAvatar);
+  // Broadcast to friend
+  if (friendCode) socket.emit("friend_avatar", { code: friendCode, avatar: myAvatar });
+  document.getElementById("friend-avatar-gen-status").textContent = "✓ Icon updated!";
+  document.getElementById("btn-friend-use-icon").classList.add("hidden");
 });
 
 // When USE THIS ICON is tapped, return to wherever we came from
