@@ -282,9 +282,8 @@
 
       <div class="friend-lobby-logo">ARCADE<span>FACE</span></div>
 
-      <div class="friend-lobby-main">
-
-        <!-- Left: Friend camera -->
+      <!-- Videos side by side -->
+      <div class="friend-lobby-videos">
         <div class="friend-lobby-pip pip-them">
           <video id="video-friend-remote" autoplay playsinline></video>
           <div class="friend-lobby-avatar-wrap them">
@@ -292,81 +291,6 @@
           </div>
           <span>FRIEND</span>
         </div>
-
-        <!-- Centre: scrollable content -->
-        <div class="friend-lobby-centre">
-
-          <!-- Game picker -->
-          <div class="friend-lobby-pick">
-            <div class="friend-lobby-pick-label" id="friend-pick-label">Pick a game to start</div>
-            <div class="friend-game-carousel-wrap">
-              <div class="friend-game-carousel" id="friend-game-carousel">
-                <button class="game-card pong-card friend-game-card" data-game="pong">
-                  <div class="game-card-icon">&#9646; &#9646;</div>
-                  <div class="game-card-name">PONG</div>
-                  <div class="game-card-sub">First to 5 wins</div>
-                </button>
-                <button class="game-card snake-card friend-game-card" data-game="snake">
-                  <div class="game-card-icon">&#9632;&#9632;&#9632;</div>
-                  <div class="game-card-name">SNAKE</div>
-                  <div class="game-card-sub">Last one alive wins</div>
-                </button>
-                <button class="game-card reaction-card friend-game-card" data-game="reaction">
-                  <div class="game-card-icon">&#9654;</div>
-                  <div class="game-card-name">REFLEX</div>
-                  <div class="game-card-sub">First to 3 taps wins</div>
-                </button>
-                <button class="game-card raid-card friend-game-card" data-game="raid">
-                  <div class="game-card-icon">&#9632;&#9632;<br>&#9632;&#9632;</div>
-                  <div class="game-card-name">RAID</div>
-                  <div class="game-card-sub">Destroy their buildings</div>
-                </button>
-                <button class="game-card fourdots-card friend-game-card" data-game="fourdots">
-                  <div class="game-card-icon">&#9679;&#9679;<br>&#9679;&#9679;</div>
-                  <div class="game-card-name">4 DOTS</div>
-                  <div class="game-card-sub">Connect 4 to win</div>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Inline avatar creator -->
-          <div class="friend-lobby-avatar-creator">
-            <div class="friend-avatar-creator-title">YOUR ICON</div>
-            <div class="friend-avatar-row">
-              <canvas id="friend-avatar-preview" width="64" height="64" class="friend-avatar-preview-canvas"></canvas>
-              <div class="friend-avatar-controls">
-                <div class="avatar-input-row">
-                  <input type="text" id="friend-avatar-input" placeholder="describe your icon..." maxlength="40" autocomplete="off"/>
-                  <button class="btn-primary" id="btn-friend-generate">GO</button>
-                </div>
-                <div style="display:flex;gap:8px;width:100%">
-                  <button class="btn-ghost" style="flex:1;font-size:8px;padding:10px 4px" id="btn-friend-random-icon">&#9682; RANDOM</button>
-                  <label class="btn-ghost friend-photo-label" style="flex:1;font-size:8px">
-                    <input type="file" id="friend-avatar-file" accept="image/*" style="display:none">
-                    &#8679; PHOTO
-                  </label>
-                </div>
-                <div class="friend-avatar-gen-status" id="friend-avatar-gen-status"></div>
-                <button class="btn-primary hidden" id="btn-friend-use-icon" style="font-size:9px">&#10003; USE THIS ICON</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Share link -->
-          <div class="friend-share-bar" id="friend-share-bar">
-            <div class="friend-share-status" id="friend-lobby-status">Waiting for friend...</div>
-            <div class="friend-share-label">INVITE LINK</div>
-            <div class="friend-share-row">
-              <div class="friend-share-link" id="friend-lobby-code"></div>
-              <button class="friend-copy-btn" id="btn-friend-copy">COPY</button>
-            </div>
-          </div>
-
-          <button class="btn-text friend-exit-btn" id="btn-friend-exit">&#8592; Leave room</button>
-        </div>
-
-        <!-- Right: Your camera -->
         <div class="friend-lobby-pip pip-you">
           <video id="video-friend-local" autoplay muted playsinline></video>
           <div class="friend-lobby-avatar-wrap you">
@@ -374,8 +298,76 @@
           </div>
           <span>YOU</span>
         </div>
+      </div>
 
-      </div><!-- end main -->
+      <!-- Game picker -->
+      <div class="friend-lobby-pick">
+        <div class="friend-lobby-pick-label" id="friend-pick-label">Pick a game to start</div>
+        <div class="friend-game-carousel-wrap">
+          <div class="friend-game-carousel" id="friend-game-carousel">
+            <button class="game-card pong-card friend-game-card" data-game="pong">
+              <div class="game-card-icon">&#9646; &#9646;</div>
+              <div class="game-card-name">PONG</div>
+              <div class="game-card-sub">First to 5 wins</div>
+            </button>
+            <button class="game-card snake-card friend-game-card" data-game="snake">
+              <div class="game-card-icon">&#9632;&#9632;&#9632;</div>
+              <div class="game-card-name">SNAKE</div>
+              <div class="game-card-sub">Last one alive wins</div>
+            </button>
+            <button class="game-card reaction-card friend-game-card" data-game="reaction">
+              <div class="game-card-icon">&#9654;</div>
+              <div class="game-card-name">REFLEX</div>
+              <div class="game-card-sub">First to 3 taps wins</div>
+            </button>
+            <button class="game-card raid-card friend-game-card" data-game="raid">
+              <div class="game-card-icon">&#9632;&#9632;<br>&#9632;&#9632;</div>
+              <div class="game-card-name">RAID</div>
+              <div class="game-card-sub">Destroy their buildings</div>
+            </button>
+            <button class="game-card fourdots-card friend-game-card" data-game="fourdots">
+              <div class="game-card-icon">&#9679;&#9679;<br>&#9679;&#9679;</div>
+              <div class="game-card-name">4 DOTS</div>
+              <div class="game-card-sub">Connect 4 to win</div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inline avatar creator -->
+      <div class="friend-lobby-avatar-creator">
+        <div class="friend-avatar-creator-title">YOUR ICON</div>
+        <div class="friend-avatar-row">
+          <canvas id="friend-avatar-preview" width="64" height="64" class="friend-avatar-preview-canvas"></canvas>
+          <div class="friend-avatar-controls">
+            <div class="avatar-input-row">
+              <input type="text" id="friend-avatar-input" placeholder="describe your icon..." maxlength="40" autocomplete="off"/>
+              <button class="btn-primary" id="btn-friend-generate">GO</button>
+            </div>
+            <div style="display:flex;gap:8px;width:100%">
+              <button class="btn-ghost" style="flex:1;font-size:8px;padding:10px 4px" id="btn-friend-random-icon">&#9682; RANDOM</button>
+              <label class="btn-ghost friend-photo-label" style="flex:1;font-size:8px">
+                <input type="file" id="friend-avatar-file" accept="image/*" style="display:none">
+                &#8679; PHOTO
+              </label>
+            </div>
+            <div class="friend-avatar-gen-status" id="friend-avatar-gen-status"></div>
+            <button class="btn-primary hidden" id="btn-friend-use-icon" style="font-size:9px">&#10003; USE THIS ICON</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Share link -->
+      <div class="friend-share-bar" id="friend-share-bar">
+        <div class="friend-share-status" id="friend-lobby-status">Waiting for friend...</div>
+        <div class="friend-share-label">INVITE LINK</div>
+        <div class="friend-share-row">
+          <div class="friend-share-link" id="friend-lobby-code"></div>
+          <button class="friend-copy-btn" id="btn-friend-copy">COPY</button>
+        </div>
+      </div>
+
+      <button class="btn-text friend-exit-btn" id="btn-friend-exit">&#8592; Leave room</button>
     </div>
   </div>
 
