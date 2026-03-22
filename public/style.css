@@ -295,8 +295,106 @@ body {
   width: 100%;
 }
 
-/* ── Avatar on side panels / faceoff ───────────────────── */
-.panel-avatar {
+/* ── Avatar vault ───────────────────────────────────────── */
+.avatar-vault {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.avatar-vault-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.avatar-vault-title {
+  font-family: var(--pixel);
+  font-size: 8px;
+  color: var(--text);
+  letter-spacing: 2px;
+}
+
+.avatar-vault-count {
+  font-family: var(--pixel);
+  font-size: 8px;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
+.avatar-vault-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.avatar-vault-item {
+  position: relative;
+  width: 56px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.avatar-vault-item canvas {
+  width: 56px;
+  height: 56px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border: 2px solid var(--border);
+  transition: border-color 0.15s;
+}
+
+.avatar-vault-item:hover canvas { border-color: var(--accent); }
+.avatar-vault-item.active canvas { border-color: var(--accent); border-width: 2px; }
+
+.avatar-vault-item-label {
+  font-family: var(--pixel);
+  font-size: 6px;
+  color: var(--muted);
+  letter-spacing: 0;
+  text-align: center;
+  max-width: 56px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.avatar-vault-delete {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  background: var(--accent2);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 9px;
+  line-height: 16px;
+  text-align: center;
+  cursor: pointer;
+  display: none;
+  padding: 0;
+  font-family: monospace;
+}
+
+.avatar-vault-item:hover .avatar-vault-delete { display: block; }
+
+.avatar-vault-hint {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent2);
+  text-align: center;
+}
+
+/* ── Panel avatar ───────────────────────────────────────── */
   position: absolute;
   top: 12px;
   left: 50%;
