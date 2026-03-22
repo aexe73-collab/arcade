@@ -710,24 +710,41 @@ function startPongLoop(roomId) {
   if (room.gameLoop) clearInterval(room.gameLoop);
 
   const W = 800, H = 400, PH = 80, BS = 10, WIN = 5, INC = 0.6, MAX_SPEED = 18;
+  // Paddle face x-positions
+  const LEFT_FACE = 42, RIGHT_FACE = W - 42;
 
   room.gameLoop = setInterval(() => {
     if (!room.gameState.running) return;
     const gs = room.gameState;
     const b  = gs.ball;
 
+    const prevX = b.x;
     b.x += b.vx; b.y += b.vy;
 
-    if (b.y <= 0 || b.y >= H - BS) { b.vy *= -1; b.y = b.y <= 0 ? 0 : H - BS; }
+    // Top/bottom wall bounce — clamp to prevent sticking
+    if (b.y <= 0)        { b.vy = Math.abs(b.vy);  b.y = 0; }
+    if (b.y >= H - BS)   { b.vy = -Math.abs(b.vy); b.y = H - BS; }
 
-    if (b.x <= 42 && b.x >= 30 && b.y + BS >= gs.paddles.left && b.y <= gs.paddles.left + PH) {
-      b.vx = Math.min(Math.abs(b.vx) + INC, MAX_SPEED);
-      b.vy = ((b.y - gs.paddles.left) / PH - 0.5) * 10;
+    // Sweep-based paddle collision — catches fast-moving ball that skips the zone
+    // Left paddle: ball moving left and crossed the paddle face this tick
+    if (b.vx < 0 && prevX > LEFT_FACE && b.x <= LEFT_FACE) {
+      const ballMid = b.y + BS / 2;
+      if (ballMid >= gs.paddles.left && ballMid <= gs.paddles.left + PH) {
+        b.x  = LEFT_FACE; // push ball back to face
+        b.vx = Math.min(Math.abs(b.vx) + INC, MAX_SPEED);
+        b.vy = ((ballMid - gs.paddles.left) / PH - 0.5) * 10;
+      }
     }
-    if (b.x >= W-42 && b.x <= W-30 && b.y + BS >= gs.paddles.right && b.y <= gs.paddles.right + PH) {
-      b.vx = -Math.min(Math.abs(b.vx) + INC, MAX_SPEED);
-      b.vy = ((b.y - gs.paddles.right) / PH - 0.5) * 10;
+    // Right paddle: ball moving right and crossed the paddle face this tick
+    if (b.vx > 0 && prevX < RIGHT_FACE && b.x >= RIGHT_FACE) {
+      const ballMid = b.y + BS / 2;
+      if (ballMid >= gs.paddles.right && ballMid <= gs.paddles.right + PH) {
+        b.x  = RIGHT_FACE; // push ball back to face
+        b.vx = -Math.min(Math.abs(b.vx) + INC, MAX_SPEED);
+        b.vy = ((ballMid - gs.paddles.right) / PH - 0.5) * 10;
+      }
     }
+
     if (b.x < 0) {
       gs.scores.right++;
       if (gs.scores.right >= WIN) { endGame(roomId, "right"); return; }
