@@ -49,6 +49,8 @@ function initSupabase() {
     if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
       setUser(session.user);
       showScreen("screen-home");
+      // Load their saved avatar from Supabase
+      setTimeout(loadSavedAvatar, 300);
     } else if (event === "SIGNED_OUT") {
       setUser(null);
     }
@@ -1758,11 +1760,15 @@ async function generateAvatar(description) {
 
 function showAvatarPreview(grid, label) {
   window._pendingAvatar = grid;
+  window._pendingLabel  = label;
   const preview = document.getElementById("avatar-preview-canvas");
   drawAvatarOnCanvas(preview, grid);
   document.getElementById("avatar-preview-label").textContent = label;
   document.getElementById("avatar-actions").style.display = "flex";
   document.getElementById("avatar-generating").style.display = "none";
+  // Show save button only for signed-in users
+  const saveBtn = document.getElementById("btn-save-avatar");
+  if (saveBtn) saveBtn.style.display = currentUser ? "block" : "none";
 }
 
 // ── Avatar creator screen controls ───────────────────────────────
@@ -1791,6 +1797,22 @@ document.getElementById("btn-use-avatar").addEventListener("click", () => {
   showScreen("screen-home");
 });
 
+document.getElementById("btn-save-avatar").addEventListener("click", async () => {
+  if (!window._pendingAvatar || !currentUser) return;
+  const btn = document.getElementById("btn-save-avatar");
+  btn.textContent = "SAVING...";
+  btn.disabled = true;
+  const ok = await vaultSaveIcon(window._pendingAvatar, window._pendingLabel || "icon");
+  btn.disabled = false;
+  if (ok) {
+    btn.textContent = "✓ SAVED";
+    await vaultLoad();
+    setTimeout(() => { btn.textContent = "▲ SAVE TO VAULT"; }, 1500);
+  } else {
+    btn.textContent = "▲ SAVE TO VAULT";
+  }
+});
+
 document.getElementById("btn-regen-avatar").addEventListener("click", () => {
   const input = document.getElementById("avatar-input").value.trim();
   if (input) generateAvatar(input);
@@ -1800,6 +1822,130 @@ document.getElementById("btn-regen-avatar").addEventListener("click", () => {
 document.getElementById("btn-skip-avatar").addEventListener("click", () => {
   showScreen("screen-home");
 });
+
+// ── Avatar Vault (Supabase) ───────────────────────────────────────
+// SQL to run in Supabase dashboard:
+// create table if not exists player_icons (
+//   id uuid default gen_random_uuid() primary key,
+//   user_id uuid references auth.users not null,
+//   label text,
+//   grid jsonb not null,
+//   created_at timestamptz default now()
+// );
+// alter table player_icons enable row level security;
+// create policy "Users manage own icons" on player_icons
+//   using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+const VAULT_MAX = 7;
+let vaultIcons = []; // [{ id, label, grid }]
+
+async function vaultLoad() {
+  if (!sbClient || !currentUser) return;
+  const { data, error } = await sbClient
+    .from("player_icons")
+    .select("id, label, grid, created_at")
+    .eq("user_id", currentUser.id)
+    .order("created_at", { ascending: true });
+  if (error) { console.warn("Vault load error:", error.message); return; }
+  vaultIcons = data || [];
+  vaultRender();
+}
+
+async function vaultSaveIcon(grid, label) {
+  if (!sbClient || !currentUser) return false;
+  if (vaultIcons.length >= VAULT_MAX) {
+    document.getElementById("avatar-vault-hint").textContent =
+      "Vault full — delete an icon first";
+    return false;
+  }
+  const { error } = await sbClient.from("player_icons").insert({
+    user_id: currentUser.id,
+    label: label.replace(/"/g, "").substring(0, 40),
+    grid
+  });
+  if (error) { console.warn("Vault save error:", error.message); return false; }
+  return true;
+}
+
+async function vaultDeleteIcon(id) {
+  if (!sbClient || !currentUser) return;
+  const { error } = await sbClient
+    .from("player_icons")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", currentUser.id);
+  if (error) { console.warn("Vault delete error:", error.message); return; }
+  vaultIcons = vaultIcons.filter(ic => ic.id !== id);
+  vaultRender();
+}
+
+function vaultRender() {
+  const grid    = document.getElementById("avatar-vault-grid");
+  const count   = document.getElementById("avatar-vault-count");
+  const hint    = document.getElementById("avatar-vault-hint");
+  const vault   = document.getElementById("avatar-vault");
+  const saveBtn = document.getElementById("btn-save-avatar");
+
+  if (!grid) return;
+  vault.style.display = "block";
+  count.textContent   = `${vaultIcons.length} / ${VAULT_MAX}`;
+
+  const full = vaultIcons.length >= VAULT_MAX;
+  hint.textContent = full ? "Vault full — delete an icon to create a new one" : "";
+  if (saveBtn) saveBtn.style.display = currentUser && !full ? "block" : "none";
+
+  grid.innerHTML = "";
+
+  if (vaultIcons.length === 0) {
+    grid.innerHTML = '<div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:4px">No saved icons yet</div>';
+    return;
+  }
+
+  vaultIcons.forEach(icon => {
+    const item = document.createElement("div");
+    item.className = "avatar-vault-item";
+    if (myAvatar && JSON.stringify(myAvatar) === JSON.stringify(icon.grid)) {
+      item.classList.add("active");
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 16;
+    drawAvatarOnCanvas(canvas, icon.grid);
+
+    const label = document.createElement("div");
+    label.className = "avatar-vault-item-label";
+    label.textContent = icon.label || "icon";
+
+    const del = document.createElement("button");
+    del.className = "avatar-vault-delete";
+    del.textContent = "×";
+    del.title = "Delete";
+    del.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (confirm("Delete this icon?")) vaultDeleteIcon(icon.id);
+    });
+
+    // Tap to select
+    item.addEventListener("click", () => {
+      myAvatar = icon.grid;
+      try { localStorage.setItem("arcadeface_avatar", JSON.stringify(myAvatar)); } catch(e) {}
+      refreshMyAvatarCanvases();
+      if (roomId) socket.emit("player_avatar", { roomId, avatar: myAvatar });
+      // Highlight active
+      document.querySelectorAll(".avatar-vault-item").forEach(el => el.classList.remove("active"));
+      item.classList.add("active");
+      document.getElementById("avatar-preview-label").textContent = `Using: ${icon.label || "icon"}`;
+      drawAvatarOnCanvas(document.getElementById("avatar-preview-canvas"), icon.grid);
+      document.getElementById("avatar-actions").style.display = "flex";
+      window._pendingAvatar = icon.grid;
+    });
+
+    item.appendChild(canvas);
+    item.appendChild(label);
+    item.appendChild(del);
+    grid.appendChild(item);
+  });
+}
 
 // Open avatar creator — both guest and signed-in buttons
 document.getElementById("avatar-btn-home").addEventListener("click", openAvatarCreator);
@@ -1849,10 +1995,29 @@ function openAvatarCreator() {
     }
   }
   showScreen("screen-avatar");
+  // Load vault if signed in
+  if (currentUser) vaultLoad();
+  else document.getElementById("avatar-vault").style.display = "none";
 }
 
 // Load saved avatar on startup
-function loadSavedAvatar() {
+async function loadSavedAvatar() {
+  // Try Supabase first (signed-in users)
+  if (sbClient && currentUser) {
+    const { data } = await sbClient
+      .from("player_icons")
+      .select("id, label, grid, created_at")
+      .eq("user_id", currentUser.id)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (data && data.length > 0) {
+      myAvatar = data[0].grid;
+      try { localStorage.setItem("arcadeface_avatar", JSON.stringify(myAvatar)); } catch(e) {}
+      refreshMyAvatarCanvases();
+      return;
+    }
+  }
+  // Fall back to localStorage
   try {
     const saved = localStorage.getItem("arcadeface_avatar");
     if (saved) {
