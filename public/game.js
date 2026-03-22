@@ -83,6 +83,8 @@ function setUser(user) {
 }
 
 // ── Sign in screen handlers ───────────────────────────────────────
+let signinMode = "signin"; // "signin" | "create"
+
 document.getElementById("btn-goto-signin").addEventListener("click", () => {
   showScreen("screen-signin");
 });
@@ -91,56 +93,66 @@ document.getElementById("btn-back-home").addEventListener("click", () => {
   showScreen("screen-home");
 });
 
-// Tab switching
-document.querySelectorAll(".signin-tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".signin-tab").forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-    const which = tab.dataset.tab;
-    document.getElementById("signin-form-password").classList.toggle("hidden", which !== "password");
-    document.getElementById("signin-form-magic").classList.toggle("hidden", which !== "magic");
-    document.getElementById("signin-error").classList.add("hidden");
-  });
-});
-
 function showSigninError(msg) {
   const el = document.getElementById("signin-error");
   el.textContent = msg;
   el.classList.remove("hidden");
 }
 
-// Password sign in
-document.getElementById("btn-signin-pw").addEventListener("click", async () => {
-  if (!sbClient) return;
-  const email = document.getElementById("signin-email-pw").value.trim();
-  const pw    = document.getElementById("signin-password").value;
-  if (!email || !pw) { showSigninError("Enter email and password"); return; }
-  document.getElementById("signin-error").classList.add("hidden");
-  const { error } = await sbClient.auth.signInWithPassword({ email, password: pw });
-  if (error) showSigninError(error.message);
+// Tab switching — changes mode and updates button label + hint
+document.querySelectorAll(".signin-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".signin-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    signinMode = tab.dataset.mode;
+    const hint = document.getElementById("signin-mode-hint");
+    const btn  = document.getElementById("btn-signin-submit");
+    const pw   = document.getElementById("signin-password");
+    const forgot = document.getElementById("btn-forgot-pw");
+    if (signinMode === "create") {
+      hint.textContent   = "New here? Create a free account";
+      btn.textContent    = "CREATE ACCOUNT";
+      pw.placeholder     = "choose a password (min 6 chars)";
+      pw.autocomplete    = "new-password";
+      forgot.style.display = "none";
+    } else {
+      hint.textContent   = "Welcome back — enter your details";
+      btn.textContent    = "SIGN IN";
+      pw.placeholder     = "password";
+      pw.autocomplete    = "current-password";
+      forgot.style.display = "block";
+    }
+    document.getElementById("signin-error").classList.add("hidden");
+  });
 });
 
-// Create account
-document.getElementById("btn-signup-pw").addEventListener("click", async () => {
+// Single submit button — signs in or creates account based on mode
+document.getElementById("btn-signin-submit").addEventListener("click", async () => {
   if (!sbClient) return;
   const email = document.getElementById("signin-email-pw").value.trim();
   const pw    = document.getElementById("signin-password").value;
-  if (!email || !pw) { showSigninError("Enter email and password"); return; }
-  if (pw.length < 6) { showSigninError("Password must be at least 6 characters"); return; }
+  if (!email || !pw) { showSigninError("Enter your email and password"); return; }
   document.getElementById("signin-error").classList.add("hidden");
-  const { error } = await sbClient.auth.signUp({
-    email, password: pw,
-    options: { emailRedirectTo: "https://www.arcadeface.com" }
-  });
-  if (error) showSigninError(error.message);
-  else showSigninError("✓ Account created! Check your email to confirm, then sign in.");
+
+  if (signinMode === "create") {
+    if (pw.length < 6) { showSigninError("Password must be at least 6 characters"); return; }
+    const { error } = await sbClient.auth.signUp({
+      email, password: pw,
+      options: { emailRedirectTo: "https://www.arcadeface.com" }
+    });
+    if (error) showSigninError(error.message);
+    else showSigninError("✓ Account created! Check your email to confirm, then sign in.");
+  } else {
+    const { error } = await sbClient.auth.signInWithPassword({ email, password: pw });
+    if (error) showSigninError(error.message);
+  }
 });
 
 // Forgot password
 document.getElementById("btn-forgot-pw").addEventListener("click", async () => {
   if (!sbClient) return;
   const email = document.getElementById("signin-email-pw").value.trim();
-  if (!email) { showSigninError("Enter your email first"); return; }
+  if (!email) { showSigninError("Enter your email above first"); return; }
   const { error } = await sbClient.auth.resetPasswordForEmail(email, {
     redirectTo: "https://www.arcadeface.com"
   });
@@ -162,7 +174,7 @@ document.getElementById("btn-send-link").addEventListener("click", async () => {
   const { error } = await sbClient.auth.signInWithOtp({
     email, options: { emailRedirectTo: "https://www.arcadeface.com" }
   });
-  btn.textContent = "SEND MAGIC LINK"; btn.disabled = false;
+  btn.textContent = "EMAIL ME A SIGN IN LINK"; btn.disabled = false;
   if (!error) {
     document.getElementById("signin-form-magic").classList.add("hidden");
     document.getElementById("signin-sent").classList.remove("hidden");
