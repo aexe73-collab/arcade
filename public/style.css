@@ -62,30 +62,64 @@ body {
 .btn-text-small { font-family: var(--mono); font-size: 11px; color: var(--muted); background: none; border: none; cursor: pointer; text-decoration: underline; }
 .btn-text-small:hover { color: var(--text); }
 
-/* ── Avatar button (home screen) ───────────────────────── */
-.avatar-btn {
+/* ── Avatar home button ─────────────────────────────────── */
+.avatar-btn-home {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
+  gap: 6px;
+  background: transparent;
+  border: 2px solid var(--border);
   cursor: pointer;
-  padding: 6px 8px;
+  padding: 10px 16px;
   transition: border-color 0.15s;
+  position: relative;
 }
-.avatar-btn:hover { border-color: var(--accent); }
-.avatar-canvas {
-  width: 40px;
-  height: 40px;
+.avatar-btn-home:hover { border-color: var(--accent); }
+
+.avatar-canvas-home {
+  width: 56px;
+  height: 56px;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
-.avatar-btn-label {
+
+.avatar-btn-home-label {
   font-family: var(--pixel);
-  font-size: 6px;
+  font-size: 7px;
   color: var(--muted);
-  letter-spacing: 1px;
+  letter-spacing: 2px;
+}
+
+/* ── Keep old avatar-btn/canvas for panel usage ─────────── */
+.avatar-btn { display:none; } /* replaced by avatar-btn-home */
+.avatar-canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* ── Friend lobby carousel ─────────────────────────────── */
+.friend-game-carousel-wrap {
+  width: 100%;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 8px 0 12px;
+}
+.friend-game-carousel-wrap::-webkit-scrollbar { display: none; }
+
+.friend-game-carousel {
+  display: flex;
+  gap: 12px;
+  padding: 0 20px;
+  width: max-content;
+}
+
+.friend-game-card {
+  scroll-snap-align: center;
+  flex-shrink: 0;
+  width: 140px;
 }
 
 /* ── Avatar creator screen ─────────────────────────────── */
