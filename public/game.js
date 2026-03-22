@@ -62,6 +62,8 @@ function setUser(user) {
   const guestEl    = document.getElementById("home-guest");
   const signedinEl = document.getElementById("home-signed-in");
   const usernameEl = document.getElementById("home-username");
+  const avatarGuest  = document.getElementById("avatar-btn-home-guest");
+  const avatarSignin = document.getElementById("avatar-btn-home");
 
   if (user) {
     const name = user.user_metadata?.username
@@ -70,9 +72,13 @@ function setUser(user) {
     if (usernameEl) usernameEl.textContent = name;
     guestEl?.classList.add("hidden");
     signedinEl?.classList.remove("hidden");
+    avatarGuest?.classList.add("hidden");
+    avatarSignin?.classList.remove("hidden");
   } else {
     guestEl?.classList.remove("hidden");
     signedinEl?.classList.add("hidden");
+    avatarGuest?.classList.remove("hidden");
+    avatarSignin?.classList.add("hidden");
   }
 }
 
@@ -85,37 +91,84 @@ document.getElementById("btn-back-home").addEventListener("click", () => {
   showScreen("screen-home");
 });
 
+// Tab switching
+document.querySelectorAll(".signin-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".signin-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    const which = tab.dataset.tab;
+    document.getElementById("signin-form-password").classList.toggle("hidden", which !== "password");
+    document.getElementById("signin-form-magic").classList.toggle("hidden", which !== "magic");
+    document.getElementById("signin-error").classList.add("hidden");
+  });
+});
+
+function showSigninError(msg) {
+  const el = document.getElementById("signin-error");
+  el.textContent = msg;
+  el.classList.remove("hidden");
+}
+
+// Password sign in
+document.getElementById("btn-signin-pw").addEventListener("click", async () => {
+  if (!sbClient) return;
+  const email = document.getElementById("signin-email-pw").value.trim();
+  const pw    = document.getElementById("signin-password").value;
+  if (!email || !pw) { showSigninError("Enter email and password"); return; }
+  document.getElementById("signin-error").classList.add("hidden");
+  const { error } = await sbClient.auth.signInWithPassword({ email, password: pw });
+  if (error) showSigninError(error.message);
+});
+
+// Create account
+document.getElementById("btn-signup-pw").addEventListener("click", async () => {
+  if (!sbClient) return;
+  const email = document.getElementById("signin-email-pw").value.trim();
+  const pw    = document.getElementById("signin-password").value;
+  if (!email || !pw) { showSigninError("Enter email and password"); return; }
+  if (pw.length < 6) { showSigninError("Password must be at least 6 characters"); return; }
+  document.getElementById("signin-error").classList.add("hidden");
+  const { error } = await sbClient.auth.signUp({
+    email, password: pw,
+    options: { emailRedirectTo: "https://www.arcadeface.com" }
+  });
+  if (error) showSigninError(error.message);
+  else showSigninError("✓ Account created! Check your email to confirm, then sign in.");
+});
+
+// Forgot password
+document.getElementById("btn-forgot-pw").addEventListener("click", async () => {
+  if (!sbClient) return;
+  const email = document.getElementById("signin-email-pw").value.trim();
+  if (!email) { showSigninError("Enter your email first"); return; }
+  const { error } = await sbClient.auth.resetPasswordForEmail(email, {
+    redirectTo: "https://www.arcadeface.com"
+  });
+  if (error) showSigninError(error.message);
+  else showSigninError("✓ Password reset email sent — check your inbox");
+});
+
+// Magic link
 document.getElementById("btn-send-link").addEventListener("click", async () => {
   const email = document.getElementById("signin-email").value.trim();
   if (!email || !email.includes("@")) {
     document.getElementById("signin-email").style.borderColor = "var(--accent2)";
     return;
   }
-  if (!sbClient) {
-    alert("Auth not configured — add SUPABASE_URL and SUPABASE_ANON_KEY.");
-    return;
-  }
-
+  document.getElementById("signin-email").style.borderColor = "";
+  if (!sbClient) { alert("Auth not configured."); return; }
   const btn = document.getElementById("btn-send-link");
-  btn.textContent = "SENDING...";
-  btn.disabled = true;
-
+  btn.textContent = "SENDING..."; btn.disabled = true;
   const { error } = await sbClient.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: "https://www.arcadeface.com" }
+    email, options: { emailRedirectTo: "https://www.arcadeface.com" }
   });
-
-  btn.textContent = "SEND MAGIC LINK";
-  btn.disabled = false;
-
-  if (error) {
-    console.error("Magic link error:", error.message);
-    alert("Error: " + error.message);
-    return;
+  btn.textContent = "SEND MAGIC LINK"; btn.disabled = false;
+  if (!error) {
+    document.getElementById("signin-form-magic").classList.add("hidden");
+    document.getElementById("signin-sent").classList.remove("hidden");
+  } else {
+    showSigninError(error.message);
   }
-
-  document.getElementById("signin-form").classList.add("hidden");
-  document.getElementById("signin-sent").classList.remove("hidden");
 });
 
 // Google OAuth removed — magic link only for now
