@@ -39,36 +39,62 @@ app.post("/api/avatar", async (req, res) => {
   const { description } = req.body;
   if (!description) return res.status(400).json({ error: "No description" });
 
-  const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || "";
-  if (!ANTHROPIC_KEY) return res.status(500).json({ error: "No API key configured" });
-
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_KEY,
-        "anthropic-version": "2023-06-01"
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 1000,
-        messages: [{ role: "user", content:
-          `Create a 16x16 pixel art sprite of "${description}" in retro Game Boy style.
-Return ONLY valid JSON, no markdown, no explanation:
-{"grid":[["#rrggbb",...16 hex values],...16 rows total]}
-Use vivid retro colors. Black (#000000) for empty/background. Centre the subject.` }]
-      })
-    });
-    const data = await response.json();
-    const text = data.content?.map(b => b.text || "").join("") || "";
-    const clean = text.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean);
-    res.json({ grid: parsed.grid });
-  } catch(e) {
-    console.error("Avatar gen error:", e.message);
-    res.status(500).json({ error: e.message });
+  // Deterministic pixel avatar from description — no API key needed
+  // Hash the description to a reproducible seed
+  let seed = 0;
+  for (let i = 0; i < description.length; i++) {
+    seed = (seed * 31 + description.charCodeAt(i)) >>> 0;
   }
+
+  function rng() {
+    seed ^= seed << 13; seed ^= seed >> 17; seed ^= seed << 5;
+    return (seed >>> 0) / 0xFFFFFFFF;
+  }
+
+  // Pick palette from description keywords
+  const PALETTES = [
+    ["#00ff88","#00cc66","#004422","#000000"], // green (dragon, nature)
+    ["#ff3366","#cc0044","#440011","#000000"], // pink/red (fire, demon)
+    ["#4488ff","#2255cc","#001144","#000000"], // blue (water, ice, robot)
+    ["#ffcc00","#cc8800","#442200","#000000"], // gold (wizard, star)
+    ["#aa44ff","#6600cc","#220044","#000000"], // purple (ghost, magic)
+    ["#ff8800","#cc5500","#441100","#000000"], // orange (fox, tiger)
+    ["#00ccff","#0088cc","#002244","#000000"], // cyan (cyber, electric)
+    ["#ffffff","#aaaaaa","#444444","#000000"], // grey (robot, stone)
+  ];
+
+  const desc = description.toLowerCase();
+  let palette;
+  if (/fire|dragon|demon|lava|red/.test(desc)) palette = PALETTES[1];
+  else if (/water|ice|ocean|blue|cyber/.test(desc)) palette = PALETTES[2];
+  else if (/wizard|star|gold|sun/.test(desc)) palette = PALETTES[3];
+  else if (/ghost|magic|purple|shadow/.test(desc)) palette = PALETTES[4];
+  else if (/fox|tiger|orange|cat/.test(desc)) palette = PALETTES[5];
+  else if (/electric|cyber|cyan|neon/.test(desc)) palette = PALETTES[6];
+  else if (/robot|stone|grey|silver/.test(desc)) palette = PALETTES[7];
+  else palette = PALETTES[Math.floor(rng() * PALETTES.length)];
+
+  // Generate 8x16 half-grid then mirror for symmetry
+  const grid = [];
+  for (let r = 0; r < 16; r++) {
+    const row = [];
+    for (let c = 0; c < 8; c++) {
+      const v = rng();
+      if (v < 0.35) row.push("#000000");
+      else if (v < 0.55) row.push(palette[0]);
+      else if (v < 0.70) row.push(palette[1]);
+      else if (v < 0.82) row.push(palette[2]);
+      else row.push("#000000");
+    }
+    // Mirror left half to right
+    grid.push([...row, ...row.slice().reverse()]);
+  }
+
+  // Add eyes (bright accent) — rows 4-5, cols 3 and 4 mirrored
+  grid[4][3] = grid[4][4] = "#ffffff";
+  grid[4][11] = grid[4][12] = "#ffffff";
+
+  res.json({ grid });
 });
 
 app.use(express.static(path.join(__dirname, "public")));
