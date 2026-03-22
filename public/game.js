@@ -1673,15 +1673,16 @@ function drawAvatarOnCanvas(canvas, grid) {
 }
 
 function refreshMyAvatarCanvases() {
-  if (!myAvatar) return;
-  ["avatar-canvas-home", "panel-avatar-you"].forEach(id => {
+  const ids = ["avatar-canvas-guest", "avatar-canvas-signedin", "panel-avatar-you"];
+  ids.forEach(id => {
     const el = document.getElementById(id);
     if (el) drawAvatarOnCanvas(el, myAvatar);
   });
-  ["avatar-btn-home-label", "avatar-btn-home-label"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = "YOUR ICON";
-  });
+  // Update labels
+  const lGuest = document.getElementById("avatar-lbl-guest");
+  const lSigned = document.getElementById("avatar-lbl-signedin");
+  if (lGuest)  lGuest.textContent  = myAvatar ? "YOUR ICON" : "CREATE ICON";
+  if (lSigned) lSigned.textContent = "YOUR ICON";
 }
 
 // ── Photo upload → pixel avatar ───────────────────────────────────
@@ -1791,8 +1792,11 @@ document.getElementById("btn-random-avatar").addEventListener("click", () => {
 document.getElementById("btn-use-avatar").addEventListener("click", () => {
   if (!window._pendingAvatar) return;
   myAvatar = window._pendingAvatar;
+  // Save to localStorage
   try { localStorage.setItem("arcadeface_avatar", JSON.stringify(myAvatar)); } catch(e) {}
+  // Draw on all home screen canvases immediately
   refreshMyAvatarCanvases();
+  // Broadcast to opponent if in a game
   if (roomId) socket.emit("player_avatar", { roomId, avatar: myAvatar });
   showScreen("screen-home");
 });
@@ -1836,7 +1840,7 @@ document.getElementById("btn-skip-avatar").addEventListener("click", () => {
 // create policy "Users manage own icons" on player_icons
 //   using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
-const VAULT_MAX = 7;
+const VAULT_MAX = 3;
 let vaultIcons = []; // [{ id, label, grid }]
 
 async function vaultLoad() {
@@ -2031,8 +2035,6 @@ async function loadSavedAvatar() {
 }
 
 function drawDefaultIcon() {
-  // 16x16 pixel branded "AF" joystick icon
-  // Using brand colours: #00ff88 (accent green) and #ff3366 (accent pink)
   const G = "#00ff88", P = "#ff3366", W = "#e8e8f0", B = "#000000", D = "#1a1a26";
   const defaultGrid = [
     [B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B],
@@ -2052,8 +2054,10 @@ function drawDefaultIcon() {
     [B,B,B,B,B,B,D,D,D,B,B,B,B,B,B,B],
     [B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B],
   ];
-  const canvas = document.getElementById("avatar-canvas-home");
-  if (canvas) drawAvatarOnCanvas(canvas, defaultGrid);
+  ["avatar-canvas-guest","avatar-canvas-signedin"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) drawAvatarOnCanvas(el, defaultGrid);
+  });
   window._defaultIcon = defaultGrid;
 }
 
@@ -2066,4 +2070,5 @@ socket.on("player_avatar", ({ avatar }) => {
 
 initSupabase();
 checkFriendLink();
-loadSavedAvatar();
+drawDefaultIcon(); // show branded icon immediately
+loadSavedAvatar(); // then overwrite with saved if exists
