@@ -1676,9 +1676,10 @@ function refreshMyAvatarCanvases() {
     const el = document.getElementById(id);
     if (el) drawAvatarOnCanvas(el, myAvatar);
   });
-  // Update label when avatar exists
-  const label = document.getElementById("avatar-btn-home-label");
-  if (label) label.textContent = "YOUR ICON";
+  ["avatar-btn-home-label", "avatar-btn-home-label"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = "YOUR ICON";
+  });
 }
 
 // ── Photo upload → pixel avatar ───────────────────────────────────
@@ -1800,8 +1801,9 @@ document.getElementById("btn-skip-avatar").addEventListener("click", () => {
   showScreen("screen-home");
 });
 
-// Open avatar creator — single button now
+// Open avatar creator — both guest and signed-in buttons
 document.getElementById("avatar-btn-home").addEventListener("click", openAvatarCreator);
+document.getElementById("avatar-btn-home-guest").addEventListener("click", openAvatarCreator);
 
 function openAvatarCreator() {
   document.getElementById("avatar-input").value = "";
