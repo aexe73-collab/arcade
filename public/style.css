@@ -1657,6 +1657,7 @@ body {
   width: 100%;
   max-width: 860px;
   min-height: 100%;
+  padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 16px);
 }
 
