@@ -367,8 +367,7 @@ socket.on("friend_avatar", ({ avatar }) => {
   if (el && avatar) drawAvatarOnCanvas(el, avatar);
 });
 
-// When friend connects, broadcast our avatar to them
-socket.on("friend_connected", async ({ code }) => {
+socket.on("friend_connected", async ({ code, initiator }) => {
   document.getElementById("friend-lobby-status").textContent = "Friend connected — pick a game!";
   document.getElementById("friend-lobby-code").textContent   = `Room: ${code}`;
 
@@ -387,8 +386,8 @@ socket.on("friend_connected", async ({ code }) => {
     socket.emit("friend_avatar", { code: friendCode, avatar: myAvatar });
   }
 
-  // Initiate WebRTC
-  if (friendPeerConn) {
+  // Only the initiator (player 1) creates the offer to avoid collision
+  if (initiator && friendPeerConn) {
     const offer = await friendPeerConn.createOffer();
     await friendPeerConn.setLocalDescription(offer);
     socket.emit("friend_offer", { code, offer });
@@ -413,10 +412,11 @@ socket.on("friend_ice", async ({ candidate }) => {
 });
 
 socket.on("friend_game_starting", ({ game }) => {
-  // Both players start matchmaking for this game
   currentGame = game;
   playMode = "friend";
   document.getElementById("waiting-sub").textContent = `Starting ${game.toUpperCase()} with friend...`;
+  // Close friend lobby peer connection but keep localStream alive for the game
+  if (friendPeerConn) { friendPeerConn.close(); friendPeerConn = null; }
   showScreen("screen-waiting");
   socket.emit("find_match", { game });
 });
@@ -449,7 +449,7 @@ function checkFriendLink() {
 // ── Screen helpers ────────────────────────────────────────────────
 // Screens that require an active camera
 const CAMERA_SCREENS = new Set([
-  "screen-faceoff", "screen-game", "screen-gameover", "screen-friend-lobby"
+  "screen-waiting", "screen-faceoff", "screen-game", "screen-gameover", "screen-friend-lobby"
 ]);
 
 function stopCamera() {
@@ -463,9 +463,6 @@ function stopCamera() {
     const el = document.getElementById(id);
     if (el) el.srcObject = null;
   });
-  // Close peer connections
-  if (peerConn) { peerConn.close(); peerConn = null; }
-  if (friendPeerConn) { friendPeerConn.close(); friendPeerConn = null; }
   console.log("[CAM] camera stopped");
 }
 
@@ -476,9 +473,8 @@ function showScreen(id) {
   const fixedGame = document.getElementById("banner-game-fixed");
   if (fixedGame) fixedGame.style.display = onGame ? "block" : "none";
 
-  // Stop camera when leaving camera screens
+  // Stop camera only when going to non-camera screens
   if (!CAMERA_SCREENS.has(id) && localStream) {
-    // Only stop if we're not heading somewhere that needs it
     stopCamera();
   }
 }
