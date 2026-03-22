@@ -349,8 +349,19 @@ document.querySelectorAll(".friend-game-card").forEach(btn => {
   });
 });
 
-document.getElementById("btn-friend-exit").addEventListener("click", () => {
-  if (friendCode) socket.emit("friend_exit", { code: friendCode });
+// Step away — room stays open, URL preserved so they can come back
+document.getElementById("btn-friend-leave").addEventListener("click", () => {
+  if (friendCode) socket.emit("friend_leave", { code: friendCode });
+  if (friendPeerConn) { friendPeerConn.close(); friendPeerConn = null; }
+  stopCamera();
+  // Keep friendCode and URL — they can return via the link
+  showScreen("screen-home");
+});
+
+// Close room permanently
+document.getElementById("btn-friend-close").addEventListener("click", () => {
+  if (!confirm("Close this room? Your friend will be disconnected and the room link will stop working.")) return;
+  if (friendCode) socket.emit("friend_close", { code: friendCode });
   friendCode = null;
   history.replaceState({}, "", "/");
   if (friendPeerConn) { friendPeerConn.close(); friendPeerConn = null; }
@@ -436,9 +447,26 @@ socket.on("friend_game_starting", ({ game }) => {
   socket.emit("find_match", { game });
 });
 
+socket.on("friend_stepped_away", () => {
+  document.getElementById("friend-lobby-status").textContent = "Friend stepped away — room still open";
+  document.getElementById("friend-pick-label").textContent = "Waiting for friend to return...";
+  const rv = document.getElementById("video-friend-remote");
+  if (rv) rv.srcObject = null;
+  const theirEl = document.getElementById("friend-avatar-them");
+  if (theirEl) theirEl.getContext("2d").clearRect(0, 0, 16, 16);
+});
+
+socket.on("friend_room_closed", () => {
+  friendCode = null;
+  history.replaceState({}, "", "/");
+  if (friendPeerConn) { friendPeerConn.close(); friendPeerConn = null; }
+  stopCamera();
+  showScreen("screen-home");
+});
+
 socket.on("friend_left", () => {
-  document.getElementById("friend-lobby-status").textContent = "Friend left the room";
-  document.getElementById("friend-pick-label").textContent = "Waiting for friend to rejoin...";
+  // Legacy — treat same as stepped away
+  document.getElementById("friend-lobby-status").textContent = "Friend stepped away — room still open";
   const rv = document.getElementById("video-friend-remote");
   if (rv) rv.srcObject = null;
 });
@@ -455,6 +483,7 @@ function checkFriendLink() {
   const code = params.get("friend");
   if (code) {
     playMode = "friend";
+    friendCode = code; // preserve even before entering lobby
     setTimeout(() => {
       getCamera().then(() => enterFriendLobby(code));
     }, 500);
