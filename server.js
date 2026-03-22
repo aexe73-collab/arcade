@@ -328,6 +328,7 @@ io.on("connection", (socket) => {
   socket.on("friend_offer",  ({ code, offer })     => socket.to("f_" + code.toUpperCase()).emit("friend_offer",  { offer, code }));
   socket.on("friend_answer", ({ code, answer })    => socket.to("f_" + code.toUpperCase()).emit("friend_answer", { answer }));
   socket.on("friend_ice",    ({ code, candidate }) => socket.to("f_" + code.toUpperCase()).emit("friend_ice",    { candidate }));
+  socket.on("friend_avatar", ({ code, avatar })    => socket.to("f_" + code.toUpperCase()).emit("friend_avatar", { avatar }));
 
   // ── Friend room: create or join ──────────────────────────────────
   socket.on("friend_join", ({ code }) => {
