@@ -211,11 +211,20 @@ document.getElementById("btn-friend-exit").addEventListener("click", () => {
 // Friend socket events
 socket.on("friend_waiting", ({ code }) => {
   const link = `https://www.arcadeface.com?friend=${code}`;
-  document.getElementById("friend-lobby-status").textContent = "Share this link with your friend:";
-  document.getElementById("friend-lobby-code").textContent = link;
-
-  // Copy link to clipboard automatically
+  document.getElementById("friend-lobby-status").textContent = "Send this link to your friend \u2193";
+  document.getElementById("friend-lobby-code").textContent   = link;
   navigator.clipboard?.writeText(link).catch(() => {});
+});
+
+// Copy button
+document.getElementById("btn-friend-copy").addEventListener("click", () => {
+  const link = document.getElementById("friend-lobby-code").textContent;
+  navigator.clipboard?.writeText(link).then(() => {
+    const btn = document.getElementById("btn-friend-copy");
+    btn.textContent = "✓ COPIED";
+    btn.classList.add("copied");
+    setTimeout(() => { btn.textContent = "COPY"; btn.classList.remove("copied"); }, 2000);
+  }).catch(() => {});
 });
 
 socket.on("friend_connected", async ({ code }) => {
@@ -1835,8 +1844,38 @@ function loadSavedAvatar() {
     if (saved) {
       myAvatar = JSON.parse(saved);
       refreshMyAvatarCanvases();
+      return;
     }
   } catch(e) {}
+  // Draw branded default icon
+  drawDefaultIcon();
+}
+
+function drawDefaultIcon() {
+  // 16x16 pixel branded "AF" joystick icon
+  // Using brand colours: #00ff88 (accent green) and #ff3366 (accent pink)
+  const G = "#00ff88", P = "#ff3366", W = "#e8e8f0", B = "#000000", D = "#1a1a26";
+  const defaultGrid = [
+    [B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B],
+    [B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B],
+    [B,B,P,P,B,B,G,G,G,B,B,P,P,B,B,B],
+    [B,B,P,P,B,B,G,B,B,B,B,P,B,P,B,B],
+    [B,B,P,P,B,B,G,G,B,B,B,P,P,B,B,B],
+    [B,B,P,P,B,B,G,B,B,B,B,P,B,P,B,B],
+    [B,B,P,P,P,B,G,G,G,B,B,P,B,P,B,B],
+    [B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B],
+    [B,B,B,B,B,W,W,W,W,W,B,B,B,B,B,B],
+    [B,B,B,B,W,W,W,W,W,W,W,B,B,B,B,B],
+    [B,B,B,W,W,D,W,W,W,D,W,W,B,B,B,B],
+    [B,B,B,W,W,W,W,W,W,W,W,W,B,B,B,B],
+    [B,B,B,B,W,W,W,W,W,W,W,B,B,B,B,B],
+    [B,B,B,B,B,B,W,W,W,B,B,B,B,B,B,B],
+    [B,B,B,B,B,B,D,D,D,B,B,B,B,B,B,B],
+    [B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B],
+  ];
+  const canvas = document.getElementById("avatar-canvas-home");
+  if (canvas) drawAvatarOnCanvas(canvas, defaultGrid);
+  window._defaultIcon = defaultGrid;
 }
 
 // Avatar socket events
