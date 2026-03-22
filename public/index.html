@@ -14,6 +14,21 @@
   <div id="screen-home" class="screen active">
     <div class="scanlines"></div>
     <div class="home-content">
+
+      <!-- Avatar icon — always visible above logo -->
+      <div class="home-avatar-wrap">
+        <!-- Guest icon button -->
+        <button class="avatar-btn-home" id="avatar-btn-home-guest" title="Create your player icon">
+          <canvas class="avatar-canvas-home" id="avatar-canvas-guest" width="48" height="48"></canvas>
+          <span class="avatar-btn-home-label" id="avatar-lbl-guest">CREATE ICON</span>
+        </button>
+        <!-- Signed-in icon button (hidden until auth) -->
+        <button class="avatar-btn-home hidden" id="avatar-btn-home" title="Edit your player icon">
+          <canvas class="avatar-canvas-home" id="avatar-canvas-signedin" width="48" height="48"></canvas>
+          <span class="avatar-btn-home-label" id="avatar-lbl-signedin">YOUR ICON</span>
+        </button>
+      </div>
+
       <div class="logo-block">
         <div class="logo-eyebrow">INSERT COIN</div>
         <h1 class="logo">ARCADE<span class="logo-accent">FACE</span></h1>
@@ -26,10 +41,6 @@
           <span class="home-username" id="home-username">PLAYER</span>
           <button class="btn-text-small" id="btn-signout">sign out</button>
         </div>
-        <button class="avatar-btn-home" id="avatar-btn-home" title="Edit your player icon">
-          <canvas class="avatar-canvas-home" id="avatar-canvas-signedin" width="48" height="48"></canvas>
-          <span class="avatar-btn-home-label" id="avatar-lbl-signedin">YOUR ICON</span>
-        </button>
         <button class="btn-primary" id="btn-play-modes">
           <span class="btn-icon">&#9654;</span> PLAY
         </button>
@@ -37,10 +48,6 @@
 
       <!-- Guest state -->
       <div class="home-guest" id="home-guest">
-        <button class="avatar-btn-home" id="avatar-btn-home-guest" title="Create your player icon">
-          <canvas class="avatar-canvas-home" id="avatar-canvas-guest" width="48" height="48"></canvas>
-          <span class="avatar-btn-home-label" id="avatar-lbl-guest">CREATE ICON</span>
-        </button>
         <button class="btn-primary" id="btn-find-match">
           <span class="btn-icon">&#9654;</span> RANDOM MATCH
         </button>
@@ -141,18 +148,36 @@
     <div class="signin-content">
       <div class="signin-logo">ARCADE<span>FACE</span></div>
       <div class="signin-title">SIGN IN / SIGN UP</div>
-      <p class="signin-sub">Enter your email — we'll send you a magic link.<br>No password needed.</p>
 
-      <div class="signin-form" id="signin-form">
+      <!-- Tab switcher -->
+      <div class="signin-tabs">
+        <button class="signin-tab active" id="tab-password" data-tab="password">PASSWORD</button>
+        <button class="signin-tab" id="tab-magic" data-tab="magic">MAGIC LINK</button>
+      </div>
+
+      <!-- Password form -->
+      <div class="signin-form" id="signin-form-password">
+        <input type="email" id="signin-email-pw" placeholder="your@email.com" autocomplete="email"/>
+        <input type="password" id="signin-password" placeholder="password" autocomplete="current-password"/>
+        <button class="btn-primary" id="btn-signin-pw">SIGN IN</button>
+        <button class="btn-ghost" id="btn-signup-pw">CREATE ACCOUNT</button>
+        <button class="btn-text signin-forgot" id="btn-forgot-pw">Forgot password?</button>
+      </div>
+
+      <!-- Magic link form -->
+      <div class="signin-form hidden" id="signin-form-magic">
         <input type="email" id="signin-email" placeholder="your@email.com" autocomplete="email"/>
         <button class="btn-primary" id="btn-send-link">SEND MAGIC LINK</button>
+        <p class="signin-sub">We'll email you a one-click sign-in link. No password needed.</p>
       </div>
 
       <div class="signin-sent hidden" id="signin-sent">
         <div class="signin-sent-icon">&#10003;</div>
         <p>Check your email — link sent!</p>
-        <p class="signin-sent-sub">Click the link in your inbox to sign in.<br>You can close this tab.</p>
+        <p class="signin-sent-sub">Click the link in your inbox to sign in.</p>
       </div>
+
+      <div class="signin-error hidden" id="signin-error"></div>
 
       <button class="btn-text" id="btn-back-home">&#8592; Back</button>
     </div>
