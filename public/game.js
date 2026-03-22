@@ -45,16 +45,17 @@ function initSupabase() {
   const isRecovery = hash.includes("type=recovery") || hash.includes("type=signup");
 
   if (!isRecovery) {
-    // Normal page load — restore existing session
     sbClient.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setUser(session.user);
-        // Only go home if no friend code — checkFriendLink handles that case
         const hasFriendCode = new URLSearchParams(window.location.search).get("friend");
-        if (!hasFriendCode) {
-          showScreen("screen-home");
-          setTimeout(loadSavedAvatar, 300);
-        }
+        showScreen("screen-home");
+        if (hasFriendCode) showFriendJoinPrompt(hasFriendCode);
+        else setTimeout(loadSavedAvatar, 300);
+      } else {
+        // Guest — if friend code present, show join prompt
+        const hasFriendCode = new URLSearchParams(window.location.search).get("friend");
+        if (hasFriendCode) showFriendJoinPrompt(hasFriendCode);
       }
     });
   }
@@ -69,12 +70,14 @@ function initSupabase() {
     } else if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session && !isRecovery) {
       setUser(session.user);
       setTimeout(loadSavedAvatar, 300);
-      // Only redirect to home if no friend link in URL
       const hasFriendCode = new URLSearchParams(window.location.search).get("friend");
-      if (!hasFriendCode) {
+      if (hasFriendCode) {
+        // Show join prompt on home screen — don't auto-request camera
+        showScreen("screen-home");
+        showFriendJoinPrompt(hasFriendCode);
+      } else {
         showScreen("screen-home");
       }
-      // If there's a friend code, checkFriendLink already started the lobby flow
     } else if (event === "SIGNED_OUT") {
       setUser(null);
     }
@@ -335,6 +338,7 @@ function enterFriendLobby(code) {
   if (prevEl && myAvatar) { drawAvatarOnCanvas(prevEl, myAvatar); window._friendPendingAvatar = myAvatar; }
 
   showScreen("screen-friend-lobby");
+  document.getElementById("screen-friend-lobby").scrollTop = 0;
   socket.emit("friend_join", { code });
 
   // Get fresh camera for lobby (showScreen stops it if coming from non-camera screen)
@@ -509,11 +513,20 @@ function checkFriendLink() {
   const code = params.get("friend");
   if (code) {
     playMode = "friend";
-    friendCode = code; // preserve even before entering lobby
-    setTimeout(() => {
-      getCamera().then(() => enterFriendLobby(code));
-    }, 500);
+    friendCode = code;
   }
+}
+
+function showFriendJoinPrompt(code) {
+  // Show a join button on the home screen
+  const prompt = document.getElementById("friend-join-prompt");
+  const btn    = document.getElementById("btn-join-friend-room");
+  if (!prompt || !btn) return;
+  prompt.style.display = "flex";
+  btn.onclick = () => {
+    prompt.style.display = "none";
+    getCamera().then(() => enterFriendLobby(code));
+  };
 }
 
 // ── Screen helpers ────────────────────────────────────────────────
