@@ -1826,12 +1826,24 @@ function openAvatarCreator() {
   if (uploadLabel) {
     if (isSignedIn) {
       uploadLabel.classList.remove("disabled");
-      if (photoBadge) { photoBadge.textContent = "FREE"; photoBadge.style.color = "var(--accent)"; photoBadge.style.borderColor = "var(--accent)"; }
-      if (photoSub)   photoSub.textContent = "Pixelate a selfie or any image";
+      if (photoBadge) {
+        photoBadge.textContent = "FREE";
+        photoBadge.style.color = "var(--accent)";
+        photoBadge.style.borderColor = "var(--accent)";
+        photoBadge.style.cursor = "default";
+        photoBadge.onclick = null;
+      }
+      if (photoSub) photoSub.textContent = "Pixelate a selfie or any image";
     } else {
       uploadLabel.classList.add("disabled");
-      if (photoBadge) { photoBadge.textContent = "SIGN IN"; photoBadge.style.color = "var(--accent2)"; photoBadge.style.borderColor = "var(--accent2)"; }
-      if (photoSub)   photoSub.textContent = "Sign in free to unlock photo upload";
+      if (photoBadge) {
+        photoBadge.textContent = "SIGN IN →";
+        photoBadge.style.color = "var(--accent2)";
+        photoBadge.style.borderColor = "var(--accent2)";
+        photoBadge.style.cursor = "pointer";
+        photoBadge.onclick = () => showScreen("screen-signin");
+      }
+      if (photoSub) photoSub.textContent = "Sign in free to unlock — tap SIGN IN →";
     }
   }
   showScreen("screen-avatar");
