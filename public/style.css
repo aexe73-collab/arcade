@@ -1645,525 +1645,124 @@ body {
 
 #screen-friend-lobby {
   background: var(--bg);
-  align-items: stretch;
-  justify-content: stretch;
-  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
 }
 
-/* ── Desktop: cameras on sides, content in centre ── */
 .friend-lobby-layout {
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
-  overflow: hidden;
+  max-width: 860px;
+  min-height: 100%;
 }
 
 .friend-lobby-logo {
   font-family: var(--pixel);
-  font-size: clamp(16px, 2.5vw, 26px);
-  letter-spacing: 2px;
+  font-size: clamp(22px, 3vw, 34px);
+  letter-spacing: 3px;
   text-align: center;
-  padding: 14px 0 10px;
+  padding: 20px 0 14px;
   color: var(--text);
   flex-shrink: 0;
   border-bottom: 1px solid var(--border);
 }
 .friend-lobby-logo span { color: var(--accent2); }
+.friend-lobby-main { display: contents; }
+.friend-lobby-header { display: none; }
 
-/* Middle section: cameras + content in game-screen style */
-.friend-lobby-main {
+.friend-lobby-videos {
   display: flex;
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
+  gap: 6px;
+  height: clamp(240px, 35vh, 420px);
+  flex-shrink: 0;
+  padding: 12px;
 }
 
-/* Side video panels — match game screen exactly */
 .friend-lobby-pip {
-  width: clamp(280px, 40vw, 600px);
-  flex-shrink: 0;
+  flex: 1;
   position: relative;
   overflow: hidden;
   background: var(--bg2);
 }
-
-.friend-lobby-pip video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
+.friend-lobby-pip video { width: 100%; height: 100%; object-fit: cover; }
 .friend-lobby-pip.pip-you video { transform: scaleX(-1); }
-
 .friend-lobby-pip span {
   position: absolute;
-  bottom: 8px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 6px;
+  left: 8px;
   font-family: var(--pixel);
-  font-size: 9px;
-  letter-spacing: 3px;
-  padding: 4px 12px;
+  font-size: 8px;
+  letter-spacing: 2px;
+  padding: 3px 8px;
   background: rgba(0,0,0,0.7);
-  white-space: nowrap;
 }
-
-.friend-lobby-pip.pip-them { border-right: 3px solid var(--accent2); }
+.friend-lobby-pip.pip-them { border: 2px solid var(--accent2); }
 .friend-lobby-pip.pip-them span { color: var(--accent2); }
-.friend-lobby-pip.pip-you  { border-left:  3px solid var(--accent); }
+.friend-lobby-pip.pip-you  { border: 2px solid var(--accent); }
 .friend-lobby-pip.pip-you  span { color: var(--accent); }
 
-.friend-lobby-avatar-wrap {
-  position: absolute;
-  top: 10px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.friend-lobby-avatar-wrap.them { left: 10px; }
-.friend-lobby-avatar-wrap.you  { right: 10px; flex-direction: row-reverse; }
+.friend-lobby-avatar-wrap { position: absolute; top: 6px; display: flex; align-items: center; gap: 4px; }
+.friend-lobby-avatar-wrap.them { left: 6px; }
+.friend-lobby-avatar-wrap.you  { right: 6px; flex-direction: row-reverse; }
+.friend-lobby-avatar { width: 36px; height: 36px; image-rendering: pixelated; image-rendering: crisp-edges; border: 1px solid rgba(255,255,255,0.2); }
 
-.friend-lobby-avatar {
-  width: 36px;
-  height: 36px;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-  border: 1px solid rgba(255,255,255,0.2);
-}
+.friend-lobby-centre { display: contents; }
 
-/* Centre column: scrollable content */
-.friend-lobby-centre {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  min-width: 0;
-  padding: 0;
-}
-
-/* Game picker */
 .friend-lobby-pick {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   padding: 16px 12px 8px;
   flex-shrink: 0;
 }
+.friend-lobby-pick-label { font-family: var(--pixel); font-size: 9px; color: var(--muted); letter-spacing: 2px; text-align: center; }
 
-.friend-lobby-pick-label {
-  font-family: var(--pixel);
-  font-size: 9px;
-  color: var(--muted);
-  letter-spacing: 2px;
-  text-align: center;
-}
-
-/* Carousel */
 .friend-game-carousel-wrap {
   width: 100%;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding: 4px 0 8px;
+  padding: 4px 0 12px;
 }
 .friend-game-carousel-wrap::-webkit-scrollbar { display: none; }
+.friend-game-carousel { display: flex; gap: 12px; padding: 0 16px; width: max-content; }
+.friend-game-card { scroll-snap-align: center; flex-shrink: 0; width: 150px; height: 150px; }
 
-.friend-game-carousel {
-  display: flex;
-  gap: 8px;
-  padding: 0 12px;
-  width: max-content;
+@media (min-width: 769px) {
+  .friend-game-carousel-wrap { overflow-x: visible; }
+  .friend-game-carousel { width: 100%; justify-content: center; flex-wrap: wrap; }
+  .friend-game-card { scroll-snap-align: unset; }
 }
 
-.friend-game-card {
-  scroll-snap-align: center;
-  flex-shrink: 0;
-  width: 120px;
-  height: 120px;
-}
-
-/* ── Inline avatar creator ─────────────────────────── */
 .friend-lobby-avatar-creator {
-  padding: 12px 16px;
+  padding: 16px 24px;
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
 }
+.friend-avatar-creator-title { font-family: var(--pixel); font-size: 9px; color: var(--text); letter-spacing: 2px; text-align: center; }
+.friend-avatar-row { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; max-width: 400px; }
+.friend-avatar-preview-canvas { width: 96px; height: 96px; image-rendering: pixelated; image-rendering: crisp-edges; border: 2px solid var(--border); background: var(--bg2); }
+.friend-avatar-controls { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.friend-avatar-gen-status { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align: center; min-height: 14px; }
+.friend-photo-label { display: inline-flex; align-items: center; justify-content: center; padding: 10px 4px; }
 
-.friend-avatar-creator-title {
-  font-family: var(--pixel);
-  font-size: 9px;
-  color: var(--text);
-  letter-spacing: 2px;
-  text-align: center;
-}
-
-.friend-avatar-row {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-}
-
-.friend-avatar-preview-canvas {
-  width: 80px;
-  height: 80px;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-  border: 2px solid var(--border);
-  background: var(--bg2);
-}
-
-.friend-avatar-controls {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.friend-avatar-gen-status {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--muted);
-  text-align: center;
-  min-height: 14px;
-}
-
-.friend-photo-label {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 4px;
-}
-
-/* Share + exit at bottom of centre column */
-.friend-share-bar {
-  padding: 10px 16px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.friend-exit-btn {
-  margin: 6px auto 12px;
-  color: var(--muted);
-}
-
-/* ── Mobile: stack everything vertically ───────────── */
-@media (max-width: 768px) {
-  .friend-lobby-layout { overflow-y: auto; }
-  .friend-lobby-main { flex-direction: column; overflow: visible; }
-  .friend-lobby-pip {
-    width: 100%;
-    height: 200px;
-    border: none !important;
-  }
-  .friend-lobby-pip.pip-them { border-bottom: 3px solid var(--accent2) !important; }
-  .friend-lobby-pip.pip-you  { border-bottom: 3px solid var(--accent) !important; }
-  .friend-lobby-videos {
-    display: flex;
-    flex-direction: row;
-    height: 200px;
-    gap: 4px;
-    padding: 8px;
-    flex-shrink: 0;
-  }
-  .friend-lobby-pip { height: 100%; }
-  .friend-lobby-centre { overflow: visible; }
-}
-
-.friend-share-status {
-  font-family: var(--pixel);
-  font-size: 8px;
-  color: var(--accent);
-  letter-spacing: 2px;
-  text-align: center;
-}
-
-.friend-share-label {
-  font-family: var(--pixel);
-  font-size: 7px;
-  color: var(--muted);
-  letter-spacing: 2px;
-}
-
-.friend-share-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-}
-
-.friend-share-link {
-  flex: 1;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--accent);
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  padding: 8px 10px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.friend-copy-btn {
-  font-family: var(--pixel);
-  font-size: 8px;
-  padding: 8px 14px;
-  background: transparent;
-  border: 1px solid var(--accent);
-  color: var(--accent);
-  cursor: pointer;
-  letter-spacing: 1px;
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
+.friend-share-bar { padding: 12px 24px; border-top: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
+.friend-share-status { font-family: var(--pixel); font-size: 8px; color: var(--accent); letter-spacing: 2px; text-align: center; }
+.friend-share-label { font-family: var(--pixel); font-size: 7px; color: var(--muted); letter-spacing: 2px; }
+.friend-share-row { display: flex; gap: 8px; align-items: center; width: 100%; max-width: 500px; }
+.friend-share-link { flex: 1; font-family: var(--mono); font-size: 11px; color: var(--accent); background: var(--bg2); border: 1px solid var(--border); padding: 8px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.friend-copy-btn { font-family: var(--pixel); font-size: 8px; padding: 8px 14px; background: transparent; border: 1px solid var(--accent); color: var(--accent); cursor: pointer; letter-spacing: 1px; flex-shrink: 0; transition: background 0.15s; }
 .friend-copy-btn:hover  { background: var(--accent); color: var(--bg); }
 .friend-copy-btn.copied { background: var(--accent); color: var(--bg); }
+.friend-exit-btn { margin: 8px auto 20px; color: var(--muted); }
 
-.friend-lobby-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr auto;
-  width: 100%;
-  height: 100%;
-  gap: 0;
-}
-
-/* Left column: cameras stacked */
-.friend-lobby-videos {
-  grid-column: 1;
-  grid-row: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 16px 8px 16px 16px;
-  min-height: 0;
-}
-
-.friend-lobby-pip {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-  background: var(--bg2);
-  min-height: 0;
-}
-
-.friend-lobby-pip video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.friend-lobby-pip.pip-you video { transform: scaleX(-1); }
-
-.friend-lobby-pip span {
-  position: absolute;
-  bottom: 6px;
-  left: 8px;
-  font-family: var(--pixel);
-  font-size: 7px;
-  letter-spacing: 2px;
-}
-
-.friend-lobby-pip.pip-them { border: 2px solid var(--accent2); }
-.friend-lobby-pip.pip-them span { color: var(--accent2); }
-.friend-lobby-pip.pip-you  { border: 2px solid var(--accent); }
-.friend-lobby-pip.pip-you  span { color: var(--accent); }
-
-.friend-lobby-avatar-wrap {
-  position: absolute;
-  top: 6px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.friend-lobby-avatar-wrap.them { left: 6px; }
-.friend-lobby-avatar-wrap.you  { right: 6px; flex-direction: row-reverse; }
-
-.friend-lobby-avatar {
-  width: 32px;
-  height: 32px;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-  border: 1px solid rgba(255,255,255,0.2);
-}
-
-.friend-avatar-edit-btn {
-  background: rgba(0,0,0,0.6);
-  border: 1px solid var(--accent);
-  color: var(--accent);
-  font-size: 12px;
-  width: 22px;
-  height: 22px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-/* Right column: game picker */
-.friend-lobby-pick {
-  grid-column: 2;
-  grid-row: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  padding: 16px 16px 16px 8px;
-  overflow-y: auto;
-}
-
-.friend-lobby-pick-label {
-  font-family: var(--pixel);
-  font-size: 9px;
-  color: var(--muted);
-  letter-spacing: 2px;
-  text-align: center;
-}
-
-/* On desktop: wrap game cards in a grid, no scroll needed */
-.friend-game-carousel-wrap {
-  width: 100%;
-  overflow: visible;
-  padding: 0;
-}
-
-.friend-game-carousel {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: center;
-  width: 100%;
-  padding: 0;
-}
-
-.friend-game-card {
-  flex-shrink: 0;
-  width: 140px;
-  scroll-snap-align: unset;
-}
-
-/* Bottom bar spans full width */
-.friend-share-bar {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  padding: 10px 24px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.friend-share-status {
-  font-family: var(--pixel);
-  font-size: 8px;
-  color: var(--accent);
-  letter-spacing: 2px;
-  text-align: center;
-}
-
-.friend-share-label {
-  font-family: var(--pixel);
-  font-size: 7px;
-  color: var(--muted);
-  letter-spacing: 2px;
-}
-
-.friend-share-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  max-width: 560px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.friend-share-link {
-  flex: 1;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--accent);
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  padding: 8px 10px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.friend-copy-btn {
-  font-family: var(--pixel);
-  font-size: 8px;
-  padding: 8px 14px;
-  background: transparent;
-  border: 1px solid var(--accent);
-  color: var(--accent);
-  cursor: pointer;
-  letter-spacing: 1px;
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-.friend-copy-btn:hover { background: var(--accent); color: var(--bg); }
-.friend-copy-btn.copied { background: var(--accent); color: var(--bg); }
-
-.friend-exit-btn {
-  grid-column: 1 / -1;
-  margin: 4px auto 12px;
-  color: var(--muted);
-}
-
-.friend-lobby-header { display: none; }
-
-/* ── Mobile: revert to single column ──────────────────────── */
-@media (max-width: 768px) {
-  .friend-lobby-layout {
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-  }
-  .friend-lobby-videos {
-    flex-direction: row;
-    height: 200px;
-    flex-shrink: 0;
-    padding: 8px;
-  }
-  .friend-lobby-pick {
-    padding: 12px 8px;
-    justify-content: flex-start;
-  }
-  .friend-game-carousel-wrap {
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .friend-game-carousel-wrap::-webkit-scrollbar { display: none; }
-  .friend-game-carousel {
-    flex-wrap: nowrap;
-    width: max-content;
-    padding: 0 12px;
-    justify-content: flex-start;
-  }
-  .friend-game-card { scroll-snap-align: center; }
-  .friend-share-row { max-width: 100%; }
-  .friend-lobby-pick-label { display: block; }
-}
 /* ── Pong mobile slider ────────────────────────────────── */
 .pong-slider-wrap {
   display: none;
