@@ -354,6 +354,7 @@ document.getElementById("btn-friend-exit").addEventListener("click", () => {
   friendCode = null;
   history.replaceState({}, "", "/");
   if (friendPeerConn) { friendPeerConn.close(); friendPeerConn = null; }
+  stopCamera();
   showScreen("screen-home");
 });
 
@@ -1819,8 +1820,8 @@ document.getElementById("btn-next-match").addEventListener("click", () => {
 
 document.getElementById("btn-home").addEventListener("click", () => {
   if (peerConn) { peerConn.close(); peerConn = null; }
-  if (localStream) localStream.getTracks().forEach(t => t.stop());
-  roomId = null; myRole = null; gameState = null; localStream = null;
+  roomId = null; myRole = null; gameState = null;
+  stopCamera();
   showScreen("screen-home");
 });
 
