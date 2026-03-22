@@ -322,30 +322,33 @@ let friendCode = null;
 let friendPeerConn = null;
 
 function enterFriendLobby(code) {
-  if (!code) {
-    const params = new URLSearchParams(window.location.search);
-    code = params.get("friend") || Math.random().toString(36).substring(2, 8).toUpperCase();
-  }
-  friendCode = code;
-  history.replaceState({}, "", `?friend=${code}`);
+  // For signed-in users: let the server assign the canonical code.
+  // For guests joining via a link: use the supplied code.
+  const joiningViaLink = !currentUser && !!code;
 
-  const link = `https://www.arcadeface.com?friend=${code}`;
-  document.getElementById("friend-lobby-code").textContent   = link;
-  document.getElementById("friend-lobby-status").textContent = "Waiting for friend...";
-  document.getElementById("friend-pick-label").textContent   = "Swipe & pick a game";
+  document.getElementById("friend-lobby-status").textContent = "Connecting...";
+  document.getElementById("friend-lobby-pick-label") && (document.getElementById("friend-pick-label").textContent = "Swipe & pick a game");
 
   // Show avatar immediately
   const myAvatarEl = document.getElementById("friend-avatar-you");
   if (myAvatarEl && myAvatar) drawAvatarOnCanvas(myAvatarEl, myAvatar);
-  // Also populate the inline preview
   const prevEl = document.getElementById("friend-avatar-preview");
   if (prevEl && myAvatar) { drawAvatarOnCanvas(prevEl, myAvatar); window._friendPendingAvatar = myAvatar; }
 
   showScreen("screen-friend-lobby");
-  document.getElementById("screen-friend-lobby").scrollTop = 0;
-  socket.emit("friend_join", { code, userId: currentUser?.id || null });
+  // Reset scroll after the opacity transition completes (iOS ignores scrollTop mid-transition)
+  const lobbyEl = document.getElementById("screen-friend-lobby");
+  lobbyEl.scrollTop = 0;
+  setTimeout(() => { lobbyEl.scrollTop = 0; }, 300);
 
-  // Get fresh camera for lobby (showScreen stops it if coming from non-camera screen)
+  // Signed-in: send userId only — server returns the canonical code via friend_waiting
+  // Guest via link: send the code from the URL
+  socket.emit("friend_join", {
+    code: joiningViaLink ? code.toUpperCase().trim() : null,
+    userId: currentUser?.id || null
+  });
+
+  // Get fresh camera for lobby
   getCamera().then(() => {
     const lv = document.getElementById("video-friend-local");
     if (lv && localStream) lv.srcObject = localStream;
@@ -405,6 +408,9 @@ document.getElementById("btn-friend-close").addEventListener("click", () => {
 
 // Friend socket events
 socket.on("friend_waiting", ({ code }) => {
+  // Server is the source of truth — set the canonical code and URL here
+  friendCode = code;
+  history.replaceState({}, "", `?friend=${code}`);
   const link = `https://www.arcadeface.com?friend=${code}`;
   document.getElementById("friend-lobby-status").textContent = "Send this link to your friend \u2193";
   document.getElementById("friend-lobby-code").textContent   = link;
@@ -428,6 +434,8 @@ socket.on("friend_avatar", ({ avatar }) => {
 });
 
 socket.on("friend_connected", async ({ code, initiator }) => {
+  friendCode = code; // ensure friendCode is always in sync with server
+  history.replaceState({}, "", `?friend=${code}`);
   document.getElementById("friend-lobby-status").textContent = "Friend connected — pick a game!";
   document.getElementById("friend-lobby-code").textContent   = `Room: ${code}`;
 
@@ -556,10 +564,20 @@ function stopCamera() {
 
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
+  const el = document.getElementById(id);
+  el.classList.add("active");
   const onGame = id === "screen-game";
   const fixedGame = document.getElementById("banner-game-fixed");
   if (fixedGame) fixedGame.style.display = onGame ? "block" : "none";
+
+  // For the friend lobby, force a scroll reset to unstick iOS scroll on re-entry
+  if (id === "screen-friend-lobby") {
+    el.style.overflowY = "hidden";
+    requestAnimationFrame(() => {
+      el.style.overflowY = "";
+      el.scrollTop = 0;
+    });
+  }
 
   // Stop camera only when going to non-camera screens
   if (!CAMERA_SCREENS.has(id) && localStream) {
