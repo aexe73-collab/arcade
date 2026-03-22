@@ -1677,6 +1677,40 @@ body {
 .friend-lobby-pip.pip-you  { border: 2px solid var(--accent); }
 .friend-lobby-pip.pip-you  span { color: var(--accent); }
 
+.friend-lobby-avatar-wrap {
+  position: absolute;
+  top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.friend-lobby-avatar-wrap.them { left: 6px; }
+.friend-lobby-avatar-wrap.you  { right: 6px; flex-direction: row-reverse; }
+
+.friend-lobby-avatar {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.friend-avatar-edit-btn {
+  background: rgba(0,0,0,0.6);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 12px;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 .friend-lobby-pick {
   display: flex;
   flex-direction: column;
