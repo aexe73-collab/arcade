@@ -121,16 +121,16 @@ app.post("/api/subscribe", (req, res) => {
 const waitingQueues = { pong: null, snake: null, reaction: null, raid: null, fourdots: null };
 const rooms = new Map();
 
-// ── Friend rooms (persistent 24hr) ───────────────────────────────
-const friendRooms = new Map(); // code → { players: [socketId, socketId], createdAt, gameRoomId }
+// ── Friend rooms (persistent) ─────────────────────────────────────
+const friendRooms = new Map(); // code → { players, createdAt, expiresAt, closed }
 
 function cleanOldFriendRooms() {
   const now = Date.now();
   for (const [code, room] of friendRooms) {
-    if (now - room.createdAt > 24 * 60 * 60 * 1000) friendRooms.delete(code);
+    if (room.closed || now > room.expiresAt) friendRooms.delete(code);
   }
 }
-setInterval(cleanOldFriendRooms, 60 * 60 * 1000); // clean every hour
+setInterval(cleanOldFriendRooms, 30 * 60 * 1000);
 
 function generateRoomId() {
   return Math.random().toString(36).substring(2, 9);
@@ -334,24 +334,27 @@ io.on("connection", (socket) => {
   socket.on("friend_join", ({ code }) => {
     code = code.toUpperCase().trim();
     let froom = friendRooms.get(code);
+    const TWO_HOURS = 2 * 60 * 60 * 1000;
+    const now = Date.now();
 
     if (!froom) {
-      // Create new friend room
-      froom = { players: [socket.id], createdAt: Date.now() };
+      froom = { players: [socket.id], createdAt: now, expiresAt: now + TWO_HOURS, owner: socket.id, closed: false };
       friendRooms.set(code, froom);
       socket.join("f_" + code);
       socket.emit("friend_waiting", { code });
       return;
     }
 
-    // Check which existing players are still connected
+    if (froom.closed || now > froom.expiresAt) {
+      socket.emit("friend_room_full");
+      return;
+    }
+
     froom.players = froom.players.filter(id => io.sockets.sockets.has(id));
 
     if (froom.players.includes(socket.id)) {
-      // Rejoining same socket
       socket.join("f_" + code);
       if (froom.players.length === 2) {
-        const isInitiator = froom.players[0] === socket.id;
         io.to(froom.players[0]).emit("friend_connected", { code, initiator: true });
         io.to(froom.players[1]).emit("friend_connected", { code, initiator: false });
       } else {
@@ -367,7 +370,7 @@ io.on("connection", (socket) => {
     } else if (froom.players.length === 1) {
       froom.players.push(socket.id);
       socket.join("f_" + code);
-      // Player 0 = initiator (creates offer), Player 1 = receiver
+      froom.expiresAt = now + TWO_HOURS;
       io.to(froom.players[0]).emit("friend_connected", { code, initiator: true });
       io.to(froom.players[1]).emit("friend_connected", { code, initiator: false });
     } else {
@@ -379,12 +382,31 @@ io.on("connection", (socket) => {
     io.to("f_" + code.toUpperCase()).emit("friend_game_starting", { game });
   });
 
-  socket.on("friend_exit", ({ code }) => {
+  // Step away — room stays open, slot held for 2 hours
+  socket.on("friend_leave", ({ code }) => {
     const c = code.toUpperCase();
-    socket.to("f_" + c).emit("friend_left");
     socket.leave("f_" + c);
     const froom = friendRooms.get(c);
     if (froom) froom.players = froom.players.filter(id => id !== socket.id);
+    socket.to("f_" + c).emit("friend_stepped_away");
+  });
+
+  // Close room permanently
+  socket.on("friend_close", ({ code }) => {
+    const c = code.toUpperCase();
+    io.to("f_" + c).emit("friend_room_closed");
+    const froom = friendRooms.get(c);
+    if (froom) froom.closed = true;
+    friendRooms.delete(c);
+  });
+
+  // Legacy exit — treat as leave
+  socket.on("friend_exit", ({ code }) => {
+    const c = code.toUpperCase();
+    socket.leave("f_" + c);
+    const froom = friendRooms.get(c);
+    if (froom) froom.players = froom.players.filter(id => id !== socket.id);
+    socket.to("f_" + c).emit("friend_stepped_away");
   });
 
   // Rejoin room after reconnect
