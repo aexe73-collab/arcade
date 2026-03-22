@@ -47,24 +47,34 @@ function initSupabase() {
   if (!isRecovery) {
     // Normal page load — restore existing session
     sbClient.auth.getSession().then(({ data: { session } }) => {
-      if (session) { setUser(session.user); showScreen("screen-home"); setTimeout(loadSavedAvatar, 300); }
+      if (session) {
+        setUser(session.user);
+        // Only go home if no friend code — checkFriendLink handles that case
+        const hasFriendCode = new URLSearchParams(window.location.search).get("friend");
+        if (!hasFriendCode) {
+          showScreen("screen-home");
+          setTimeout(loadSavedAvatar, 300);
+        }
+      }
     });
   }
 
   sbClient.auth.onAuthStateChange((event, session) => {
     console.log("Auth event:", event, "user:", session?.user?.email || "none");
     if (event === "PASSWORD_RECOVERY") {
-      // Clear the hash so refresh doesn't re-trigger
       history.replaceState({}, "", window.location.pathname);
       showScreen("screen-reset-password");
     } else if (event === "SIGNED_IN" && isRecovery) {
-      // Supabase signs the user in when processing the recovery token
-      // but we want to show the reset screen, not home
       showScreen("screen-reset-password");
     } else if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session && !isRecovery) {
       setUser(session.user);
-      showScreen("screen-home");
       setTimeout(loadSavedAvatar, 300);
+      // Only redirect to home if no friend link in URL
+      const hasFriendCode = new URLSearchParams(window.location.search).get("friend");
+      if (!hasFriendCode) {
+        showScreen("screen-home");
+      }
+      // If there's a friend code, checkFriendLink already started the lobby flow
     } else if (event === "SIGNED_OUT") {
       setUser(null);
     }
@@ -214,7 +224,18 @@ document.getElementById("btn-signin-submit").addEventListener("click", async () 
     else showSigninError("✓ Account created! Check your email to confirm, then sign in.");
   } else {
     const { error } = await sbClient.auth.signInWithPassword({ email, password: pw });
-    if (error) showSigninError(error.message);
+    if (error) {
+      showSigninError(error.message);
+    } else {
+      // After sign in, go to lobby if there's a friend code in URL
+      const friendParam = new URLSearchParams(window.location.search).get("friend");
+      if (friendParam) {
+        setTimeout(() => {
+          getCamera().then(() => enterFriendLobby(friendParam));
+        }, 300);
+      }
+      // Otherwise auth state change handles navigation
+    }
   }
 });
 
@@ -241,8 +262,13 @@ document.getElementById("btn-send-link").addEventListener("click", async () => {
   if (!sbClient) { alert("Auth not configured."); return; }
   const btn = document.getElementById("btn-send-link");
   btn.textContent = "SENDING..."; btn.disabled = true;
+  // Preserve friend code in redirect URL if present
+  const currentFriend = new URLSearchParams(window.location.search).get("friend");
+  const redirectTo = currentFriend
+    ? `https://www.arcadeface.com?friend=${currentFriend}`
+    : "https://www.arcadeface.com";
   const { error } = await sbClient.auth.signInWithOtp({
-    email, options: { emailRedirectTo: "https://www.arcadeface.com" }
+    email, options: { emailRedirectTo: redirectTo }
   });
   btn.textContent = "SEND MAGIC LINK"; btn.disabled = false;
   if (!error) {
