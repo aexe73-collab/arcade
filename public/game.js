@@ -287,10 +287,7 @@ document.getElementById("btn-send-link").addEventListener("click", async () => {
 
 document.getElementById("btn-signout").addEventListener("click", async () => {
   if (sbClient) await sbClient.auth.signOut();
-  setUser(null);
-  const prompt = document.getElementById("friend-join-prompt");
-  if (prompt) prompt.style.display = "none";
-  showScreen("screen-home");
+  window.location.href = "/";
 });
 
 // ── Mode selector ─────────────────────────────────────────────────
