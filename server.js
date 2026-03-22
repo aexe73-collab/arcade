@@ -122,12 +122,16 @@ const waitingQueues = { pong: null, snake: null, reaction: null, raid: null, fou
 const rooms = new Map();
 
 // ── Friend rooms (persistent) ─────────────────────────────────────
-const friendRooms = new Map(); // code → { players, createdAt, expiresAt, closed }
+const friendRooms = new Map(); // code → { players, createdAt, expiresAt, closed, owner, ownerUserId }
+const userLobbies = new Map();  // userId → roomCode (one active lobby per signed-in user)
 
 function cleanOldFriendRooms() {
   const now = Date.now();
   for (const [code, room] of friendRooms) {
-    if (room.closed || now > room.expiresAt) friendRooms.delete(code);
+    if (room.closed || now > room.expiresAt) {
+      if (room.ownerUserId) userLobbies.delete(room.ownerUserId);
+      friendRooms.delete(code);
+    }
   }
 }
 setInterval(cleanOldFriendRooms, 30 * 60 * 1000);
@@ -331,14 +335,36 @@ io.on("connection", (socket) => {
   socket.on("friend_avatar", ({ code, avatar })    => socket.to("f_" + code.toUpperCase()).emit("friend_avatar", { avatar }));
 
   // ── Friend room: create or join ──────────────────────────────────
-  socket.on("friend_join", ({ code }) => {
+  socket.on("friend_join", ({ code, userId }) => {
     code = code.toUpperCase().trim();
-    let froom = friendRooms.get(code);
     const TWO_HOURS = 2 * 60 * 60 * 1000;
     const now = Date.now();
 
+    // ── Owner path: signed-in user creating/rejoining their own lobby ──
+    if (userId) {
+      const existingCode = userLobbies.get(userId);
+
+      // They already own a different lobby — close it first
+      if (existingCode && existingCode !== code) {
+        const oldRoom = friendRooms.get(existingCode);
+        if (oldRoom) {
+          io.to("f_" + existingCode).emit("friend_room_closed");
+          oldRoom.closed = true;
+          friendRooms.delete(existingCode);
+        }
+        userLobbies.delete(userId);
+        console.log(`[lobby] Closed old lobby ${existingCode} for user ${userId}`);
+      }
+
+      // Register this user as owner of this code
+      userLobbies.set(userId, code);
+    }
+
+    let froom = friendRooms.get(code);
+
     if (!froom) {
-      froom = { players: [socket.id], createdAt: now, expiresAt: now + TWO_HOURS, owner: socket.id, closed: false };
+      // Create new room
+      froom = { players: [socket.id], createdAt: now, expiresAt: now + TWO_HOURS, owner: socket.id, ownerUserId: userId || null, closed: false };
       friendRooms.set(code, froom);
       socket.join("f_" + code);
       socket.emit("friend_waiting", { code });
@@ -350,8 +376,10 @@ io.on("connection", (socket) => {
       return;
     }
 
+    // Prune disconnected players
     froom.players = froom.players.filter(id => io.sockets.sockets.has(id));
 
+    // Already in the room (reconnect / page refresh)
     if (froom.players.includes(socket.id)) {
       socket.join("f_" + code);
       if (froom.players.length === 2) {
@@ -364,16 +392,20 @@ io.on("connection", (socket) => {
     }
 
     if (froom.players.length === 0) {
+      // Room empty — become the owner again
       froom.players = [socket.id];
+      froom.owner = socket.id;
       socket.join("f_" + code);
       socket.emit("friend_waiting", { code });
     } else if (froom.players.length === 1) {
+      // One slot open — join as the friend
       froom.players.push(socket.id);
       socket.join("f_" + code);
       froom.expiresAt = now + TWO_HOURS;
       io.to(froom.players[0]).emit("friend_connected", { code, initiator: true });
       io.to(froom.players[1]).emit("friend_connected", { code, initiator: false });
     } else {
+      // Both slots taken — reject
       socket.emit("friend_room_full");
     }
   });
@@ -396,7 +428,10 @@ io.on("connection", (socket) => {
     const c = code.toUpperCase();
     io.to("f_" + c).emit("friend_room_closed");
     const froom = friendRooms.get(c);
-    if (froom) froom.closed = true;
+    if (froom) {
+      froom.closed = true;
+      if (froom.ownerUserId) userLobbies.delete(froom.ownerUserId);
+    }
     friendRooms.delete(c);
   });
 
