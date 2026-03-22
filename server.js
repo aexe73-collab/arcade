@@ -140,6 +140,10 @@ function generateRoomId() {
   return Math.random().toString(36).substring(2, 9);
 }
 
+function generateFriendCode() {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
 // ── 4 Dots state ──────────────────────────────────────────────────
 const COLS = 7, ROWS = 6;
 
@@ -335,43 +339,55 @@ io.on("connection", (socket) => {
   socket.on("friend_avatar", ({ code, avatar })    => socket.to("f_" + code.toUpperCase()).emit("friend_avatar", { avatar }));
 
   // ── Friend room: create or join ──────────────────────────────────
+  // For signed-in users (userId present): server is the source of truth for the code.
+  // For guests (no userId): use the client-supplied code (joining via link).
   socket.on("friend_join", ({ code, userId }) => {
-    code = code.toUpperCase().trim();
     const TWO_HOURS = 2 * 60 * 60 * 1000;
     const now = Date.now();
 
-    // ── Owner path: signed-in user creating/rejoining their own lobby ──
+    // ── Signed-in owner: server assigns the canonical code ────────────
     if (userId) {
       const existingCode = userLobbies.get(userId);
 
-      // They already own a different lobby — close it first
-      if (existingCode && existingCode !== code) {
-        const oldRoom = friendRooms.get(existingCode);
-        if (oldRoom) {
-          io.to("f_" + existingCode).emit("friend_room_closed");
-          oldRoom.closed = true;
-          friendRooms.delete(existingCode);
+      if (existingCode) {
+        // They already have a lobby — reconnect them to it
+        const froom = friendRooms.get(existingCode);
+        if (froom && !froom.closed && now <= froom.expiresAt) {
+          froom.players = froom.players.filter(id => io.sockets.sockets.has(id));
+          if (!froom.players.includes(socket.id)) froom.players.unshift(socket.id);
+          socket.join("f_" + existingCode);
+          if (froom.players.length >= 2) {
+            io.to(froom.players[0]).emit("friend_connected", { code: existingCode, initiator: true });
+            io.to(froom.players[1]).emit("friend_connected", { code: existingCode, initiator: false });
+          } else {
+            socket.emit("friend_waiting", { code: existingCode });
+          }
+          console.log(`[lobby] User ${userId} reconnected to existing lobby ${existingCode}`);
+          return;
         }
+        // Existing lobby expired/closed — clean it up
         userLobbies.delete(userId);
-        console.log(`[lobby] Closed old lobby ${existingCode} for user ${userId}`);
+        if (froom) friendRooms.delete(existingCode);
       }
 
-      // Register this user as owner of this code
-      userLobbies.set(userId, code);
-    }
-
-    let froom = friendRooms.get(code);
-
-    if (!froom) {
-      // Create new room
-      froom = { players: [socket.id], createdAt: now, expiresAt: now + TWO_HOURS, owner: socket.id, ownerUserId: userId || null, closed: false };
-      friendRooms.set(code, froom);
-      socket.join("f_" + code);
-      socket.emit("friend_waiting", { code });
+      // Create a fresh lobby with a server-generated code
+      const newCode = generateFriendCode();
+      const froom = { players: [socket.id], createdAt: now, expiresAt: now + TWO_HOURS, owner: socket.id, ownerUserId: userId, closed: false };
+      friendRooms.set(newCode, froom);
+      userLobbies.set(userId, newCode);
+      socket.join("f_" + newCode);
+      socket.emit("friend_waiting", { code: newCode });
+      console.log(`[lobby] Created lobby ${newCode} for user ${userId}`);
       return;
     }
 
-    if (froom.closed || now > froom.expiresAt) {
+    // ── Guest / friend joining via link: use the supplied code ───────
+    if (!code) return;
+    code = code.toUpperCase().trim();
+
+    let froom = friendRooms.get(code);
+
+    if (!froom || froom.closed || now > froom.expiresAt) {
       socket.emit("friend_room_full");
       return;
     }
@@ -392,20 +408,17 @@ io.on("connection", (socket) => {
     }
 
     if (froom.players.length === 0) {
-      // Room empty — become the owner again
       froom.players = [socket.id];
       froom.owner = socket.id;
       socket.join("f_" + code);
       socket.emit("friend_waiting", { code });
     } else if (froom.players.length === 1) {
-      // One slot open — join as the friend
       froom.players.push(socket.id);
       socket.join("f_" + code);
       froom.expiresAt = now + TWO_HOURS;
       io.to(froom.players[0]).emit("friend_connected", { code, initiator: true });
       io.to(froom.players[1]).emit("friend_connected", { code, initiator: false });
     } else {
-      // Both slots taken — reject
       socket.emit("friend_room_full");
     }
   });
