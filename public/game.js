@@ -277,19 +277,19 @@ function enterFriendLobby(code) {
   document.getElementById("friend-lobby-status").textContent = "Waiting for friend...";
   document.getElementById("friend-pick-label").textContent   = "Swipe & pick a game";
 
-  // Assign local video immediately
-  if (localStream) {
-    const lv = document.getElementById("video-friend-local");
-    if (lv) lv.srcObject = localStream;
-  }
-
-  // Show my avatar in lobby immediately
+  // Show avatar immediately
   const myAvatarEl = document.getElementById("friend-avatar-you");
   if (myAvatarEl && myAvatar) drawAvatarOnCanvas(myAvatarEl, myAvatar);
 
   showScreen("screen-friend-lobby");
   socket.emit("friend_join", { code });
-  startFriendPeerConnection();
+
+  // Get fresh camera for lobby (showScreen stops it if coming from non-camera screen)
+  getCamera().then(() => {
+    const lv = document.getElementById("video-friend-local");
+    if (lv && localStream) lv.srcObject = localStream;
+    startFriendPeerConnection();
+  });
 }
 
 async function startFriendPeerConnection() {
@@ -434,18 +434,47 @@ function checkFriendLink() {
 }
 
 // ── Screen helpers ────────────────────────────────────────────────
+// Screens that require an active camera
+const CAMERA_SCREENS = new Set([
+  "screen-faceoff", "screen-game", "screen-gameover", "screen-friend-lobby"
+]);
+
+function stopCamera() {
+  if (!localStream) return;
+  localStream.getTracks().forEach(track => track.stop());
+  localStream = null;
+  // Clear all video elements
+  ["video-local","video-faceoff-local","video-mobile-local",
+   "video-postgame-local","video-friend-local","video-friend-remote",
+   "video-remote"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.srcObject = null;
+  });
+  // Close peer connections
+  if (peerConn) { peerConn.close(); peerConn = null; }
+  if (friendPeerConn) { friendPeerConn.close(); friendPeerConn = null; }
+  console.log("[CAM] camera stopped");
+}
+
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   const onGame = id === "screen-game";
   const fixedGame = document.getElementById("banner-game-fixed");
   if (fixedGame) fixedGame.style.display = onGame ? "block" : "none";
+
+  // Stop camera when leaving camera screens
+  if (!CAMERA_SCREENS.has(id) && localStream) {
+    // Only stop if we're not heading somewhere that needs it
+    stopCamera();
+  }
 }
 function showOverlay(id) { document.getElementById(id).classList.remove("hidden"); }
 function hideOverlay(id) { document.getElementById(id).classList.add("hidden"); }
 
 // ── Camera ────────────────────────────────────────────────────────
 async function getCamera() {
+  if (localStream) return true; // already running
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     ["video-local","video-faceoff-local","video-mobile-local","video-postgame-local","video-friend-local"].forEach(id => {
@@ -1795,7 +1824,9 @@ function drawAvatarOnCanvas(canvas, grid) {
   const ctx  = canvas.getContext("2d");
   const size = canvas.width;
   const cell = size / 16;
-  ctx.clearRect(0, 0, size, size);
+  // Fill dark background first
+  ctx.fillStyle = "#0a0a0f";
+  ctx.fillRect(0, 0, size, size);
   for (let r = 0; r < 16; r++) {
     for (let c = 0; c < 16; c++) {
       const color = grid[r]?.[c];
@@ -2222,5 +2253,10 @@ socket.on("player_avatar", ({ avatar }) => {
 
 initSupabase();
 checkFriendLink();
-drawDefaultIcon(); // show branded icon immediately
-loadSavedAvatar(); // then overwrite with saved if exists
+// Draw default icon after DOM settles
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => { drawDefaultIcon(); loadSavedAvatar(); });
+} else {
+  drawDefaultIcon();
+  loadSavedAvatar();
+}
