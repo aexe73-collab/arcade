@@ -350,23 +350,27 @@ io.on("connection", (socket) => {
     if (froom.players.includes(socket.id)) {
       // Rejoining same socket
       socket.join("f_" + code);
-      if (froom.players.length === 2) io.to("f_" + code).emit("friend_connected", { code });
-      else socket.emit("friend_waiting", { code });
+      if (froom.players.length === 2) {
+        const isInitiator = froom.players[0] === socket.id;
+        io.to(froom.players[0]).emit("friend_connected", { code, initiator: true });
+        io.to(froom.players[1]).emit("friend_connected", { code, initiator: false });
+      } else {
+        socket.emit("friend_waiting", { code });
+      }
       return;
     }
 
     if (froom.players.length === 0) {
-      // Room empty — take first slot
       froom.players = [socket.id];
       socket.join("f_" + code);
       socket.emit("friend_waiting", { code });
     } else if (froom.players.length === 1) {
-      // One slot open — join
       froom.players.push(socket.id);
       socket.join("f_" + code);
-      io.to("f_" + code).emit("friend_connected", { code });
+      // Player 0 = initiator (creates offer), Player 1 = receiver
+      io.to(froom.players[0]).emit("friend_connected", { code, initiator: true });
+      io.to(froom.players[1]).emit("friend_connected", { code, initiator: false });
     } else {
-      // Both slots taken by active connections — full
       socket.emit("friend_room_full");
     }
   });
