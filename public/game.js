@@ -53,8 +53,7 @@ function initSupabase() {
         if (hasFriendCode) showFriendJoinPrompt(hasFriendCode);
         else setTimeout(loadSavedAvatar, 300);
       } else {
-        // Guest — if friend code present, do NOT show JOIN LOBBY (requires sign-in)
-        // The friend code stays in the URL; showFriendJoinPrompt fires after SIGNED_IN
+        // Guest — do NOT show JOIN LOBBY (requires sign-in). URL stays intact.
       }
     });
   }
@@ -79,8 +78,6 @@ function initSupabase() {
       }
     } else if (event === "SIGNED_OUT") {
       setUser(null);
-      // Hide friend join prompt UI but keep the URL intact —
-      // if they sign back in, showFriendJoinPrompt will re-show it
       const prompt = document.getElementById("friend-join-prompt");
       if (prompt) prompt.style.display = "none";
       showScreen("screen-home");
@@ -543,10 +540,111 @@ const CAMERA_SCREENS = new Set([
   "screen-waiting", "screen-faceoff", "screen-game", "screen-gameover", "screen-friend-lobby"
 ]);
 
+// Screens where we can fully stop/restart the camera (LED off) vs just mute the track
+const STOP_RESTART_SCREENS = new Set(["screen-friend-lobby", "screen-gameover"]);
+
+// ── Media control state ───────────────────────────────────────────
+let camEnabled = true;
+let micEnabled = true;
+let _cameraRequested = false;
+
+// Per-screen button configs: [screenId, camBtnId, micBtnId, camIconId, camLblId, micIconId, micLblId]
+const MEDIA_CTRL_SCREENS = [
+  ["screen-friend-lobby", "lobby-cam-btn",   "lobby-mic-btn",   "lobby-cam-icon",   "lobby-cam-lbl",   "lobby-mic-icon",   "lobby-mic-lbl"],
+  ["screen-waiting",      "waiting-cam-btn", "waiting-mic-btn", "waiting-cam-icon", "waiting-cam-lbl", "waiting-mic-icon", "waiting-mic-lbl"],
+  ["screen-faceoff",      "faceoff-cam-btn", "faceoff-mic-btn", "faceoff-cam-icon", "faceoff-cam-lbl", "faceoff-mic-icon", "faceoff-mic-lbl"],
+  ["screen-game",         "game-cam-btn",    "game-mic-btn",    "game-cam-icon",    "game-cam-lbl",    "game-mic-icon",    "game-mic-lbl"],
+  ["screen-gameover",     "gameover-cam-btn","gameover-mic-btn","gameover-cam-icon","gameover-cam-lbl","gameover-mic-icon","gameover-mic-lbl"],
+];
+
+function updateAllMediaControlsUI() {
+  MEDIA_CTRL_SCREENS.forEach(([, camBtnId, micBtnId, camIconId, camLblId, micIconId, micLblId]) => {
+    const camBtn = document.getElementById(camBtnId);
+    const micBtn = document.getElementById(micBtnId);
+    if (!camBtn || !micBtn) return;
+    if (camEnabled) {
+      camBtn.classList.remove("cam-off");
+      document.getElementById(camIconId).textContent = "\u{1F4F7}";
+      document.getElementById(camLblId).textContent  = "CAM ON";
+    } else {
+      camBtn.classList.add("cam-off");
+      document.getElementById(camIconId).textContent = "\u{1F6AB}";
+      document.getElementById(camLblId).textContent  = "CAM OFF";
+    }
+    if (micEnabled) {
+      micBtn.classList.remove("mic-off");
+      document.getElementById(micIconId).textContent = "\u{1F3A4}";
+      document.getElementById(micLblId).textContent  = "MIC ON";
+    } else {
+      micBtn.classList.add("mic-off");
+      document.getElementById(micIconId).textContent = "\u{1F507}";
+      document.getElementById(micLblId).textContent  = "MUTED";
+    }
+  });
+}
+
+async function toggleCam(screenId) {
+  camEnabled = !camEnabled;
+  if (STOP_RESTART_SCREENS.has(screenId)) {
+    // Full stop/restart — LED turns off when disabled
+    if (!camEnabled) {
+      if (localStream) {
+        localStream.getVideoTracks().forEach(t => t.stop());
+      }
+    } else {
+      // Restart video track only
+      try {
+        const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const newTrack = newStream.getVideoTracks()[0];
+        if (localStream) {
+          // Replace in the existing stream
+          const oldTrack = localStream.getVideoTracks()[0];
+          if (oldTrack) { oldTrack.stop(); localStream.removeTrack(oldTrack); }
+          localStream.addTrack(newTrack);
+          // Re-assign to video elements
+          ["video-local","video-faceoff-local","video-mobile-local","video-postgame-local","video-friend-local"].forEach(id => {
+            const el = document.getElementById(id);
+            if (el && el.srcObject) el.srcObject = localStream;
+          });
+          // Replace track in any active peer connections
+          [peerConn, friendPeerConn].forEach(pc => {
+            if (!pc) return;
+            const sender = pc.getSenders().find(s => s.track && s.track.kind === "video");
+            if (sender) sender.replaceTrack(newTrack).catch(() => {});
+          });
+        } else {
+          localStream = newStream;
+        }
+      } catch(e) { console.warn("[CAM] restart failed:", e.message); camEnabled = false; }
+    }
+  } else {
+    // track.enabled only — no LED change, but instant and doesn't break WebRTC
+    if (localStream) localStream.getVideoTracks().forEach(t => { t.enabled = camEnabled; });
+  }
+  updateAllMediaControlsUI();
+}
+
+function toggleMic() {
+  micEnabled = !micEnabled;
+  if (localStream) localStream.getAudioTracks().forEach(t => { t.enabled = micEnabled; });
+  updateAllMediaControlsUI();
+}
+
+// Wire up all per-screen buttons
+MEDIA_CTRL_SCREENS.forEach(([screenId, camBtnId, micBtnId]) => {
+  const camBtn = document.getElementById(camBtnId);
+  const micBtn = document.getElementById(micBtnId);
+  if (camBtn) camBtn.addEventListener("click", () => toggleCam(screenId));
+  if (micBtn) micBtn.addEventListener("click", () => toggleMic());
+});
+
 function stopCamera() {
+  _cameraRequested = false;
   if (!localStream) return;
   localStream.getTracks().forEach(track => track.stop());
   localStream = null;
+  camEnabled = true;
+  micEnabled = true;
   // Clear all video elements
   ["video-local","video-faceoff-local","video-mobile-local",
    "video-postgame-local","video-friend-local","video-friend-remote",
@@ -554,6 +652,7 @@ function stopCamera() {
     const el = document.getElementById(id);
     if (el) el.srcObject = null;
   });
+  updateAllMediaControlsUI();
   console.log("[CAM] camera stopped");
 }
 
@@ -575,14 +674,29 @@ function hideOverlay(id) { document.getElementById(id).classList.add("hidden"); 
 // ── Camera ────────────────────────────────────────────────────────
 async function getCamera() {
   if (localStream) return true; // already running
+  if (_cameraRequested) return false; // request already in-flight
+  _cameraRequested = true;
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    _cameraRequested = false;
+    // If we navigated away from a camera screen while waiting, discard the stream
+    const activeScreen = document.querySelector(".screen.active");
+    if (!activeScreen || !CAMERA_SCREENS.has(activeScreen.id)) {
+      stream.getTracks().forEach(t => t.stop());
+      console.log("[CAM] stream discarded — not on a camera screen");
+      return false;
+    }
+    localStream = stream;
+    camEnabled = true;
+    micEnabled = true;
+    updateAllMediaControlsUI();
     ["video-local","video-faceoff-local","video-mobile-local","video-postgame-local","video-friend-local"].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.srcObject = localStream;
     });
     return true;
   } catch (e) {
+    _cameraRequested = false;
     console.warn("Camera unavailable:", e.message);
     return false;
   }
@@ -603,18 +717,6 @@ document.getElementById("btn-find-match").addEventListener("click", () => {
 
 // ── Play button (signed in) ───────────────────────────────────────
 document.getElementById("btn-play-modes").addEventListener("click", () => {
-  // Update FRIEND card to show REJOIN LOBBY if they have an existing room
-  const friendCardSub  = document.querySelector("#mode-friend .mode-card-sub");
-  const friendCardName = document.querySelector("#mode-friend .mode-card-name");
-  if (friendCardSub && friendCardName) {
-    if (friendCode) {
-      friendCardName.textContent = "FRIEND";
-      friendCardSub.textContent  = "Rejoin your open lobby";
-    } else {
-      friendCardName.textContent = "FRIEND";
-      friendCardSub.textContent  = "Send a challenge link";
-    }
-  }
   requestCameraThenProceed("screen-mode");
 });
 
