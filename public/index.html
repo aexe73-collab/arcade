@@ -267,10 +267,17 @@
       <div class="friend-lobby-videos">
         <div class="friend-lobby-pip pip-them">
           <video id="video-friend-remote" autoplay playsinline></video>
+          <div class="friend-lobby-avatar-wrap them">
+            <canvas class="friend-lobby-avatar" id="friend-avatar-them" width="16" height="16"></canvas>
+          </div>
           <span>FRIEND</span>
         </div>
         <div class="friend-lobby-pip pip-you">
           <video id="video-friend-local" autoplay muted playsinline></video>
+          <div class="friend-lobby-avatar-wrap you">
+            <canvas class="friend-lobby-avatar" id="friend-avatar-you" width="16" height="16"></canvas>
+            <button class="friend-avatar-edit-btn" id="btn-friend-edit-icon" title="Change your icon">&#9999;</button>
+          </div>
           <span>YOU</span>
         </div>
       </div>
