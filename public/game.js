@@ -40,19 +40,30 @@ function initSupabase() {
     auth: { detectSessionInUrl: true, persistSession: true }
   });
 
-  sbClient.auth.getSession().then(({ data: { session } }) => {
-    if (session) { setUser(session.user); showScreen("screen-home"); }
-  });
+  // Check if this is a password recovery redirect before doing anything else
+  const hash = window.location.hash;
+  const isRecovery = hash.includes("type=recovery") || hash.includes("type=signup");
+
+  if (!isRecovery) {
+    // Normal page load — restore existing session
+    sbClient.auth.getSession().then(({ data: { session } }) => {
+      if (session) { setUser(session.user); showScreen("screen-home"); setTimeout(loadSavedAvatar, 300); }
+    });
+  }
 
   sbClient.auth.onAuthStateChange((event, session) => {
     console.log("Auth event:", event, "user:", session?.user?.email || "none");
     if (event === "PASSWORD_RECOVERY") {
-      // User clicked reset link — show set password screen instead of signing in
+      // Clear the hash so refresh doesn't re-trigger
+      history.replaceState({}, "", window.location.pathname);
       showScreen("screen-reset-password");
-    } else if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
+    } else if (event === "SIGNED_IN" && isRecovery) {
+      // Supabase signs the user in when processing the recovery token
+      // but we want to show the reset screen, not home
+      showScreen("screen-reset-password");
+    } else if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session && !isRecovery) {
       setUser(session.user);
       showScreen("screen-home");
-      // Load their saved avatar from Supabase
       setTimeout(loadSavedAvatar, 300);
     } else if (event === "SIGNED_OUT") {
       setUser(null);
@@ -92,12 +103,14 @@ document.getElementById("btn-set-password").addEventListener("click", async () =
     errEl.textContent = error.message;
     errEl.classList.remove("hidden");
   } else {
-    // Password updated — sign them in and go home
     errEl.textContent = "✓ Password updated!";
     errEl.style.color = "var(--accent)";
     errEl.classList.remove("hidden");
-    setTimeout(() => {
+    setTimeout(async () => {
       errEl.style.color = "";
+      // Get the now-signed-in session and go home
+      const { data: { session } } = await sbClient.auth.getSession();
+      if (session) { setUser(session.user); setTimeout(loadSavedAvatar, 300); }
       showScreen("screen-home");
     }, 1500);
   }
