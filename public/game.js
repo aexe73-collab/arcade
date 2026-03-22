@@ -225,6 +225,10 @@ function enterFriendLobby(code) {
     if (lv) lv.srcObject = localStream;
   }
 
+  // Show my avatar in lobby immediately
+  const myAvatarEl = document.getElementById("friend-avatar-you");
+  if (myAvatarEl && myAvatar) drawAvatarOnCanvas(myAvatarEl, myAvatar);
+
   showScreen("screen-friend-lobby");
   socket.emit("friend_join", { code });
   startFriendPeerConnection();
@@ -282,17 +286,32 @@ document.getElementById("btn-friend-copy").addEventListener("click", () => {
   }).catch(() => {});
 });
 
+socket.on("friend_avatar", ({ avatar }) => {
+  const el = document.getElementById("friend-avatar-them");
+  if (el && avatar) drawAvatarOnCanvas(el, avatar);
+});
+
+// When friend connects, broadcast our avatar to them
 socket.on("friend_connected", async ({ code }) => {
   document.getElementById("friend-lobby-status").textContent = "Friend connected — pick a game!";
   document.getElementById("friend-lobby-code").textContent   = `Room: ${code}`;
 
-  // Assign local video
+  // Show local video
   if (localStream) {
     const lv = document.getElementById("video-friend-local");
     if (lv) lv.srcObject = localStream;
   }
 
-  // Initiator (first to join) creates offer for friend lobby video
+  // Show my avatar in lobby
+  const myEl = document.getElementById("friend-avatar-you");
+  if (myEl && myAvatar) drawAvatarOnCanvas(myEl, myAvatar);
+
+  // Broadcast my avatar to friend
+  if (myAvatar && friendCode) {
+    socket.emit("friend_avatar", { code: friendCode, avatar: myAvatar });
+  }
+
+  // Initiate WebRTC
   if (friendPeerConn) {
     const offer = await friendPeerConn.createOffer();
     await friendPeerConn.setLocalDescription(offer);
@@ -1845,13 +1864,10 @@ document.getElementById("btn-random-avatar").addEventListener("click", () => {
 document.getElementById("btn-use-avatar").addEventListener("click", () => {
   if (!window._pendingAvatar) return;
   myAvatar = window._pendingAvatar;
-  // Save to localStorage
   try { localStorage.setItem("arcadeface_avatar", JSON.stringify(myAvatar)); } catch(e) {}
-  // Draw on all home screen canvases immediately
   refreshMyAvatarCanvases();
-  // Broadcast to opponent if in a game
   if (roomId) socket.emit("player_avatar", { roomId, avatar: myAvatar });
-  showScreen("screen-home");
+  afterAvatarSave();
 });
 
 document.getElementById("btn-save-avatar").addEventListener("click", async () => {
@@ -1877,7 +1893,7 @@ document.getElementById("btn-regen-avatar").addEventListener("click", () => {
 });
 
 document.getElementById("btn-skip-avatar").addEventListener("click", () => {
-  showScreen("screen-home");
+  afterAvatarSave();
 });
 
 // ── Avatar Vault (Supabase) ───────────────────────────────────────
@@ -2004,9 +2020,25 @@ function vaultRender() {
   });
 }
 
-// Open avatar creator — both guest and signed-in buttons
-document.getElementById("avatar-btn-home").addEventListener("click", openAvatarCreator);
-document.getElementById("avatar-btn-home-guest").addEventListener("click", openAvatarCreator);
+// Friend lobby icon edit button — go to avatar creator, return to lobby
+document.getElementById("btn-friend-edit-icon").addEventListener("click", () => {
+  window._avatarReturnTo = "screen-friend-lobby";
+  openAvatarCreator();
+});
+
+// When USE THIS ICON is tapped, return to wherever we came from
+function afterAvatarSave() {
+  const returnTo = window._avatarReturnTo || "screen-home";
+  window._avatarReturnTo = null;
+  showScreen(returnTo);
+  // If returning to friend lobby, broadcast the new avatar
+  if (returnTo === "screen-friend-lobby" && friendCode) {
+    socket.emit("friend_avatar", { code: friendCode, avatar: myAvatar });
+    // Refresh lobby avatar display
+    const el = document.getElementById("friend-avatar-you");
+    if (el && myAvatar) drawAvatarOnCanvas(el, myAvatar);
+  }
+}
 
 function openAvatarCreator() {
   document.getElementById("avatar-input").value = "";
@@ -2051,11 +2083,15 @@ function openAvatarCreator() {
       if (photoSub) photoSub.textContent = "Sign in free to unlock — tap SIGN IN →";
     }
   }
+
   showScreen("screen-avatar");
-  // Load vault if signed in
   if (currentUser) vaultLoad();
   else document.getElementById("avatar-vault").style.display = "none";
 }
+
+// Open avatar creator — home screen buttons
+document.getElementById("avatar-btn-home").addEventListener("click", openAvatarCreator);
+document.getElementById("avatar-btn-home-guest").addEventListener("click", openAvatarCreator);
 
 // Load saved avatar on startup
 async function loadSavedAvatar() {
