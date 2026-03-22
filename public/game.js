@@ -53,7 +53,9 @@ function initSupabase() {
         if (hasFriendCode) showFriendJoinPrompt(hasFriendCode);
         else setTimeout(loadSavedAvatar, 300);
       } else {
-        // Guest — do NOT show JOIN LOBBY (requires sign-in). URL stays intact.
+        // Guest visiting a friend link — show the JOIN LOBBY prompt
+        const hasFriendCode = new URLSearchParams(window.location.search).get("friend");
+        if (hasFriendCode) showFriendJoinPrompt(hasFriendCode);
       }
     });
   }
