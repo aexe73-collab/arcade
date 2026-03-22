@@ -1647,21 +1647,21 @@ body {
   background: var(--bg);
   align-items: stretch;
   justify-content: stretch;
+  flex-direction: column;
 }
 
+/* ── Desktop: cameras on sides, content in centre ── */
 .friend-lobby-layout {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .friend-lobby-logo {
   font-family: var(--pixel);
-  font-size: clamp(16px, 3vw, 24px);
+  font-size: clamp(16px, 2.5vw, 26px);
   letter-spacing: 2px;
   text-align: center;
   padding: 14px 0 10px;
@@ -1671,16 +1671,18 @@ body {
 }
 .friend-lobby-logo span { color: var(--accent2); }
 
-.friend-lobby-videos {
+/* Middle section: cameras + content in game-screen style */
+.friend-lobby-main {
   display: flex;
-  gap: 6px;
-  height: 280px;
-  flex-shrink: 0;
-  padding: 10px;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
 }
 
+/* Side video panels — match game screen exactly */
 .friend-lobby-pip {
-  flex: 1;
+  width: clamp(280px, 40vw, 600px);
+  flex-shrink: 0;
   position: relative;
   overflow: hidden;
   background: var(--bg2);
@@ -1696,42 +1698,57 @@ body {
 
 .friend-lobby-pip span {
   position: absolute;
-  bottom: 6px;
-  left: 8px;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
   font-family: var(--pixel);
-  font-size: 7px;
-  letter-spacing: 2px;
+  font-size: 9px;
+  letter-spacing: 3px;
+  padding: 4px 12px;
+  background: rgba(0,0,0,0.7);
+  white-space: nowrap;
 }
 
-.friend-lobby-pip.pip-them { border: 2px solid var(--accent2); }
+.friend-lobby-pip.pip-them { border-right: 3px solid var(--accent2); }
 .friend-lobby-pip.pip-them span { color: var(--accent2); }
-.friend-lobby-pip.pip-you  { border: 2px solid var(--accent); }
+.friend-lobby-pip.pip-you  { border-left:  3px solid var(--accent); }
 .friend-lobby-pip.pip-you  span { color: var(--accent); }
 
 .friend-lobby-avatar-wrap {
   position: absolute;
-  top: 6px;
+  top: 10px;
   display: flex;
   align-items: center;
   gap: 4px;
 }
-.friend-lobby-avatar-wrap.them { left: 6px; }
-.friend-lobby-avatar-wrap.you  { right: 6px; flex-direction: row-reverse; }
+.friend-lobby-avatar-wrap.them { left: 10px; }
+.friend-lobby-avatar-wrap.you  { right: 10px; flex-direction: row-reverse; }
 
 .friend-lobby-avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   border: 1px solid rgba(255,255,255,0.2);
 }
 
+/* Centre column: scrollable content */
+.friend-lobby-centre {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-width: 0;
+  padding: 0;
+}
+
+/* Game picker */
 .friend-lobby-pick {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 14px 8px 8px;
+  padding: 16px 12px 8px;
   flex-shrink: 0;
 }
 
@@ -1750,32 +1767,32 @@ body {
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding: 4px 0 12px;
+  padding: 4px 0 8px;
 }
 .friend-game-carousel-wrap::-webkit-scrollbar { display: none; }
 
 .friend-game-carousel {
   display: flex;
-  gap: 10px;
-  padding: 0 16px;
+  gap: 8px;
+  padding: 0 12px;
   width: max-content;
 }
 
 .friend-game-card {
   scroll-snap-align: center;
   flex-shrink: 0;
-  width: 150px;
-  height: 150px;
+  width: 120px;
+  height: 120px;
 }
 
-/* ── Inline avatar creator in lobby ───────────────────── */
+/* ── Inline avatar creator ─────────────────────────── */
 .friend-lobby-avatar-creator {
-  padding: 16px;
+  padding: 12px 16px;
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .friend-avatar-creator-title {
@@ -1786,19 +1803,17 @@ body {
   text-align: center;
 }
 
-/* Image above fields — column layout */
 .friend-avatar-row {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  max-width: 360px;
 }
 
 .friend-avatar-preview-canvas {
-  width: 96px;
-  height: 96px;
+  width: 80px;
+  height: 80px;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   border: 2px solid var(--border);
@@ -1827,11 +1842,7 @@ body {
   padding: 10px 4px;
 }
 
-.friend-exit-btn {
-  margin: 8px auto 16px;
-  color: var(--muted);
-}
-
+/* Share + exit at bottom of centre column */
 .friend-share-bar {
   padding: 10px 16px;
   border-top: 1px solid var(--border);
@@ -1840,6 +1851,34 @@ body {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+}
+
+.friend-exit-btn {
+  margin: 6px auto 12px;
+  color: var(--muted);
+}
+
+/* ── Mobile: stack everything vertically ───────────── */
+@media (max-width: 768px) {
+  .friend-lobby-layout { overflow-y: auto; }
+  .friend-lobby-main { flex-direction: column; overflow: visible; }
+  .friend-lobby-pip {
+    width: 100%;
+    height: 200px;
+    border: none !important;
+  }
+  .friend-lobby-pip.pip-them { border-bottom: 3px solid var(--accent2) !important; }
+  .friend-lobby-pip.pip-you  { border-bottom: 3px solid var(--accent) !important; }
+  .friend-lobby-videos {
+    display: flex;
+    flex-direction: row;
+    height: 200px;
+    gap: 4px;
+    padding: 8px;
+    flex-shrink: 0;
+  }
+  .friend-lobby-pip { height: 100%; }
+  .friend-lobby-centre { overflow: visible; }
 }
 
 .friend-share-status {
@@ -1861,7 +1900,6 @@ body {
   display: flex;
   gap: 8px;
   align-items: center;
-  max-width: 560px;
   width: 100%;
 }
 
