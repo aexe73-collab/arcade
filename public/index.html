@@ -60,6 +60,16 @@
     <div class="avatar-creator-content">
       <div class="avatar-creator-title">CREATE YOUR ICON</div>
 
+      <!-- Saved icons vault (signed-in only) -->
+      <div class="avatar-vault" id="avatar-vault" style="display:none">
+        <div class="avatar-vault-header">
+          <span class="avatar-vault-title">YOUR SAVED ICONS</span>
+          <span class="avatar-vault-count" id="avatar-vault-count">0 / 7</span>
+        </div>
+        <div class="avatar-vault-grid" id="avatar-vault-grid"></div>
+        <div class="avatar-vault-hint" id="avatar-vault-hint"></div>
+      </div>
+
       <div class="avatar-preview-wrap">
         <canvas id="avatar-preview-canvas" width="128" height="128"></canvas>
         <div class="avatar-preview-label" id="avatar-preview-label">Choose an option below</div>
@@ -117,6 +127,7 @@
 
       <div class="avatar-actions" id="avatar-actions" style="display:none">
         <button class="btn-primary" id="btn-use-avatar">&#10003; USE THIS ICON</button>
+        <button class="btn-primary" id="btn-save-avatar" style="display:none;background:var(--surface);color:var(--accent);border:1px solid var(--accent)">&#9650; SAVE TO VAULT</button>
         <button class="btn-text" id="btn-regen-avatar">Try again</button>
       </div>
 
