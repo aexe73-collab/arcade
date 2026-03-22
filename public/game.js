@@ -53,9 +53,8 @@ function initSupabase() {
         if (hasFriendCode) showFriendJoinPrompt(hasFriendCode);
         else setTimeout(loadSavedAvatar, 300);
       } else {
-        // Guest — if friend code present, show join prompt
-        const hasFriendCode = new URLSearchParams(window.location.search).get("friend");
-        if (hasFriendCode) showFriendJoinPrompt(hasFriendCode);
+        // Guest — if friend code present, do NOT show JOIN LOBBY (requires sign-in)
+        // The friend code stays in the URL; showFriendJoinPrompt fires after SIGNED_IN
       }
     });
   }
@@ -80,7 +79,6 @@ function initSupabase() {
       }
     } else if (event === "SIGNED_OUT") {
       setUser(null);
-      showScreen("screen-home");
     }
   });
 }
@@ -539,7 +537,6 @@ const CAMERA_SCREENS = new Set([
 ]);
 
 function stopCamera() {
-  _cameraRequested = false;
   if (!localStream) return;
   localStream.getTracks().forEach(track => track.stop());
   localStream = null;
@@ -569,30 +566,16 @@ function showOverlay(id) { document.getElementById(id).classList.remove("hidden"
 function hideOverlay(id) { document.getElementById(id).classList.add("hidden"); }
 
 // ── Camera ────────────────────────────────────────────────────────
-let _cameraRequested = false;
 async function getCamera() {
   if (localStream) return true; // already running
-  if (_cameraRequested) return false; // request already in-flight
-  _cameraRequested = true;
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    _cameraRequested = false;
-    // If stopCamera() was called while we were waiting (e.g. user navigated to a
-    // non-camera screen before getUserMedia resolved), kill the stream immediately
-    const activeScreen = document.querySelector(".screen.active");
-    if (!activeScreen || !CAMERA_SCREENS.has(activeScreen.id)) {
-      stream.getTracks().forEach(t => t.stop());
-      console.log("[CAM] stream discarded — not on a camera screen");
-      return false;
-    }
-    localStream = stream;
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     ["video-local","video-faceoff-local","video-mobile-local","video-postgame-local","video-friend-local"].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.srcObject = localStream;
     });
     return true;
   } catch (e) {
-    _cameraRequested = false;
     console.warn("Camera unavailable:", e.message);
     return false;
   }
@@ -613,6 +596,18 @@ document.getElementById("btn-find-match").addEventListener("click", () => {
 
 // ── Play button (signed in) ───────────────────────────────────────
 document.getElementById("btn-play-modes").addEventListener("click", () => {
+  // Update FRIEND card to show REJOIN LOBBY if they have an existing room
+  const friendCardSub  = document.querySelector("#mode-friend .mode-card-sub");
+  const friendCardName = document.querySelector("#mode-friend .mode-card-name");
+  if (friendCardSub && friendCardName) {
+    if (friendCode) {
+      friendCardName.textContent = "FRIEND";
+      friendCardSub.textContent  = "Rejoin your open lobby";
+    } else {
+      friendCardName.textContent = "FRIEND";
+      friendCardSub.textContent  = "Send a challenge link";
+    }
+  }
   requestCameraThenProceed("screen-mode");
 });
 
