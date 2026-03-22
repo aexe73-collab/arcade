@@ -127,19 +127,17 @@ body {
   background: var(--bg);
   overflow-y: auto;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
 }
 
 .avatar-creator-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 32px 20px;
+  gap: 16px;
+  padding: 32px 20px 40px;
   width: 100%;
-  max-width: 460px;
-  flex: 1;
-  justify-content: center;
+  max-width: 480px;
 }
 
 .avatar-creator-title {
@@ -165,8 +163,8 @@ body {
 }
 
 #avatar-preview-canvas {
-  width: 128px;
-  height: 128px;
+  width: 192px;
+  height: 192px;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   border: 2px solid var(--border);
