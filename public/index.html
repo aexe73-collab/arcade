@@ -14,6 +14,13 @@
   <div id="screen-home" class="screen active">
     <div class="scanlines"></div>
     <div class="home-content">
+
+      <!-- Single avatar button - shown always above logo -->
+      <button class="avatar-btn-home" id="avatar-btn-home" title="Create your player icon">
+        <canvas class="avatar-canvas-home" id="avatar-canvas-home" width="48" height="48"></canvas>
+        <span class="avatar-btn-home-label" id="avatar-btn-home-label">CREATE ICON</span>
+      </button>
+
       <div class="logo-block">
         <div class="logo-eyebrow">INSERT COIN</div>
         <h1 class="logo">ARCADE<span class="logo-accent">FACE</span></h1>
@@ -23,10 +30,6 @@
       <!-- Signed-in state (hidden until auth) -->
       <div class="home-signed-in hidden" id="home-signed-in">
         <div class="home-user-row">
-          <button class="avatar-btn" id="avatar-btn-signedin" title="Create your player icon">
-            <canvas class="avatar-canvas" id="avatar-canvas-signedin" width="32" height="32"></canvas>
-            <span class="avatar-btn-label">YOUR ICON</span>
-          </button>
           <span class="home-username" id="home-username">PLAYER</span>
           <button class="btn-text-small" id="btn-signout">sign out</button>
         </div>
@@ -37,10 +40,6 @@
 
       <!-- Guest state -->
       <div class="home-guest" id="home-guest">
-        <button class="avatar-btn" id="avatar-btn-guest" title="Create your player icon">
-          <canvas class="avatar-canvas" id="avatar-canvas-guest" width="32" height="32"></canvas>
-          <span class="avatar-btn-label">CREATE ICON</span>
-        </button>
         <button class="btn-primary" id="btn-find-match">
           <span class="btn-icon">&#9654;</span> RANDOM MATCH
         </button>
@@ -240,28 +239,35 @@
         </div>
       </div>
       <div class="friend-lobby-pick">
-        <div class="friend-lobby-pick-label" id="friend-pick-label">Pick a game to start</div>
-        <div class="friend-game-grid">
-          <button class="friend-game-btn" data-game="pong">
-            <div class="friend-game-icon">&#9646;&#9646;</div>
-            <div class="friend-game-name">PONG</div>
-          </button>
-          <button class="friend-game-btn" data-game="snake">
-            <div class="friend-game-icon">&#9632;&#9632;&#9632;</div>
-            <div class="friend-game-name">SNAKE</div>
-          </button>
-          <button class="friend-game-btn" data-game="reaction">
-            <div class="friend-game-icon">&#9654;</div>
-            <div class="friend-game-name">REFLEX</div>
-          </button>
-          <button class="friend-game-btn" data-game="raid">
-            <div class="friend-game-icon">&#9632;&#9632;</div>
-            <div class="friend-game-name">RAID</div>
-          </button>
-          <button class="friend-game-btn" data-game="fourdots">
-            <div class="friend-game-icon">&#9679;&#9679;</div>
-            <div class="friend-game-name">4 DOTS</div>
-          </button>
+        <div class="friend-lobby-pick-label" id="friend-pick-label">Swipe &amp; pick a game</div>
+        <div class="friend-game-carousel-wrap">
+          <div class="friend-game-carousel" id="friend-game-carousel">
+            <button class="game-card pong-card friend-game-card" data-game="pong">
+              <div class="game-card-icon">&#9646; &#9646;</div>
+              <div class="game-card-name">PONG</div>
+              <div class="game-card-sub">First to 5 wins</div>
+            </button>
+            <button class="game-card snake-card friend-game-card" data-game="snake">
+              <div class="game-card-icon">&#9632;&#9632;&#9632;</div>
+              <div class="game-card-name">SNAKE</div>
+              <div class="game-card-sub">Last one alive wins</div>
+            </button>
+            <button class="game-card reaction-card friend-game-card" data-game="reaction">
+              <div class="game-card-icon">&#9654;</div>
+              <div class="game-card-name">REFLEX</div>
+              <div class="game-card-sub">First to 3 taps wins</div>
+            </button>
+            <button class="game-card raid-card friend-game-card" data-game="raid">
+              <div class="game-card-icon">&#9632;&#9632;<br>&#9632;&#9632;</div>
+              <div class="game-card-name">RAID</div>
+              <div class="game-card-sub">Destroy their buildings</div>
+            </button>
+            <button class="game-card fourdots-card friend-game-card" data-game="fourdots">
+              <div class="game-card-icon">&#9679;&#9679;<br>&#9679;&#9679;</div>
+              <div class="game-card-name">4 DOTS</div>
+              <div class="game-card-sub">Connect 4 to win</div>
+            </button>
+          </div>
         </div>
       </div>
       <button class="btn-text friend-exit-btn" id="btn-friend-exit">&#8592; Leave room</button>
