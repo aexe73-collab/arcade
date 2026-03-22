@@ -55,8 +55,10 @@ body {
 }
 
 /* ── Home screen auth states ───────────────────────────── */
-.home-guest { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; max-width: 320px; }
-.home-signed-in { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; max-width: 320px; }
+.home-content { display: flex; flex-direction: column; align-items: center; gap: 24px; z-index: 2; }
+.home-avatar-wrap { display: flex; align-items: center; justify-content: center; }
+.home-guest { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; max-width: 320px; }
+.home-signed-in { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; max-width: 320px; }
 .home-user-row { display: flex; align-items: center; gap: 12px; }
 .home-username { font-family: var(--pixel); font-size: 11px; color: var(--accent); letter-spacing: 2px; }
 .btn-text-small { font-family: var(--mono); font-size: 11px; color: var(--muted); background: none; border: none; cursor: pointer; text-decoration: underline; }
@@ -395,6 +397,7 @@ body {
 }
 
 /* ── Panel avatar ───────────────────────────────────────── */
+.panel-avatar {
   position: absolute;
   top: 12px;
   left: 50%;
@@ -409,18 +412,50 @@ body {
 .home-divider::before, .home-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
 /* ── Sign in screen ────────────────────────────────────── */
-#screen-signin { background: var(--bg); overflow-y: auto; align-items: center; justify-content: flex-start; }
+#screen-signin { background: var(--bg); overflow-y: auto; align-items: center; justify-content: center; }
 .signin-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   text-align: center;
   padding: 40px 24px;
   width: 100%;
   max-width: 380px;
+}
+.signin-tabs {
+  display: flex;
+  width: 100%;
+  border: 1px solid var(--border);
+}
+.signin-tab {
   flex: 1;
-  justify-content: center;
+  font-family: var(--pixel);
+  font-size: 8px;
+  letter-spacing: 2px;
+  padding: 10px 4px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.signin-tab.active {
+  background: var(--accent);
+  color: var(--bg);
+}
+.signin-forgot {
+  font-size: 11px;
+  color: var(--muted);
+}
+.signin-error {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent2);
+  text-align: center;
+  padding: 8px;
+  border: 1px solid var(--accent2);
+  width: 100%;
 }
 .signin-logo {
   font-family: var(--pixel);
@@ -562,14 +597,6 @@ body {
   background: var(--bg);
   flex-direction: column;
   gap: 0;
-}
-
-.home-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 32px;
-  z-index: 2;
 }
 
 .logo-block {
