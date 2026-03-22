@@ -142,6 +142,22 @@
     </div>
   </div>
 
+  <!-- SCREEN: Reset Password -->
+  <div id="screen-reset-password" class="screen">
+    <div class="scanlines"></div>
+    <div class="signin-content">
+      <div class="signin-logo">ARCADE<span>FACE</span></div>
+      <div class="signin-title">SET NEW PASSWORD</div>
+      <p class="signin-sub">Choose a new password for your account.</p>
+      <div class="signin-form">
+        <input type="password" id="reset-password-new" placeholder="new password (min 6 chars)" autocomplete="new-password"/>
+        <input type="password" id="reset-password-confirm" placeholder="confirm password" autocomplete="new-password"/>
+        <button class="btn-primary" id="btn-set-password">SET PASSWORD</button>
+      </div>
+      <div class="signin-error hidden" id="reset-error"></div>
+    </div>
+  </div>
+
   <!-- SCREEN 1b: Sign in -->
   <div id="screen-signin" class="screen">
     <div class="scanlines"></div>
@@ -262,7 +278,6 @@
   <div id="screen-friend-lobby" class="screen">
     <div class="friend-lobby-layout">
       <div class="friend-lobby-header">
-        <div class="friend-lobby-status" id="friend-lobby-status">Waiting for friend...</div>
       </div>
       <div class="friend-lobby-videos">
         <div class="friend-lobby-pip pip-them">
@@ -316,6 +331,7 @@
 
       <!-- Share link at bottom -->
       <div class="friend-share-bar" id="friend-share-bar">
+        <div class="friend-share-status" id="friend-lobby-status">Waiting for friend...</div>
         <div class="friend-share-label">INVITE LINK</div>
         <div class="friend-share-row">
           <div class="friend-share-link" id="friend-lobby-code"></div>
