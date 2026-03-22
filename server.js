@@ -34,6 +34,43 @@ app.get("/debug-env", (req, res) => {
   });
 });
 
+// ── Avatar generation proxy ───────────────────────────────────────
+app.post("/api/avatar", async (req, res) => {
+  const { description } = req.body;
+  if (!description) return res.status(400).json({ error: "No description" });
+
+  const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || "";
+  if (!ANTHROPIC_KEY) return res.status(500).json({ error: "No API key configured" });
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_KEY,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1000,
+        messages: [{ role: "user", content:
+          `Create a 16x16 pixel art sprite of "${description}" in retro Game Boy style.
+Return ONLY valid JSON, no markdown, no explanation:
+{"grid":[["#rrggbb",...16 hex values],...16 rows total]}
+Use vivid retro colors. Black (#000000) for empty/background. Centre the subject.` }]
+      })
+    });
+    const data = await response.json();
+    const text = data.content?.map(b => b.text || "").join("") || "";
+    const clean = text.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean);
+    res.json({ grid: parsed.grid });
+  } catch(e) {
+    console.error("Avatar gen error:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.use(express.static(path.join(__dirname, "public")));
 
 // ── Email subscription endpoint ───────────────────────────────────
