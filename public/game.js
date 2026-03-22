@@ -79,6 +79,12 @@ function initSupabase() {
       }
     } else if (event === "SIGNED_OUT") {
       setUser(null);
+      // Hide friend join prompt and clear the friend code from URL on sign-out
+      const prompt = document.getElementById("friend-join-prompt");
+      if (prompt) prompt.style.display = "none";
+      friendCode = null;
+      history.replaceState({}, "", "/");
+      showScreen("screen-home");
     }
   });
 }
@@ -286,6 +292,10 @@ document.getElementById("btn-send-link").addEventListener("click", async () => {
 document.getElementById("btn-signout").addEventListener("click", async () => {
   if (sbClient) await sbClient.auth.signOut();
   setUser(null);
+  const prompt = document.getElementById("friend-join-prompt");
+  if (prompt) prompt.style.display = "none";
+  friendCode = null;
+  history.replaceState({}, "", "/");
   showScreen("screen-home");
 });
 
