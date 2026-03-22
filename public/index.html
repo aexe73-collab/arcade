@@ -147,34 +147,34 @@
     <div class="scanlines"></div>
     <div class="signin-content">
       <div class="signin-logo">ARCADE<span>FACE</span></div>
-      <div class="signin-title">SIGN IN / SIGN UP</div>
 
-      <!-- Tab switcher -->
+      <!-- Mode toggle -->
       <div class="signin-tabs">
-        <button class="signin-tab active" id="tab-password" data-tab="password">PASSWORD</button>
-        <button class="signin-tab" id="tab-magic" data-tab="magic">MAGIC LINK</button>
+        <button class="signin-tab active" id="tab-signin" data-mode="signin">SIGN IN</button>
+        <button class="signin-tab" id="tab-create" data-mode="create">CREATE ACCOUNT</button>
       </div>
 
-      <!-- Password form -->
+      <div class="signin-mode-hint" id="signin-mode-hint">Welcome back — enter your details</div>
+
+      <!-- Shared form -->
       <div class="signin-form" id="signin-form-password">
         <input type="email" id="signin-email-pw" placeholder="your@email.com" autocomplete="email"/>
-        <input type="password" id="signin-password" placeholder="password" autocomplete="current-password"/>
-        <button class="btn-primary" id="btn-signin-pw">SIGN IN</button>
-        <button class="btn-ghost" id="btn-signup-pw">CREATE ACCOUNT</button>
+        <input type="password" id="signin-password" placeholder="password (min 6 chars)" autocomplete="current-password"/>
+        <button class="btn-primary" id="btn-signin-submit">SIGN IN</button>
         <button class="btn-text signin-forgot" id="btn-forgot-pw">Forgot password?</button>
       </div>
 
-      <!-- Magic link form -->
-      <div class="signin-form hidden" id="signin-form-magic">
+      <!-- Magic link option -->
+      <div class="signin-divider"><span>or</span></div>
+      <div class="signin-form" id="signin-form-magic">
         <input type="email" id="signin-email" placeholder="your@email.com" autocomplete="email"/>
-        <button class="btn-primary" id="btn-send-link">SEND MAGIC LINK</button>
-        <p class="signin-sub">We'll email you a one-click sign-in link. No password needed.</p>
+        <button class="btn-ghost" id="btn-send-link">EMAIL ME A SIGN IN LINK</button>
       </div>
 
       <div class="signin-sent hidden" id="signin-sent">
         <div class="signin-sent-icon">&#10003;</div>
-        <p>Check your email — link sent!</p>
-        <p class="signin-sent-sub">Click the link in your inbox to sign in.</p>
+        <p>Check your email!</p>
+        <p class="signin-sent-sub">Click the link to sign in instantly.</p>
       </div>
 
       <div class="signin-error hidden" id="signin-error"></div>
