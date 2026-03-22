@@ -306,7 +306,8 @@ document.getElementById("mode-stranger").addEventListener("click", () => {
 
 document.getElementById("mode-friend").addEventListener("click", () => {
   playMode = "friend";
-  enterFriendLobby();
+  // Reuse existing code if we stepped away from a room
+  enterFriendLobby(friendCode || null);
 });
 
 document.getElementById("mode-group").addEventListener("click", () => {
@@ -518,10 +519,11 @@ function checkFriendLink() {
 }
 
 function showFriendJoinPrompt(code) {
-  // Show a join button on the home screen
   const prompt = document.getElementById("friend-join-prompt");
   const btn    = document.getElementById("btn-join-friend-room");
+  const label  = document.getElementById("friend-join-code-label");
   if (!prompt || !btn) return;
+  if (label) label.textContent = `Room: ${code}`;
   prompt.style.display = "flex";
   btn.onclick = () => {
     prompt.style.display = "none";
