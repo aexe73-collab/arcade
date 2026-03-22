@@ -174,7 +174,7 @@ document.getElementById("btn-send-link").addEventListener("click", async () => {
   const { error } = await sbClient.auth.signInWithOtp({
     email, options: { emailRedirectTo: "https://www.arcadeface.com" }
   });
-  btn.textContent = "EMAIL ME A SIGN IN LINK"; btn.disabled = false;
+  btn.textContent = "SEND MAGIC LINK"; btn.disabled = false;
   if (!error) {
     document.getElementById("signin-form-magic").classList.add("hidden");
     document.getElementById("signin-sent").classList.remove("hidden");
