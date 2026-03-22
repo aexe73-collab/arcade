@@ -307,14 +307,7 @@
           <span>YOU</span>
         </div>
       </div>
-
-      <!-- Media controls — friend lobby (stop/restart) -->
-      <div class="screen-media-controls" id="media-ctrl-lobby">
-        <button class="media-ctrl-btn" id="lobby-cam-btn"><span id="lobby-cam-icon">📷</span></button>
-        <button class="media-ctrl-btn" id="lobby-mic-btn"><span id="lobby-mic-icon">🎤</span></button>
-      </div>
-
-      <!-- Game picker -->
+<!-- Game picker -->
       <div class="friend-lobby-pick">
         <div class="friend-lobby-pick-label" id="friend-pick-label">Pick a game to start</div>
         <div class="friend-game-carousel-wrap">
@@ -401,11 +394,7 @@
       <h2 class="waiting-title">SCANNING FOR<br>OPPONENTS</h2>
       <p class="waiting-sub" id="waiting-sub">Finding a Pong player&hellip;</p>
       <button class="btn-ghost" id="btn-cancel-wait">CANCEL</button>
-      <div class="screen-media-controls" id="media-ctrl-waiting">
-        <button class="media-ctrl-btn" id="waiting-cam-btn"><span id="waiting-cam-icon">📷</span></button>
-        <button class="media-ctrl-btn" id="waiting-mic-btn"><span id="waiting-mic-icon">🎤</span></button>
-      </div>
-    </div>
+</div>
   </div>
 
   <!-- SCREEN 4: Face-off countdown -->
@@ -420,11 +409,7 @@
         <div class="faceoff-vs">VS</div>
         <div class="countdown-number" id="countdown-number">10</div>
         <div class="faceoff-hint">Say hi. Trash talk.<br>Game starts in&hellip;</div>
-        <div class="screen-media-controls" id="media-ctrl-faceoff">
-          <button class="media-ctrl-btn" id="faceoff-cam-btn"><span id="faceoff-cam-icon">📷</span></button>
-          <button class="media-ctrl-btn" id="faceoff-mic-btn"><span id="faceoff-mic-icon">🎤</span></button>
-        </div>
-      </div>
+</div>
       <div class="faceoff-panel faceoff-you">
         <video id="video-faceoff-local" autoplay muted playsinline></video>
         <div class="faceoff-name you">YOU</div>
@@ -599,11 +584,7 @@
           <canvas class="panel-avatar" id="panel-avatar-you"></canvas>
           <div class="panel-label you">YOU</div>
           <div class="panel-score" id="panel-score-you">0</div>
-          <div class="screen-media-controls panel-media-controls" id="media-ctrl-game">
-            <button class="media-ctrl-btn" id="game-cam-btn"><span id="game-cam-icon">📷</span></button>
-            <button class="media-ctrl-btn" id="game-mic-btn"><span id="game-mic-icon">🎤</span></button>
-          </div>
-        </div>
+</div>
 
       </div>
     </div>
@@ -666,11 +647,7 @@
             <span>YOU</span>
           </div>
         </div>
-        <div class="screen-media-controls" id="media-ctrl-gameover">
-          <button class="media-ctrl-btn" id="gameover-cam-btn"><span id="gameover-cam-icon">📷</span></button>
-          <button class="media-ctrl-btn" id="gameover-mic-btn"><span id="gameover-mic-icon">🎤</span></button>
-        </div>
-        <div class="postgame-messages" id="postgame-messages"></div>
+<div class="postgame-messages" id="postgame-messages"></div>
         <div class="postgame-input-row">
           <input type="text" id="postgame-input" placeholder="gg / rematch? / trash talk..." maxlength="120" autocomplete="off"/>
           <button class="postgame-send" id="postgame-send">SEND</button>
@@ -731,7 +708,7 @@
 
   <script>
     window.SUPABASE_URL = "https://hyukljrbaijdlcstrlhq.supabase.co";
-    window.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5dWtsanJiYWlqZGxjc3RybGhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NjI2MTAsImV4cCI6MjA4OTQzODYxMH0.EKMep95hQkuHEQGmE4ubq8DiHxDhHoxM9W6vXVg7Wmg";
+    window.SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_KEY_HERE";
   </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="/socket.io/socket.io.js"></script>
