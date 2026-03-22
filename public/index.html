@@ -26,17 +26,21 @@
           <span class="home-username" id="home-username">PLAYER</span>
           <button class="btn-text-small" id="btn-signout">sign out</button>
         </div>
+        <button class="avatar-btn-home" id="avatar-btn-home" title="Edit your player icon">
+          <canvas class="avatar-canvas-home" id="avatar-canvas-signedin" width="48" height="48"></canvas>
+          <span class="avatar-btn-home-label" id="avatar-lbl-signedin">YOUR ICON</span>
+        </button>
         <button class="btn-primary" id="btn-play-modes">
           <span class="btn-icon">&#9654;</span> PLAY
-        </button>
-        <button class="avatar-btn-home" id="avatar-btn-home" title="Create your player icon">
-          <canvas class="avatar-canvas-home" id="avatar-canvas-home" width="48" height="48"></canvas>
-          <span class="avatar-btn-home-label" id="avatar-btn-home-label">CREATE ICON</span>
         </button>
       </div>
 
       <!-- Guest state -->
       <div class="home-guest" id="home-guest">
+        <button class="avatar-btn-home" id="avatar-btn-home-guest" title="Create your player icon">
+          <canvas class="avatar-canvas-home" id="avatar-canvas-guest" width="48" height="48"></canvas>
+          <span class="avatar-btn-home-label" id="avatar-lbl-guest">CREATE ICON</span>
+        </button>
         <button class="btn-primary" id="btn-find-match">
           <span class="btn-icon">&#9654;</span> RANDOM MATCH
         </button>
@@ -45,10 +49,6 @@
           SIGN IN &mdash; FRIENDS &amp; GROUPS
         </button>
         <p class="home-sub">No account needed</p>
-        <button class="avatar-btn-home" id="avatar-btn-home-guest" title="Create your player icon">
-          <canvas class="avatar-canvas-home" id="avatar-canvas-home" width="48" height="48"></canvas>
-          <span class="avatar-btn-home-label" id="avatar-btn-home-label">CREATE ICON</span>
-        </button>
       </div>
     </div>
     <div class="home-deco"><div class="pixel-ball"></div></div>
