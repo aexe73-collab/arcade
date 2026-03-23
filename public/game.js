@@ -1202,12 +1202,21 @@ const ICE_SERVERS = {
 
 // remote stream assigned directly in ontrack
 
-// Assign all remote video elements from a stream and force play
+// Assign all remote video elements from a stream and force play.
+// On iOS Safari, autoplay of non-muted video is restricted — we call play() explicitly
+// and also mark elements with a data attribute so the video watchdog can retry them.
 function assignRemoteStream(s) {
+  if (!s) return;
   window._remoteStream = s;
   ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
     const el = document.getElementById(id);
-    if (el) { el.srcObject = s; el.play().catch(() => {}); }
+    if (!el) return;
+    // Only reassign if the stream has actually changed — avoids resetting playback position
+    if (el.srcObject !== s) el.srcObject = s;
+    el.play().catch(() => {
+      // iOS blocks non-gesture play — mark for watchdog retry
+      el.dataset.pendingPlay = "1";
+    });
   });
 }
 
@@ -1324,13 +1333,12 @@ function drawPong(gs) {
   ctx.strokeRect(1, 1, W - 2, H - 2);
 
   // Interpolate ball position between server ticks (server runs at 30fps, we render at ~60fps).
-  // Cap extrapolation to one server tick (33ms) to avoid the ball visually overshooting on lag spikes.
-  const msSinceUpdate = Math.min(performance.now() - _ballInterp.lastUpdate, 33);
-  const secElapsed    = msSinceUpdate / 1000;
-  // Server runs the loop at 30fps — scale velocity (px/tick) to px/sec for interpolation
-  const TICK_RATE = 30;
-  const bx = _ballInterp.x + _ballInterp.vx * TICK_RATE * secElapsed;
-  const by = _ballInterp.y + _ballInterp.vy * TICK_RATE * secElapsed;
+  // vx/vy are in px-per-tick units. Cap to one tick (33ms) to prevent overshoot on lag spikes.
+  const MS_PER_TICK   = 1000 / 30;
+  const msSinceUpdate = Math.min(performance.now() - _ballInterp.lastUpdate, MS_PER_TICK);
+  const tickFraction  = msSinceUpdate / MS_PER_TICK; // 0..1
+  const bx = _ballInterp.x + _ballInterp.vx * tickFraction;
+  const by = _ballInterp.y + _ballInterp.vy * tickFraction;
 
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(bx, by, BALL_SIZE, BALL_SIZE);
@@ -1838,8 +1846,13 @@ setInterval(() => {
   ["video-remote", "video-local", "video-mobile-remote", "video-mobile-local",
    "video-faceoff-remote", "video-faceoff-local"].forEach(id => {
     const el = document.getElementById(id);
-    if (el && el.srcObject && el.paused && !el.ended) {
+    if (!el || !el.srcObject) return;
+    // Skip ended streams — srcObject is dead, reassigning would just flicker
+    const tracks = el.srcObject.getTracks();
+    if (tracks.length > 0 && tracks.every(t => t.readyState === "ended")) return;
+    if (el.paused) {
       el.play().catch(() => {});
+      delete el.dataset.pendingPlay;
     }
   });
 }, 1000);
@@ -2086,6 +2099,9 @@ document.getElementById("btn-share").addEventListener("click", () => {
 
 socket.on("go_to_picker", () => {
   stopRenderLoop();
+  if (peerConn) { peerConn.close(); peerConn = null; }
+  window._remoteStream = null;
+  _ballInterp = { x: 400, y: 200, vx: 7, vy: 5, lastUpdate: 0 };
   gameState = null;
   showScreen("screen-picker");
 });
@@ -2098,6 +2114,9 @@ socket.on("opponent_left", () => { stopRenderLoop(); showOverlay("overlay-left")
 
 // ── Buttons ───────────────────────────────────────────────────────
 document.getElementById("btn-cancel-wait").addEventListener("click", () => {
+  stopRenderLoop();
+  window._remoteStream = null;
+  _ballInterp = { x: 400, y: 200, vx: 7, vy: 5, lastUpdate: 0 };
   socket.disconnect(); socket.connect();
   showScreen("screen-picker");
 });
@@ -2109,12 +2128,16 @@ document.getElementById("btn-rematch").addEventListener("click", () => {
 
 document.getElementById("btn-next-match").addEventListener("click", () => {
   if (peerConn) { peerConn.close(); peerConn = null; }
+  window._remoteStream = null;
+  _ballInterp = { x: 400, y: 200, vx: 7, vy: 5, lastUpdate: 0 };
   roomId = null; myRole = null; gameState = null;
   showScreen("screen-picker");
 });
 
 document.getElementById("btn-home").addEventListener("click", () => {
   if (peerConn) { peerConn.close(); peerConn = null; }
+  window._remoteStream = null;
+  _ballInterp = { x: 400, y: 200, vx: 7, vy: 5, lastUpdate: 0 };
   roomId = null; myRole = null; gameState = null;
   stopCamera();
   showScreen("screen-home");
@@ -2123,6 +2146,8 @@ document.getElementById("btn-home").addEventListener("click", () => {
 document.getElementById("btn-left-home").addEventListener("click", () => {
   hideOverlay("overlay-left");
   if (peerConn) { peerConn.close(); peerConn = null; }
+  window._remoteStream = null;
+  _ballInterp = { x: 400, y: 200, vx: 7, vy: 5, lastUpdate: 0 };
   roomId = null; myRole = null; gameState = null;
   showScreen("screen-picker");
 });
