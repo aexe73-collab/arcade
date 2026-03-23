@@ -1266,6 +1266,12 @@ function drawPong(gs) {
   ctx.fillStyle = "#00ff88";
   ctx.fillRect(W - 30 - PADDLE_W, myPaddleY, PADDLE_W, PADDLE_H);
 
+  // Court border
+  ctx.strokeStyle = "rgba(255,255,255,0.5)";
+  ctx.lineWidth = 2;
+  ctx.setLineDash([]);
+  ctx.strokeRect(1, 1, W - 2, H - 2);
+
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(gs.ball.x, gs.ball.y, BALL_SIZE, BALL_SIZE);
   ctx.fillStyle = "rgba(255,255,255,0.07)";
