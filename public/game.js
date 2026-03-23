@@ -1754,8 +1754,10 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
   }
   // Clear opponent avatar
   theirAvatar = null;
-  const theirEl = document.getElementById("panel-avatar-them");
-  if (theirEl) theirEl.getContext("2d").clearRect(0, 0, 48, 48);
+  ["panel-avatar-them", "mobile-avatar-them"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.getContext("2d").clearRect(0, 0, el.width, el.height);
+  });
   startCountdown(() => {
     setupGameUI(currentGame);
     showScreen("screen-game");
@@ -2002,7 +2004,7 @@ function drawAvatarOnCanvas(canvas, grid) {
 }
 
 function refreshMyAvatarCanvases() {
-  const ids = ["avatar-canvas-guest", "avatar-canvas-signedin", "panel-avatar-you"];
+  const ids = ["avatar-canvas-guest", "avatar-canvas-signedin", "panel-avatar-you", "mobile-avatar-you"];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (el) drawAvatarOnCanvas(el, myAvatar);
@@ -2485,8 +2487,10 @@ function drawDefaultIcon() {
 // Avatar socket events
 socket.on("player_avatar", ({ avatar }) => {
   theirAvatar = avatar;
-  const el = document.getElementById("panel-avatar-them");
-  if (el) drawAvatarOnCanvas(el, avatar);
+  ["panel-avatar-them", "mobile-avatar-them"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) drawAvatarOnCanvas(el, avatar);
+  });
 });
 
 initSupabase();
