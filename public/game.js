@@ -1755,6 +1755,17 @@ sliderTrack.addEventListener("touchmove", (e) => {
   pongSliderMove(e.touches[0].clientY);
 }, { passive: false });
 
+// ── Video watchdog — restart any stalled video elements ───────────
+setInterval(() => {
+  ["video-remote", "video-local", "video-mobile-remote", "video-mobile-local",
+   "video-faceoff-remote", "video-faceoff-local"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.srcObject && el.paused && !el.ended) {
+      el.play().catch(() => {});
+    }
+  });
+}, 1000);
+
 // ── Socket events ─────────────────────────────────────────────────
 socket.on("waiting", () => { /* screen already shown */ });
 
@@ -1790,26 +1801,30 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
     if (localStream) {
       ["video-local", "video-mobile-local"].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.srcObject = localStream;
+        if (el) { el.srcObject = localStream; el.play().catch(() => {}); }
       });
     }
-    if (window._remoteStream) {
+    // Helper: assign stream and force play
+    const assignRemote = (stream) => {
       ["video-remote", "video-mobile-remote"].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.srcObject = window._remoteStream;
+        if (el) {
+          el.srcObject = stream;
+          el.play().catch(() => {});
+        }
       });
+    };
+    if (window._remoteStream) {
+      assignRemote(window._remoteStream);
     } else {
-      // No remote stream yet — retry when it arrives
+      // Poll until stream arrives (WebRTC may still be negotiating)
       const waitForRemote = setInterval(() => {
         if (window._remoteStream) {
           clearInterval(waitForRemote);
-          ["video-remote", "video-mobile-remote"].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.srcObject = window._remoteStream;
-          });
+          assignRemote(window._remoteStream);
         }
-      }, 300);
-      setTimeout(() => clearInterval(waitForRemote), 15000);
+      }, 200);
+      setTimeout(() => clearInterval(waitForRemote), 20000);
     }
 
     if (currentGame !== "fourdots" && currentGame !== "raid" && currentGame !== "reaction") {
