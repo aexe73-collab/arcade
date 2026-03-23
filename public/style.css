@@ -997,11 +997,12 @@ body {
 
 /* Side video panels */
 .side-panel {
-  width: clamp(300px, 35vw, 560px);
+  width: clamp(280px, 28vw, 500px);
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
   background: var(--bg2);
+  align-self: stretch;
 }
 
 .side-panel video {
