@@ -679,13 +679,29 @@ function startPongLoop(roomId) {
   if (!room) return;
   if (room.gameLoop) clearInterval(room.gameLoop);
 
-  const W = 800, H = 400, PH = 80, BS = 10, WIN = 5, INC = 0.6, MAX_SPEED = 18;
+  const W = 800, H = 400, PH = 80, BS = 10, WIN = 5, INC = 0.5;
+  // No hard speed cap — ball accelerates with every hit for escalating tension.
+  // MAX_VY prevents near-vertical angles that are impossible to defend.
+  const MAX_VY = 10;
+  // Max paddle movement per tick — prevents teleporting past the ball on fast mobile swipes.
+  const MAX_PADDLE_STEP = 20;
   const PADDLE_X_L = 30, PADDLE_X_R = W - 30 - 12; // x positions matching canvas draw
 
   room.gameLoop = setInterval(() => {
     if (!room.gameState.running) return;
     const gs = room.gameState;
     const b  = gs.ball;
+
+    // Clamp paddle movement to MAX_PADDLE_STEP px per tick.
+    // This prevents a fast mobile swipe from teleporting the paddle across the ball's path,
+    // which would cause the Y-overlap check to fail even though the ball crossed the face.
+    if (gs._prevPaddles) {
+      const dl = gs.paddles.left  - gs._prevPaddles.left;
+      const dr = gs.paddles.right - gs._prevPaddles.right;
+      if (Math.abs(dl) > MAX_PADDLE_STEP) gs.paddles.left  = gs._prevPaddles.left  + Math.sign(dl) * MAX_PADDLE_STEP;
+      if (Math.abs(dr) > MAX_PADDLE_STEP) gs.paddles.right = gs._prevPaddles.right + Math.sign(dr) * MAX_PADDLE_STEP;
+    }
+    gs._prevPaddles = { left: gs.paddles.left, right: gs.paddles.right };
 
     const prevX = b.x;
     b.x += b.vx; b.y += b.vy;
@@ -698,8 +714,9 @@ function startPongLoop(roomId) {
     if (b.vx < 0 && prevX > PADDLE_X_L + 12 && b.x <= PADDLE_X_L + 12) {
       if (b.y + BS >= gs.paddles.left && b.y <= gs.paddles.left + PH) {
         b.x = PADDLE_X_L + 13; // push ball 1px clear of paddle face to prevent double-hit
-        b.vx = Math.min(Math.abs(b.vx) + INC, MAX_SPEED);
+        b.vx = Math.abs(b.vx) + INC; // no cap — speed keeps growing
         b.vy = ((b.y + BS/2 - (gs.paddles.left + PH/2)) / (PH/2)) * 8;
+        b.vy = Math.max(-MAX_VY, Math.min(MAX_VY, b.vy)); // clamp angle only
       }
     }
     // Right paddle — ball moving right and crossing paddle face
@@ -707,8 +724,9 @@ function startPongLoop(roomId) {
     if (b.vx > 0 && prevX + BS < PADDLE_X_R && b.x + BS >= PADDLE_X_R) {
       if (b.y + BS >= gs.paddles.right && b.y <= gs.paddles.right + PH) {
         b.x = PADDLE_X_R - BS - 1; // push ball 1px clear of paddle face to prevent double-hit
-        b.vx = -Math.min(Math.abs(b.vx) + INC, MAX_SPEED);
+        b.vx = -(Math.abs(b.vx) + INC); // no cap — speed keeps growing
         b.vy = ((b.y + BS/2 - (gs.paddles.right + PH/2)) / (PH/2)) * 8;
+        b.vy = Math.max(-MAX_VY, Math.min(MAX_VY, b.vy)); // clamp angle only
       }
     }
     if (b.x < 0) {
