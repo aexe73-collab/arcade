@@ -1791,6 +1791,10 @@ body {
   width: 100%;
 }
 
+@media (min-width: 769px) {
+  .pong-slider-wrap { display: none !important; }
+}
+
 .pong-slider-label {
   font-family: var(--pixel);
   font-size: 7px;
