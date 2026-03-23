@@ -1297,12 +1297,6 @@ const W = 800, H = 400;
 const PADDLE_W = 12, PADDLE_H = 80, BALL_SIZE = 10;
 const CELL_W = W / 40, CELL_H = H / 20;
 
-// ── Pong ball interpolation ───────────────────────────────────────
-// We render at ~60fps but the server sends state at 30fps.
-// Interpolate the ball forward using the last known velocity so it
-// never visually freezes or snaps through a paddle between ticks.
-let _ballInterp = { x: 400, y: 200, vx: 7, vy: 5, lastUpdate: 0 };
-
 // ── Pong render ───────────────────────────────────────────────────
 function drawPong(gs) {
   ctx.fillStyle = "#0a0a0f";
@@ -1332,18 +1326,10 @@ function drawPong(gs) {
   ctx.setLineDash([]);
   ctx.strokeRect(1, 1, W - 2, H - 2);
 
-  // Interpolate ball position between server ticks (server runs at 30fps, we render at ~60fps).
-  // vx/vy are in px-per-tick units. Cap to one tick (33ms) to prevent overshoot on lag spikes.
-  const MS_PER_TICK   = 1000 / 30;
-  const msSinceUpdate = Math.min(performance.now() - _ballInterp.lastUpdate, MS_PER_TICK);
-  const tickFraction  = msSinceUpdate / MS_PER_TICK; // 0..1
-  const bx = _ballInterp.x + _ballInterp.vx * tickFraction;
-  const by = _ballInterp.y + _ballInterp.vy * tickFraction;
-
   ctx.fillStyle = "#ffffff";
-  ctx.fillRect(bx, by, BALL_SIZE, BALL_SIZE);
+  ctx.fillRect(gs.ball.x, gs.ball.y, BALL_SIZE, BALL_SIZE);
   ctx.fillStyle = "rgba(255,255,255,0.07)";
-  ctx.fillRect(bx-4, by-4, BALL_SIZE+8, BALL_SIZE+8);
+  ctx.fillRect(gs.ball.x-4, gs.ball.y-4, BALL_SIZE+8, BALL_SIZE+8);
 }
 
 // ── Snake render ──────────────────────────────────────────────────
@@ -1958,10 +1944,7 @@ socket.on("game_start", ({ gameState: gs }) => {
 socket.on("game_state", ({ gameState: gs }) => {
   gameState = gs;
   if (gs.scores) updateScoreDisplay(gs.scores);
-  // Sync interpolation state with every authoritative server update
-  if (gs.game === "pong" && gs.ball) {
-    _ballInterp = { ...gs.ball, lastUpdate: performance.now() };
-  }
+
 });
 
 socket.on("game_over", ({ winner, scores }) => {
@@ -2101,7 +2084,6 @@ socket.on("go_to_picker", () => {
   stopRenderLoop();
   if (peerConn) { peerConn.close(); peerConn = null; }
   window._remoteStream = null;
-  _ballInterp = { x: 400, y: 200, vx: 7, vy: 5, lastUpdate: 0 };
   gameState = null;
   showScreen("screen-picker");
 });
@@ -2116,7 +2098,6 @@ socket.on("opponent_left", () => { stopRenderLoop(); showOverlay("overlay-left")
 document.getElementById("btn-cancel-wait").addEventListener("click", () => {
   stopRenderLoop();
   window._remoteStream = null;
-  _ballInterp = { x: 400, y: 200, vx: 7, vy: 5, lastUpdate: 0 };
   socket.disconnect(); socket.connect();
   showScreen("screen-picker");
 });
@@ -2129,7 +2110,6 @@ document.getElementById("btn-rematch").addEventListener("click", () => {
 document.getElementById("btn-next-match").addEventListener("click", () => {
   if (peerConn) { peerConn.close(); peerConn = null; }
   window._remoteStream = null;
-  _ballInterp = { x: 400, y: 200, vx: 7, vy: 5, lastUpdate: 0 };
   roomId = null; myRole = null; gameState = null;
   showScreen("screen-picker");
 });
@@ -2137,7 +2117,6 @@ document.getElementById("btn-next-match").addEventListener("click", () => {
 document.getElementById("btn-home").addEventListener("click", () => {
   if (peerConn) { peerConn.close(); peerConn = null; }
   window._remoteStream = null;
-  _ballInterp = { x: 400, y: 200, vx: 7, vy: 5, lastUpdate: 0 };
   roomId = null; myRole = null; gameState = null;
   stopCamera();
   showScreen("screen-home");
@@ -2147,7 +2126,6 @@ document.getElementById("btn-left-home").addEventListener("click", () => {
   hideOverlay("overlay-left");
   if (peerConn) { peerConn.close(); peerConn = null; }
   window._remoteStream = null;
-  _ballInterp = { x: 400, y: 200, vx: 7, vy: 5, lastUpdate: 0 };
   roomId = null; myRole = null; gameState = null;
   showScreen("screen-picker");
 });
