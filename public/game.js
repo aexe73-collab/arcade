@@ -1199,19 +1199,28 @@ async function startPeerConnection(isInitiator) {
   peerConn.ontrack = (event) => {
     const s = event.streams[0];
     window._remoteStream = s;
+    // Assign to ALL remote video elements immediately
     ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
       const el = document.getElementById(id);
-      if (el) { el.srcObject = s; el.play().catch(() => {}); }
+      if (el) {
+        el.srcObject = s;
+        el.play().catch(() => {});
+      }
     });
+    console.log("[WebRTC] ontrack fired, stream tracks:", s.getTracks().length);
   };
 
   peerConn.oniceconnectionstatechange = () => {
     const state = peerConn.iceConnectionState;
+    console.log("[WebRTC] ICE state:", state);
     if ((state === "connected" || state === "completed") && window._remoteStream) {
-      // Re-assign all remote video elements in case any missed the ontrack event
+      // Re-assign and force play on all remote elements
       ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
         const el = document.getElementById(id);
-        if (el && !el.srcObject) el.srcObject = window._remoteStream;
+        if (el) {
+          if (!el.srcObject) el.srcObject = window._remoteStream;
+          el.play().catch(() => {});
+        }
       });
     }
   };
