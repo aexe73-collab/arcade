@@ -1299,19 +1299,6 @@ const CELL_W = W / 40, CELL_H = H / 20;
 
 // ── Pong render ───────────────────────────────────────────────────
 function drawPong(gs) {
-  ctx.save();
-
-  // Mirror the canvas for the "left" role player so everyone always sees:
-  //   their own paddle on the RIGHT, opponent paddle on the LEFT.
-  // The server uses x=0 (left) for the left player's goal and x=800 for the right
-  // player's goal. A left-role player's raw ball x increases toward the opponent —
-  // so without mirroring, the ball appears to move in the opposite direction to what
-  // you'd expect (toward "your" side of screen when it's actually heading away).
-  if (myRole === "left") {
-    ctx.translate(W, 0);
-    ctx.scale(-1, 1);
-  }
-
   ctx.fillStyle = "#0a0a0f";
   ctx.fillRect(0, 0, W, H);
   ctx.setLineDash([8,12]);
@@ -1320,17 +1307,17 @@ function drawPong(gs) {
   ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke();
   ctx.setLineDash([]);
 
-  // After mirroring, server coordinates map correctly:
-  // role="right": no mirror — your paddle is at x=758 (right), opponent at x=30 (left). ✓
-  // role="left":  mirrored — your paddle at server x=30 now renders on the right. ✓
-  // Ball x coordinate is also mirrored automatically. ✓
+  // The canvas always draws YOU on the RIGHT and OPPONENT on the LEFT.
+  // Server coordinates: left player's goal is x=0, right player's goal is x=800.
+  //
+  // Paddle Y: already correctly mapped per role (your Y from your role's paddle).
   const myPaddleY   = myRole === "left" ? gs.paddles.left  : gs.paddles.right;
   const themPaddleY = myRole === "left" ? gs.paddles.right : gs.paddles.left;
 
-  // Opponent paddle — drawn at left-side server position, appears on LEFT after transform
+  // Opponent paddle — left side, pink
   ctx.fillStyle = "#ff3366";
   ctx.fillRect(30, themPaddleY, PADDLE_W, PADDLE_H);
-  // Your paddle — drawn at right-side server position, appears on RIGHT after transform
+  // Your paddle — right side, green
   ctx.fillStyle = "#00ff88";
   ctx.fillRect(W - 30 - PADDLE_W, myPaddleY, PADDLE_W, PADDLE_H);
 
@@ -1340,12 +1327,16 @@ function drawPong(gs) {
   ctx.setLineDash([]);
   ctx.strokeRect(1, 1, W - 2, H - 2);
 
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(gs.ball.x, gs.ball.y, BALL_SIZE, BALL_SIZE);
-  ctx.fillStyle = "rgba(255,255,255,0.07)";
-  ctx.fillRect(gs.ball.x-4, gs.ball.y-4, BALL_SIZE+8, BALL_SIZE+8);
+  // Ball X: remap from server coordinates so it always moves toward the correct side.
+  // role="right": server x=800 is your goal (right of canvas) — no change needed.
+  // role="left":  server x=0 is your goal, but canvas right is your side — mirror X.
+  const bx = myRole === "left" ? (W - gs.ball.x - BALL_SIZE) : gs.ball.x;
+  const by = gs.ball.y;
 
-  ctx.restore();
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(bx, by, BALL_SIZE, BALL_SIZE);
+  ctx.fillStyle = "rgba(255,255,255,0.07)";
+  ctx.fillRect(bx-4, by-4, BALL_SIZE+8, BALL_SIZE+8);
 }
 
 // ── Snake render ──────────────────────────────────────────────────
