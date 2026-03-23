@@ -1191,6 +1191,7 @@ async function startPeerConnection(isInitiator) {
 
   peerConn.ontrack = (event) => {
     const s = event.streams[0];
+    window._remoteStream = s;
     ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.srcObject = s;
@@ -1199,9 +1200,13 @@ async function startPeerConnection(isInitiator) {
 
   peerConn.oniceconnectionstatechange = () => {
     const state = peerConn.iceConnectionState;
-  };
-
-  peerConn.onsignalingstatechange = () => {
+    // Re-assign remote stream on connect in case mobile pip missed it
+    if ((state === "connected" || state === "completed") && window._remoteStream) {
+      const mobileRemote = document.getElementById("video-mobile-remote");
+      if (mobileRemote && !mobileRemote.srcObject) {
+        mobileRemote.srcObject = window._remoteStream;
+      }
+    }
   };
 
   peerConn.onicecandidate = (e) => {
