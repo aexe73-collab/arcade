@@ -1255,7 +1255,8 @@ function drawPong(gs) {
 
   // YOUR panel is always on the RIGHT, so draw YOUR paddle on the RIGHT
   // Opponent panel is always on the LEFT, so their paddle is on the LEFT
-  const myPaddleY   = myRole === "left" ? gs.paddles.left  : gs.paddles.right;
+  // Use localPaddleY for our own paddle (smooth, lag-free) and server state for opponent's.
+  const myPaddleY   = localPaddleY;
   const themPaddleY = myRole === "left" ? gs.paddles.right : gs.paddles.left;
 
   // Opponent paddle — left side, pink
@@ -1331,7 +1332,7 @@ function startRenderLoop() {
         const track = document.getElementById("pong-slider-track");
         const thumb = document.getElementById("pong-slider-thumb");
         if (track && thumb && track.offsetHeight > 0) {
-          const myY    = myRole === "left" ? gameState.paddles.left : gameState.paddles.right;
+          const myY    = localPaddleY;
           const ratio  = myY / (H - PADDLE_H);
           const thumbH = thumb.offsetHeight;
           const trackH = track.offsetHeight;
@@ -1662,17 +1663,20 @@ function generateShareCard(scores, winner) {
 document.addEventListener("keydown", e => { keys[e.key] = true; });
 document.addEventListener("keyup",   e => { keys[e.key] = false; });
 
-// Pong paddle — interval
+// Local paddle Y — kept separate from server gameState for smooth rendering.
+// We never write our local prediction back into gameState.paddles; the server is authoritative.
+let localPaddleY = 160;
+function resetLocalPaddle() { localPaddleY = 160; }
+
+// Pong paddle — keyboard input at 20Hz
 setInterval(() => {
   if (!gameState || gameState.game !== "pong" || !roomId || !myRole) return;
-  const cur = myRole === "left" ? gameState.paddles.left : gameState.paddles.right;
-  let newY = cur;
+  let newY = localPaddleY;
   if (keys["w"]||keys["W"]||keys["ArrowUp"])   newY -= 8;
   if (keys["s"]||keys["S"]||keys["ArrowDown"])  newY += 8;
   newY = Math.max(0, Math.min(H - PADDLE_H, newY));
-  if (newY !== cur) {
-    if (myRole === "left")  gameState.paddles.left  = newY;
-    if (myRole === "right") gameState.paddles.right = newY;
+  if (newY !== localPaddleY) {
+    localPaddleY = newY;
     socket.emit("paddle_move", { roomId, role: myRole, y: newY });
   }
 }, 1000/20);
@@ -1725,7 +1729,7 @@ canvas.addEventListener("mousemove", (e) => {
   if (!gameState || gameState.game !== "pong" || !myRole) return;
   const rect = canvas.getBoundingClientRect();
   const newY = Math.max(0, Math.min(H-PADDLE_H, (e.clientY-rect.top)*(H/rect.height)-PADDLE_H/2));
-  if (myRole==="left") gameState.paddles.left=newY; else gameState.paddles.right=newY;
+  localPaddleY = newY;
   socket.emit("paddle_move", { roomId, role: myRole, y: newY });
 });
 
@@ -1749,8 +1753,7 @@ function pongSliderMove(clientY) {
   const ratio   = clampY / (trackH - thumbH);
   sliderThumb.style.top = clampY + "px";
   const newY = Math.round(ratio * (H - PADDLE_H));
-  if (myRole === "left")  gameState.paddles.left  = newY;
-  else                    gameState.paddles.right = newY;
+  localPaddleY = newY;
   socket.emit("paddle_move", { roomId, role: myRole, y: newY });
 }
 
@@ -1880,6 +1883,10 @@ socket.on("webrtc_ice", async ({ candidate }) => {
 socket.on("game_start", ({ gameState: gs }) => {
   gameState = gs;
   if (gs.scores) updateScoreDisplay(gs.scores);
+  // Sync local paddle to server's initial position so we start in sync
+  if (gs.game === "pong" && gs.paddles && myRole) {
+    localPaddleY = myRole === "left" ? gs.paddles.left : gs.paddles.right;
+  }
 });
 
 socket.on("game_state", ({ gameState: gs }) => {
