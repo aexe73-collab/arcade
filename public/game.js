@@ -48,15 +48,13 @@ function initSupabase() {
     sbClient.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setUser(session.user);
-        const hasFriendCode = new URLSearchParams(window.location.search).get("friend");
         showScreen("screen-home");
-        if (hasFriendCode) showFriendJoinPrompt(hasFriendCode);
+        // Show join prompt if a friend code was detected on page load
+        if (friendCode) showFriendJoinPrompt(friendCode);
         else setTimeout(loadSavedAvatar, 300);
-      } else {
-        // Guest — if friend code present, show join prompt
-        const hasFriendCode = new URLSearchParams(window.location.search).get("friend");
-        if (hasFriendCode) showFriendJoinPrompt(hasFriendCode);
       }
+      // If no session and there's a friend code, it's stored in memory —
+      // the join prompt will show after they sign in via onAuthStateChange
     });
   }
 
@@ -70,14 +68,9 @@ function initSupabase() {
     } else if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session && !isRecovery) {
       setUser(session.user);
       setTimeout(loadSavedAvatar, 300);
-      const hasFriendCode = new URLSearchParams(window.location.search).get("friend");
-      if (hasFriendCode) {
-        // Show join prompt on home screen — don't auto-request camera
-        showScreen("screen-home");
-        showFriendJoinPrompt(hasFriendCode);
-      } else {
-        showScreen("screen-home");
-      }
+      showScreen("screen-home");
+      // Show join prompt if a friend code is waiting
+      if (friendCode) showFriendJoinPrompt(friendCode);
     } else if (event === "SIGNED_OUT") {
       setUser(null);
     }
@@ -449,6 +442,7 @@ document.getElementById("btn-friend-close").addEventListener("click", () => {
   if (!confirm("Close this room? Your friend will be disconnected and the room link will stop working.")) return;
   if (friendCode) socket.emit("friend_close", { code: friendCode });
   friendCode = null;
+  clearPendingFriendCode();
   history.replaceState({}, "", "/");
   if (friendPeerConn) { friendPeerConn.close(); friendPeerConn = null; }
   stopCamera();
@@ -575,11 +569,19 @@ socket.on("friend_room_full", () => {
 // Check if arriving via friend link
 function checkFriendLink() {
   const params = new URLSearchParams(window.location.search);
-  const code = params.get("friend");
+  const code = params.get("friend") || sessionStorage.getItem("af_pending_friend");
   if (code) {
     playMode = "friend";
     friendCode = code;
+    // Persist in sessionStorage so magic link redirects don't lose it
+    sessionStorage.setItem("af_pending_friend", code);
+    // Strip from URL immediately — prevents autofill/sign-in prompts
+    history.replaceState({}, "", "/");
   }
+}
+
+function clearPendingFriendCode() {
+  sessionStorage.removeItem("af_pending_friend");
 }
 
 function showFriendJoinPrompt(code) {
@@ -591,6 +593,7 @@ function showFriendJoinPrompt(code) {
   prompt.style.display = "flex";
   btn.onclick = () => {
     prompt.style.display = "none";
+    clearPendingFriendCode();
     getCamera().then(() => enterFriendLobby(code));
   };
 }
@@ -1241,17 +1244,17 @@ function drawPong(gs) {
   ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke();
   ctx.setLineDash([]);
 
-  // Draw MY paddle green, OPPONENT paddle pink — regardless of left/right role
-  const myColor   = "#00ff88";
-  const themColor = "#ff3366";
-  const iAmLeft   = myRole === "left";
+  // YOUR panel is always on the RIGHT, so draw YOUR paddle on the RIGHT
+  // Opponent panel is always on the LEFT, so their paddle is on the LEFT
+  const myPaddleY   = myRole === "left" ? gs.paddles.left  : gs.paddles.right;
+  const themPaddleY = myRole === "left" ? gs.paddles.right : gs.paddles.left;
 
-  // Left paddle
-  ctx.fillStyle = iAmLeft ? myColor : themColor;
-  ctx.fillRect(30, gs.paddles.left, PADDLE_W, PADDLE_H);
-  // Right paddle
-  ctx.fillStyle = iAmLeft ? themColor : myColor;
-  ctx.fillRect(W - 30 - PADDLE_W, gs.paddles.right, PADDLE_W, PADDLE_H);
+  // Opponent paddle — left side, pink
+  ctx.fillStyle = "#ff3366";
+  ctx.fillRect(30, themPaddleY, PADDLE_W, PADDLE_H);
+  // Your paddle — right side, green
+  ctx.fillStyle = "#00ff88";
+  ctx.fillRect(W - 30 - PADDLE_W, myPaddleY, PADDLE_W, PADDLE_H);
 
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(gs.ball.x, gs.ball.y, BALL_SIZE, BALL_SIZE);
@@ -1351,24 +1354,8 @@ function setupGameUI(game) {
   if (bannerGame)      bannerGame.textContent      = gameName;
   if (bannerGameFixed) bannerGameFixed.textContent = gameName;
 
-  // Swap panel sides so YOUR camera is always adjacent to YOUR paddle
-  // myRole="left" → your paddle is LEFT → your panel should be LEFT
-  // myRole="right" → your paddle is RIGHT → your panel should be RIGHT
-  const gameArea = document.querySelector(".game-area");
-  const panelThem = document.querySelector(".panel-them");
-  const panelYou  = document.querySelector(".panel-you");
-  const canvasWrap = document.querySelector(".canvas-wrap");
-  if (gameArea && panelThem && panelYou && canvasWrap) {
-    if (myRole === "left") {
-      // YOU on left, THEM on right
-      gameArea.insertBefore(panelYou,  gameArea.firstChild);
-      gameArea.appendChild(panelThem);
-    } else {
-      // YOU on right, THEM on left (default HTML order)
-      gameArea.insertBefore(panelThem, gameArea.firstChild);
-      gameArea.appendChild(panelYou);
-    }
-  }
+  // Panels stay in fixed HTML order: panel-them LEFT, canvas MIDDLE, panel-you RIGHT
+  // Pong canvas always draws YOUR paddle on the right to match your panel position
 
   if (game === "reaction") {
     canvas.style.display      = "none";
@@ -1429,10 +1416,10 @@ function setupGameUI(game) {
       dpad.style.display = "grid";
       document.getElementById("pong-slider-wrap").style.display = "none";
     } else {
-      hint.innerHTML     = '<span>W / S &nbsp;&mdash;&nbsp; move paddle</span><span class="hint-sep"> | </span><span>Or use slider below</span>';
+      hint.innerHTML     = '<span>W / S &nbsp;&mdash;&nbsp; move paddle</span>';
       status.textContent = "FIRST TO 5";
       dpad.style.display = "none";
-      document.getElementById("pong-slider-wrap").style.display = "block";
+      document.getElementById("pong-slider-wrap").style.display = "flex";
     }
   }
 }
