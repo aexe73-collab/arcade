@@ -1138,13 +1138,14 @@ document.getElementById("pick-reaction").addEventListener("click", () => {
 function startCountdown(onComplete) {
   showScreen("screen-faceoff");
 
+  // Always force-assign streams on every countdown (first match + rematch)
   if (localStream) {
     const lv = document.getElementById("video-faceoff-local");
     if (lv) lv.srcObject = localStream;
   }
   if (window._remoteStream) {
     const rv = document.getElementById("video-faceoff-remote");
-    if (rv && !rv.srcObject) rv.srcObject = window._remoteStream;
+    if (rv) rv.srcObject = window._remoteStream;
   }
 
   let count = 10;
