@@ -7,8 +7,9 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: "*" },
-  pingTimeout: 60000,
-  pingInterval: 25000
+  pingTimeout: 120000,
+  pingInterval: 25000,
+  transports: ["polling", "websocket"]
 });
 
 const fs = require("fs");
@@ -645,18 +646,23 @@ io.on("connection", (socket) => {
     for (const game of Object.keys(waitingQueues)) {
       if (waitingQueues[game] === socket.id) waitingQueues[game] = null;
     }
-    // Clear from game rooms
+    // Game rooms: give 8s grace period for reconnection before destroying
     for (const [roomId, room] of rooms.entries()) {
       if (room.players.includes(socket.id)) {
-        if (room.gameLoop)      clearInterval(room.gameLoop);
-        if (room.reactionTimer) clearTimeout(room.reactionTimer);
-        if (room.turnTimer)     clearTimeout(room.turnTimer);
-        socket.to(roomId).emit("opponent_left");
-        rooms.delete(roomId);
+        room._disconnectTimer = setTimeout(() => {
+          // Only destroy if they haven't reconnected
+          if (room.players.includes(socket.id)) {
+            if (room.gameLoop)      clearInterval(room.gameLoop);
+            if (room.reactionTimer) clearTimeout(room.reactionTimer);
+            if (room.turnTimer)     clearTimeout(room.turnTimer);
+            socket.to(roomId).emit("opponent_left");
+            rooms.delete(roomId);
+          }
+        }, 8000);
         break;
       }
     }
-    // Remove from friend rooms — notify remaining player they can be replaced
+    // Remove from friend rooms
     for (const [code, froom] of friendRooms.entries()) {
       if (froom.players.includes(socket.id)) {
         froom.players = froom.players.filter(id => id !== socket.id);
@@ -674,23 +680,34 @@ function startPongLoop(roomId) {
   if (room.gameLoop) clearInterval(room.gameLoop);
 
   const W = 800, H = 400, PH = 80, BS = 10, WIN = 5, INC = 0.6, MAX_SPEED = 18;
+  const PADDLE_X_L = 30, PADDLE_X_R = W - 30 - 12; // x positions matching canvas draw
 
   room.gameLoop = setInterval(() => {
     if (!room.gameState.running) return;
     const gs = room.gameState;
     const b  = gs.ball;
 
+    const prevX = b.x;
     b.x += b.vx; b.y += b.vy;
 
+    // Wall bounce
     if (b.y <= 0 || b.y >= H - BS) { b.vy *= -1; b.y = b.y <= 0 ? 0 : H - BS; }
 
-    if (b.x <= 42 && b.x >= 30 && b.y + BS >= gs.paddles.left && b.y <= gs.paddles.left + PH) {
-      b.vx = Math.min(Math.abs(b.vx) + INC, MAX_SPEED);
-      b.vy = ((b.y - gs.paddles.left) / PH - 0.5) * 10;
+    // Left paddle — ball moving left and crossing paddle face
+    if (b.vx < 0 && prevX >= PADDLE_X_L + 12 && b.x <= PADDLE_X_L + 12) {
+      if (b.y + BS >= gs.paddles.left && b.y <= gs.paddles.left + PH) {
+        b.x = PADDLE_X_L + 12; // push ball out of paddle
+        b.vx = Math.min(Math.abs(b.vx) + INC, MAX_SPEED);
+        b.vy = ((b.y + BS/2 - (gs.paddles.left + PH/2)) / (PH/2)) * 8;
+      }
     }
-    if (b.x >= W-42 && b.x <= W-30 && b.y + BS >= gs.paddles.right && b.y <= gs.paddles.right + PH) {
-      b.vx = -Math.min(Math.abs(b.vx) + INC, MAX_SPEED);
-      b.vy = ((b.y - gs.paddles.right) / PH - 0.5) * 10;
+    // Right paddle — ball moving right and crossing paddle face
+    if (b.vx > 0 && prevX + BS <= PADDLE_X_R && b.x + BS >= PADDLE_X_R) {
+      if (b.y + BS >= gs.paddles.right && b.y <= gs.paddles.right + PH) {
+        b.x = PADDLE_X_R - BS; // push ball out of paddle
+        b.vx = -Math.min(Math.abs(b.vx) + INC, MAX_SPEED);
+        b.vy = ((b.y + BS/2 - (gs.paddles.right + PH/2)) / (PH/2)) * 8;
+      }
     }
     if (b.x < 0) {
       gs.scores.right++;
