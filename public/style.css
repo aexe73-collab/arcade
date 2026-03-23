@@ -978,9 +978,9 @@ body {
   overflow: hidden;
 }
 
-/* Side video panels — big face energy */
+/* Side video panels */
 .side-panel {
-  width: clamp(400px, 50vw, 800px);
+  width: clamp(200px, 25vw, 400px);
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
@@ -1798,6 +1798,7 @@ body {
   padding: 16px 0 8px;
   touch-action: none;
   width: 100%;
+  flex-shrink: 0;
 }
 
 @media (min-width: 769px) {
