@@ -1753,11 +1753,16 @@ sliderTrack.addEventListener("touchmove", (e) => {
 socket.on("waiting", () => { /* screen already shown */ });
 
 socket.on("match_found", async ({ roomId: rid, role, game }) => {
+  const isRematch = (rid === roomId); // same room = rematch
   roomId      = rid;
   myRole      = role;
   currentGame = game;
   clearChat();
-  await startPeerConnection(role === "left");
+
+  // Only create a new peer connection on first match — reuse on rematch
+  if (!isRematch || !peerConn || peerConn.connectionState === "closed" || peerConn.connectionState === "failed") {
+    await startPeerConnection(role === "left");
+  }
 
   // Show my avatar on my panel
   if (myAvatar) {
