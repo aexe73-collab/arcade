@@ -996,7 +996,7 @@ body {
 
 /* Side video panels */
 .side-panel {
-  width: clamp(160px, 20vw, 320px);
+  width: clamp(240px, 30vw, 480px);
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
