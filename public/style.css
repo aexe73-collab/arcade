@@ -1093,7 +1093,7 @@ body {
   .side-panel        { display: none; }
   .desktop-score     { display: none; }
   .score-bar         { display: flex; }
-  .canvas-wrap       { justify-content: flex-start; padding-top: 8px; }
+  .canvas-wrap       { justify-content: flex-start; align-items: center; padding-top: 8px; }
   .mobile-pips       { display: flex; gap: 8px; width: 100%; padding: 0 8px; }
   .mobile-pip        { flex: 1; height: 160px; position: relative; overflow: hidden; background: var(--bg2); }
   .mobile-pip video  { width: 100%; height: 100%; object-fit: cover; }
