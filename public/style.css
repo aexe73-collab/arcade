@@ -665,11 +665,12 @@ body {
 }
 .friend-code-row {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   width: 100%;
 }
 .friend-code-row input {
-  flex: 1;
+  width: 100%;
   background: var(--bg2);
   border: 1px solid var(--border);
   color: var(--accent);
@@ -679,6 +680,7 @@ body {
   letter-spacing: 4px;
   outline: none;
   text-transform: uppercase;
+  box-sizing: border-box;
 }
 .friend-code-row input:focus { border-color: var(--accent); }
 .friend-code-row input::placeholder { color: var(--muted); font-size: 9px; letter-spacing: 1px; }
