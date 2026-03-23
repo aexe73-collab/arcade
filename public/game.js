@@ -1140,6 +1140,10 @@ function startCountdown(onComplete) {
     const lv = document.getElementById("video-faceoff-local");
     if (lv) lv.srcObject = localStream;
   }
+  if (window._remoteStream) {
+    const rv = document.getElementById("video-faceoff-remote");
+    if (rv && !rv.srcObject) rv.srcObject = window._remoteStream;
+  }
 
   let count = 10;
   const el = document.getElementById("countdown-number");
@@ -1200,12 +1204,12 @@ async function startPeerConnection(isInitiator) {
 
   peerConn.oniceconnectionstatechange = () => {
     const state = peerConn.iceConnectionState;
-    // Re-assign remote stream on connect in case mobile pip missed it
     if ((state === "connected" || state === "completed") && window._remoteStream) {
-      const mobileRemote = document.getElementById("video-mobile-remote");
-      if (mobileRemote && !mobileRemote.srcObject) {
-        mobileRemote.srcObject = window._remoteStream;
-      }
+      // Re-assign all remote video elements in case any missed the ontrack event
+      ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el.srcObject) el.srcObject = window._remoteStream;
+      });
     }
   };
 
@@ -1236,10 +1240,19 @@ function drawPong(gs) {
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = "#00ff88";
+
+  // Draw MY paddle green, OPPONENT paddle pink — regardless of left/right role
+  const myColor   = "#00ff88";
+  const themColor = "#ff3366";
+  const iAmLeft   = myRole === "left";
+
+  // Left paddle
+  ctx.fillStyle = iAmLeft ? myColor : themColor;
   ctx.fillRect(30, gs.paddles.left, PADDLE_W, PADDLE_H);
-  ctx.fillStyle = "#ff3366";
+  // Right paddle
+  ctx.fillStyle = iAmLeft ? themColor : myColor;
   ctx.fillRect(W - 30 - PADDLE_W, gs.paddles.right, PADDLE_W, PADDLE_H);
+
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(gs.ball.x, gs.ball.y, BALL_SIZE, BALL_SIZE);
   ctx.fillStyle = "rgba(255,255,255,0.07)";
@@ -1761,6 +1774,22 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
   startCountdown(() => {
     setupGameUI(currentGame);
     showScreen("screen-game");
+
+    // Explicitly assign streams to all game screen video elements
+    // Fixes initial match where WebRTC may have fired before these elements were active
+    if (localStream) {
+      ["video-local", "video-mobile-local"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.srcObject !== localStream) el.srcObject = localStream;
+      });
+    }
+    if (window._remoteStream) {
+      ["video-remote", "video-mobile-remote"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.srcObject !== window._remoteStream) el.srcObject = window._remoteStream;
+      });
+    }
+
     if (currentGame !== "fourdots" && currentGame !== "raid" && currentGame !== "reaction") {
       startRenderLoop();
     }
