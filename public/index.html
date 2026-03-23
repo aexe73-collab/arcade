@@ -19,12 +19,12 @@
       <div class="home-avatar-wrap">
         <!-- Guest icon button -->
         <button class="avatar-btn-home" id="avatar-btn-home-guest" title="Create your player icon">
-          <canvas class="avatar-canvas-home" id="avatar-canvas-guest" width="64" height="64"></canvas>
+          <canvas class="avatar-canvas-home" id="avatar-canvas-guest" width="48" height="48"></canvas>
           <span class="avatar-btn-home-label" id="avatar-lbl-guest">CREATE ICON</span>
         </button>
         <!-- Signed-in icon button (hidden until auth) -->
         <button class="avatar-btn-home hidden" id="avatar-btn-home" title="Edit your player icon">
-          <canvas class="avatar-canvas-home" id="avatar-canvas-signedin" width="64" height="64"></canvas>
+          <canvas class="avatar-canvas-home" id="avatar-canvas-signedin" width="48" height="48"></canvas>
           <span class="avatar-btn-home-label" id="avatar-lbl-signedin">YOUR ICON</span>
         </button>
       </div>
@@ -56,6 +56,13 @@
           SIGN IN &mdash; FRIENDS &amp; GROUPS
         </button>
         <p class="home-sub">No account needed</p>
+        <div class="friend-code-entry" id="friend-code-entry">
+          <div class="friend-code-label">Have a friend code?</div>
+          <div class="friend-code-row">
+            <input type="text" id="friend-code-input" placeholder="Enter code e.g. ABC123" maxlength="6" autocomplete="off" style="text-transform:uppercase"/>
+            <button class="btn-primary" id="btn-join-code">JOIN</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="home-deco"><div class="pixel-ball"></div></div>
@@ -307,37 +314,45 @@
           <span>YOU</span>
         </div>
       </div>
-<!-- Game picker -->
+
+      <!-- Game picker — only shown to room owner -->
       <div class="friend-lobby-pick">
         <div class="friend-lobby-pick-label" id="friend-pick-label">Pick a game to start</div>
-        <div class="friend-game-carousel-wrap">
-          <div class="friend-game-carousel" id="friend-game-carousel">
-            <button class="game-card pong-card friend-game-card" data-game="pong">
-              <div class="game-card-icon">&#9646; &#9646;</div>
-              <div class="game-card-name">PONG</div>
-              <div class="game-card-sub">First to 5 wins</div>
-            </button>
-            <button class="game-card snake-card friend-game-card" data-game="snake">
-              <div class="game-card-icon">&#9632;&#9632;&#9632;</div>
-              <div class="game-card-name">SNAKE</div>
-              <div class="game-card-sub">Last one alive wins</div>
-            </button>
-            <button class="game-card reaction-card friend-game-card" data-game="reaction">
-              <div class="game-card-icon">&#9654;</div>
-              <div class="game-card-name">REFLEX</div>
-              <div class="game-card-sub">First to 3 taps wins</div>
-            </button>
-            <button class="game-card raid-card friend-game-card" data-game="raid">
-              <div class="game-card-icon">&#9632;&#9632;<br>&#9632;&#9632;</div>
-              <div class="game-card-name">RAID</div>
-              <div class="game-card-sub">Destroy their buildings</div>
-            </button>
-            <button class="game-card fourdots-card friend-game-card" data-game="fourdots">
-              <div class="game-card-icon">&#9679;&#9679;<br>&#9679;&#9679;</div>
-              <div class="game-card-name">4 DOTS</div>
-              <div class="game-card-sub">Connect 4 to win</div>
-            </button>
+        <!-- Owner sees cards -->
+        <div id="friend-pick-owner">
+          <div class="friend-game-carousel-wrap">
+            <div class="friend-game-carousel" id="friend-game-carousel">
+              <button class="game-card pong-card friend-game-card" data-game="pong">
+                <div class="game-card-icon">&#9646; &#9646;</div>
+                <div class="game-card-name">PONG</div>
+                <div class="game-card-sub">First to 5 wins</div>
+              </button>
+              <button class="game-card snake-card friend-game-card" data-game="snake">
+                <div class="game-card-icon">&#9632;&#9632;&#9632;</div>
+                <div class="game-card-name">SNAKE</div>
+                <div class="game-card-sub">Last one alive wins</div>
+              </button>
+              <button class="game-card reaction-card friend-game-card" data-game="reaction">
+                <div class="game-card-icon">&#9654;</div>
+                <div class="game-card-name">REFLEX</div>
+                <div class="game-card-sub">First to 3 taps wins</div>
+              </button>
+              <button class="game-card raid-card friend-game-card" data-game="raid">
+                <div class="game-card-icon">&#9632;&#9632;<br>&#9632;&#9632;</div>
+                <div class="game-card-name">RAID</div>
+                <div class="game-card-sub">Destroy their buildings</div>
+              </button>
+              <button class="game-card fourdots-card friend-game-card" data-game="fourdots">
+                <div class="game-card-icon">&#9679;&#9679;<br>&#9679;&#9679;</div>
+                <div class="game-card-name">4 DOTS</div>
+                <div class="game-card-sub">Connect 4 to win</div>
+              </button>
+            </div>
           </div>
+        </div>
+        <!-- Guest sees waiting message -->
+        <div id="friend-pick-guest" style="display:none" class="friend-pick-waiting">
+          <div class="friend-pick-waiting-text">&#9632;&#9632;&#9632; Waiting for host to pick a game...</div>
         </div>
       </div>
 
@@ -394,7 +409,7 @@
       <h2 class="waiting-title">SCANNING FOR<br>OPPONENTS</h2>
       <p class="waiting-sub" id="waiting-sub">Finding a Pong player&hellip;</p>
       <button class="btn-ghost" id="btn-cancel-wait">CANCEL</button>
-</div>
+    </div>
   </div>
 
   <!-- SCREEN 4: Face-off countdown -->
@@ -409,7 +424,7 @@
         <div class="faceoff-vs">VS</div>
         <div class="countdown-number" id="countdown-number">10</div>
         <div class="faceoff-hint">Say hi. Trash talk.<br>Game starts in&hellip;</div>
-</div>
+      </div>
       <div class="faceoff-panel faceoff-you">
         <video id="video-faceoff-local" autoplay muted playsinline></video>
         <div class="faceoff-name you">YOU</div>
@@ -564,7 +579,7 @@
             <span>W / S &nbsp;&mdash;&nbsp; move paddle</span>
           </div>
           <div class="pong-slider-wrap" id="pong-slider-wrap">
-            <div class="pong-slider-label">DRAG</div>
+            <div class="pong-slider-label">DRAG TO MOVE</div>
             <div class="pong-slider-track" id="pong-slider-track">
               <div class="pong-slider-thumb" id="pong-slider-thumb"></div>
             </div>
@@ -584,7 +599,7 @@
           <canvas class="panel-avatar" id="panel-avatar-you"></canvas>
           <div class="panel-label you">YOU</div>
           <div class="panel-score" id="panel-score-you">0</div>
-</div>
+        </div>
 
       </div>
     </div>
@@ -647,7 +662,7 @@
             <span>YOU</span>
           </div>
         </div>
-<div class="postgame-messages" id="postgame-messages"></div>
+        <div class="postgame-messages" id="postgame-messages"></div>
         <div class="postgame-input-row">
           <input type="text" id="postgame-input" placeholder="gg / rematch? / trash talk..." maxlength="120" autocomplete="off"/>
           <button class="postgame-send" id="postgame-send">SEND</button>
