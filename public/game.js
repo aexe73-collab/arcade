@@ -406,7 +406,7 @@ async function startFriendPeerConnection() {
   friendPeerConn.ontrack = (event) => {
     const el = document.getElementById("video-friend-remote");
     if (el) el.srcObject = event.streams[0];
-    window._remoteStream = event.streams[0];
+    // Note: do NOT set window._remoteStream here — that's for the game peer connection only
   };
 
   friendPeerConn.onicecandidate = (e) => {
@@ -1201,7 +1201,7 @@ async function startPeerConnection(isInitiator) {
     window._remoteStream = s;
     ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.srcObject = s;
+      if (el) { el.srcObject = s; el.play().catch(() => {}); }
     });
   };
 
