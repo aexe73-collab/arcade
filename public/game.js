@@ -1151,9 +1151,12 @@ function startCountdown(onComplete) {
     rv.play().catch(() => {});
   }
   const faceoffRemotePoller = setInterval(() => {
-    if (window._remoteStream && rv && !rv.srcObject) {
-      rv.srcObject = window._remoteStream;
-      rv.play().catch(() => {});
+    if (window._remoteStream && rv) {
+      // Always reassign — a stale srcObject from a previous game won't auto-update
+      if (rv.srcObject !== window._remoteStream) {
+        rv.srcObject = window._remoteStream;
+      }
+      if (rv.paused) rv.play().catch(() => {});
     }
   }, 250);
 
@@ -1443,6 +1446,10 @@ function setupGameUI(game) {
     status.textContent = "FIRST TO 3";
     dpad.style.display = "none";
     document.getElementById("pong-slider-wrap").style.display = "none";
+    document.getElementById("panel-score-you").style.visibility  = "hidden";
+    document.getElementById("panel-score-them").style.visibility = "hidden";
+    document.getElementById("score-left").style.visibility  = "hidden";
+    document.getElementById("score-right").style.visibility = "hidden";
   } else if (game === "raid") {
     canvas.style.display      = "none";
     reactionUI.style.display  = "none";
@@ -1452,6 +1459,10 @@ function setupGameUI(game) {
     status.textContent = "RAID ALL 4";
     dpad.style.display = "none";
     document.getElementById("pong-slider-wrap").style.display = "none";
+    document.getElementById("panel-score-you").style.visibility  = "hidden";
+    document.getElementById("panel-score-them").style.visibility = "hidden";
+    document.getElementById("score-left").style.visibility  = "hidden";
+    document.getElementById("score-right").style.visibility = "hidden";
     // Init raid state
     raidState = {
       myShips: [], shipsToPlace: [...RAID_SHIPS], currentShipIdx: 0,
@@ -1477,9 +1488,14 @@ function setupGameUI(game) {
     raidUI.style.display      = "none";
     fourdotsUI.style.display  = "flex";
     hint.innerHTML    = '<span>Click a column to drop your dot</span>';
-    status.textContent = "CONNECT 4";
+    status.textContent = "4 DOTS";
     dpad.style.display = "none";
     document.getElementById("pong-slider-wrap").style.display = "none";
+    // Hide scores — 4 Dots doesn't use a score counter
+    document.getElementById("panel-score-you").style.visibility  = "hidden";
+    document.getElementById("panel-score-them").style.visibility = "hidden";
+    document.getElementById("score-left").style.visibility  = "hidden";
+    document.getElementById("score-right").style.visibility = "hidden";
     buildFourDotsBoard();
     fdSetMyTurn(false);
   } else {
@@ -1487,6 +1503,11 @@ function setupGameUI(game) {
     reactionUI.style.display  = "none";
     raidUI.style.display      = "none";
     fourdotsUI.style.display  = "none";
+    // Restore scores for canvas games
+    document.getElementById("panel-score-you").style.visibility  = "visible";
+    document.getElementById("panel-score-them").style.visibility = "visible";
+    document.getElementById("score-left").style.visibility  = "visible";
+    document.getElementById("score-right").style.visibility = "visible";
     if (game === "snake") {
       hint.innerHTML     = '<span>Arrow keys / WASD &nbsp;&mdash;&nbsp; steer</span>';
       status.textContent = "FIRST TO 3 ROUNDS";
@@ -1612,10 +1633,6 @@ function updateScoreDisplay(scores) {
   // Desktop side panels
   document.getElementById("panel-score-you").textContent  = my;
   document.getElementById("panel-score-them").textContent = them;
-
-  // Desktop canvas score
-  document.getElementById("ds-score-you").textContent  = my;
-  document.getElementById("ds-score-them").textContent = them;
 
   // Top branded banner
   document.getElementById("banner-score-you").textContent  = my;
@@ -1882,13 +1899,20 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
     setupGameUI(currentGame);
     showScreen("screen-game");
 
-    // Force-assign all streams every time game screen shows (handles first match + rematch)
+    // Force-assign all streams every time game screen shows (handles first match + rematch).
+    // Always unconditionally set srcObject — stale streams from previous games won't auto-update.
     if (localStream) {
       ["video-local", "video-mobile-local"].forEach(id => {
         const el = document.getElementById(id);
         if (el) { el.srcObject = localStream; el.play().catch(() => {}); }
       });
     }
+    // Clear any stale srcObjects on remote elements before assignRemoteStream runs,
+    // so the srcObject !== s guard doesn't prevent a fresh assignment.
+    ["video-remote","video-mobile-remote"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.srcObject !== window._remoteStream) el.srcObject = null;
+    });
     // Assign remote stream — try immediately, then poll until it arrives.
     // assignRemoteStream covers all remote video elements (game + faceoff + mobile + postgame).
     if (window._remoteStream) {
