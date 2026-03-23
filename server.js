@@ -213,7 +213,7 @@ function checkSunk(board) {
 function createPongState() {
   return {
     game: "pong",
-    ball: { x: 400, y: 200, vx: 7, vy: 5 },
+    ball: { x: 400, y: 200, vx: 14, vy: 5 },
     paddles: { left: 160, right: 160 },
     scores: { left: 0, right: 0 },
     running: false,
@@ -733,13 +733,13 @@ function startPongLoop(roomId) {
       // Ball left the left side — right player scores; serve toward left (the conceding side)
       gs.scores.right++;
       if (gs.scores.right >= WIN) { endGame(roomId, "right"); return; }
-      gs.ball = { x:400, y:200, vx:-7, vy:(Math.random()-0.5)*6 };
+      gs.ball = { x:400, y:200, vx:-14, vy:(Math.random()-0.5)*6 };
     }
     if (b.x > W) {
       // Ball left the right side — left player scores; serve toward right (the conceding side)
       gs.scores.left++;
       if (gs.scores.left >= WIN) { endGame(roomId, "left"); return; }
-      gs.ball = { x:400, y:200, vx:7, vy:(Math.random()-0.5)*6 };
+      gs.ball = { x:400, y:200, vx:14, vy:(Math.random()-0.5)*6 };
     }
     io.to(roomId).emit("game_state", { gameState: gs });
   }, 1000 / 30);
