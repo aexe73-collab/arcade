@@ -1309,8 +1309,9 @@ function drawPong(gs) {
 
   // YOUR panel is always on the RIGHT, so draw YOUR paddle on the RIGHT
   // Opponent panel is always on the LEFT, so their paddle is on the LEFT
-  // Use localPaddleY for our own paddle (smooth, lag-free) and server state for opponent's.
-  const myPaddleY   = localPaddleY;
+  // Use server-authoritative paddle positions for rendering — this keeps the visual
+  // paddle aligned with where collision actually happens on the server.
+  const myPaddleY   = myRole === "left" ? gs.paddles.left  : gs.paddles.right;
   const themPaddleY = myRole === "left" ? gs.paddles.right : gs.paddles.left;
 
   // Opponent paddle — left side, pink
@@ -1392,7 +1393,7 @@ function startRenderLoop() {
         const track = document.getElementById("pong-slider-track");
         const thumb = document.getElementById("pong-slider-thumb");
         if (track && thumb && track.offsetHeight > 0) {
-          const myY    = localPaddleY;
+          const myY    = myRole === "left" ? gameState.paddles.left : gameState.paddles.right;
           const ratio  = myY / (H - PADDLE_H);
           const thumbH = thumb.offsetHeight;
           const trackH = track.offsetHeight;
@@ -1916,11 +1917,39 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
 
 socket.on("webrtc_offer", async ({ offer }) => {
   if (!peerConn) await startPeerConnection(false);
+
+  // Add our local tracks before answering so the initiator's ontrack fires.
+  // If camera isn't ready yet, add tracks and renegotiate once it arrives.
+  function addTracksForAnswer() {
+    if (!localStream) return false;
+    const senders = peerConn.getSenders();
+    localStream.getTracks().forEach(track => {
+      if (!senders.find(s => s.track === track)) peerConn.addTrack(track, localStream);
+    });
+    return true;
+  }
+  addTracksForAnswer();
+
   await peerConn.setRemoteDescription(new RTCSessionDescription(offer));
   const answer = await peerConn.createAnswer();
   await peerConn.setLocalDescription(answer);
   socket.emit("webrtc_answer", { roomId, answer });
-  if (dbg) dbg.textContent = "sent answer";
+
+  // If camera wasn't ready, renegotiate as soon as it is
+  if (!localStream) {
+    const waitForCamAnswer = setInterval(() => {
+      if (!localStream) return;
+      clearInterval(waitForCamAnswer);
+      addTracksForAnswer();
+      if (peerConn.signalingState === "stable") {
+        peerConn.createOffer()
+          .then(o => peerConn.setLocalDescription(o))
+          .then(() => socket.emit("webrtc_offer", { roomId, offer: peerConn.localDescription }))
+          .catch(() => {});
+      }
+    }, 300);
+    setTimeout(() => clearInterval(waitForCamAnswer), 30000);
+  }
 });
 
 socket.on("webrtc_answer", async ({ answer }) => {
