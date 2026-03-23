@@ -1815,6 +1815,7 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
     }
     // Helper: assign stream and force play
     const assignRemote = (stream) => {
+      window._remoteStream = stream;
       ["video-remote", "video-mobile-remote"].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -1825,15 +1826,29 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
     };
     if (window._remoteStream) {
       assignRemote(window._remoteStream);
-    } else {
-      // Poll until stream arrives (WebRTC may still be negotiating)
-      const waitForRemote = setInterval(() => {
-        if (window._remoteStream) {
-          clearInterval(waitForRemote);
-          assignRemote(window._remoteStream);
-        }
-      }, 200);
-      setTimeout(() => clearInterval(waitForRemote), 20000);
+    } else if (peerConn) {
+      // Try to get stream directly from peer connection receivers
+      const receivers = peerConn.getReceivers();
+      const videoReceiver = receivers.find(r => r.track && r.track.kind === "video");
+      if (videoReceiver) {
+        const s = new MediaStream([videoReceiver.track]);
+        assignRemote(s);
+      } else {
+        // Poll until stream arrives
+        const waitForRemote = setInterval(() => {
+          if (window._remoteStream) {
+            clearInterval(waitForRemote);
+            assignRemote(window._remoteStream);
+          } else if (peerConn) {
+            const rcv = peerConn.getReceivers().find(r => r.track && r.track.kind === "video");
+            if (rcv) {
+              clearInterval(waitForRemote);
+              assignRemote(new MediaStream([rcv.track]));
+            }
+          }
+        }, 200);
+        setTimeout(() => clearInterval(waitForRemote), 20000);
+      }
     }
 
     if (currentGame !== "fourdots" && currentGame !== "raid" && currentGame !== "reaction") {
