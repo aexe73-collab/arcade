@@ -1794,8 +1794,8 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 12px 0;
+  gap: 8px;
+  padding: 16px 0 8px;
   touch-action: none;
   width: 100%;
 }
@@ -1806,13 +1806,6 @@ body {
 
 @media (max-width: 768px) {
   .controls-hint { display: none; }
-}
-
-.pong-slider-label {
-  font-family: var(--pixel);
-  font-size: 7px;
-  color: var(--muted);
-  letter-spacing: 2px;
 }
 
 .pong-slider-track {
