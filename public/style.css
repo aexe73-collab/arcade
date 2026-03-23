@@ -1003,6 +1003,7 @@ body {
   overflow: hidden;
   background: var(--bg2);
   align-self: stretch;
+  height: 100%;
 }
 
 .side-panel video {
