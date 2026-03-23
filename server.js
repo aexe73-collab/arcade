@@ -122,26 +122,18 @@ const waitingQueues = { pong: null, snake: null, reaction: null, raid: null, fou
 const rooms = new Map();
 
 // ── Friend rooms (persistent) ─────────────────────────────────────
-const friendRooms = new Map(); // code → { players, createdAt, expiresAt, closed, owner, ownerUserId }
-const userLobbies = new Map();  // userId → roomCode (one active lobby per signed-in user)
+const friendRooms = new Map(); // code → { players, createdAt, expiresAt, closed }
 
 function cleanOldFriendRooms() {
   const now = Date.now();
   for (const [code, room] of friendRooms) {
-    if (room.closed || now > room.expiresAt) {
-      if (room.ownerUserId) userLobbies.delete(room.ownerUserId);
-      friendRooms.delete(code);
-    }
+    if (room.closed || now > room.expiresAt) friendRooms.delete(code);
   }
 }
-setInterval(cleanOldFriendRooms, 30 * 60 * 1000);
+setInterval(cleanOldFriendRooms, 24 * 60 * 60 * 1000); // clean daily
 
 function generateRoomId() {
   return Math.random().toString(36).substring(2, 9);
-}
-
-function generateFriendCode() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
 // ── 4 Dots state ──────────────────────────────────────────────────
@@ -339,63 +331,27 @@ io.on("connection", (socket) => {
   socket.on("friend_avatar", ({ code, avatar })    => socket.to("f_" + code.toUpperCase()).emit("friend_avatar", { avatar }));
 
   // ── Friend room: create or join ──────────────────────────────────
-  // For signed-in users (userId present): server is the source of truth for the code.
-  // For guests (no userId): use the client-supplied code (joining via link).
-  socket.on("friend_join", ({ code, userId }) => {
-    const TWO_HOURS = 2 * 60 * 60 * 1000;
+  socket.on("friend_join", ({ code }) => {
+    code = code.toUpperCase().trim();
+    let froom = friendRooms.get(code);
+    const TWO_HOURS = 7 * 24 * 60 * 60 * 1000; // 7 days — matches weekly code rotation
     const now = Date.now();
 
-    // ── Signed-in owner: server assigns the canonical code ────────────
-    if (userId) {
-      const existingCode = userLobbies.get(userId);
-
-      if (existingCode) {
-        // They already have a lobby — reconnect them to it
-        const froom = friendRooms.get(existingCode);
-        if (froom && !froom.closed && now <= froom.expiresAt) {
-          froom.players = froom.players.filter(id => io.sockets.sockets.has(id));
-          if (!froom.players.includes(socket.id)) froom.players.unshift(socket.id);
-          socket.join("f_" + existingCode);
-          if (froom.players.length >= 2) {
-            io.to(froom.players[0]).emit("friend_connected", { code: existingCode, initiator: true });
-            io.to(froom.players[1]).emit("friend_connected", { code: existingCode, initiator: false });
-          } else {
-            socket.emit("friend_waiting", { code: existingCode });
-          }
-          console.log(`[lobby] User ${userId} reconnected to existing lobby ${existingCode}`);
-          return;
-        }
-        // Existing lobby expired/closed — clean it up
-        userLobbies.delete(userId);
-        if (froom) friendRooms.delete(existingCode);
-      }
-
-      // Create a fresh lobby with a server-generated code
-      const newCode = generateFriendCode();
-      const froom = { players: [socket.id], createdAt: now, expiresAt: now + TWO_HOURS, owner: socket.id, ownerUserId: userId, closed: false };
-      friendRooms.set(newCode, froom);
-      userLobbies.set(userId, newCode);
-      socket.join("f_" + newCode);
-      socket.emit("friend_waiting", { code: newCode });
-      console.log(`[lobby] Created lobby ${newCode} for user ${userId}`);
+    if (!froom) {
+      froom = { players: [socket.id], createdAt: now, expiresAt: now + TWO_HOURS, owner: socket.id, closed: false };
+      friendRooms.set(code, froom);
+      socket.join("f_" + code);
+      socket.emit("friend_waiting", { code });
       return;
     }
 
-    // ── Guest / friend joining via link: use the supplied code ───────
-    if (!code) return;
-    code = code.toUpperCase().trim();
-
-    let froom = friendRooms.get(code);
-
-    if (!froom || froom.closed || now > froom.expiresAt) {
+    if (froom.closed || now > froom.expiresAt) {
       socket.emit("friend_room_full");
       return;
     }
 
-    // Prune disconnected players
     froom.players = froom.players.filter(id => io.sockets.sockets.has(id));
 
-    // Already in the room (reconnect / page refresh)
     if (froom.players.includes(socket.id)) {
       socket.join("f_" + code);
       if (froom.players.length === 2) {
@@ -409,13 +365,12 @@ io.on("connection", (socket) => {
 
     if (froom.players.length === 0) {
       froom.players = [socket.id];
-      froom.owner = socket.id;
       socket.join("f_" + code);
       socket.emit("friend_waiting", { code });
     } else if (froom.players.length === 1) {
       froom.players.push(socket.id);
       socket.join("f_" + code);
-      froom.expiresAt = now + TWO_HOURS;
+      froom.expiresAt = now + TWO_HOURS; // refresh expiry when friend joins
       io.to(froom.players[0]).emit("friend_connected", { code, initiator: true });
       io.to(froom.players[1]).emit("friend_connected", { code, initiator: false });
     } else {
@@ -441,10 +396,7 @@ io.on("connection", (socket) => {
     const c = code.toUpperCase();
     io.to("f_" + c).emit("friend_room_closed");
     const froom = friendRooms.get(c);
-    if (froom) {
-      froom.closed = true;
-      if (froom.ownerUserId) userLobbies.delete(froom.ownerUserId);
-    }
+    if (froom) froom.closed = true;
     friendRooms.delete(c);
   });
 
@@ -710,41 +662,24 @@ function startPongLoop(roomId) {
   if (room.gameLoop) clearInterval(room.gameLoop);
 
   const W = 800, H = 400, PH = 80, BS = 10, WIN = 5, INC = 0.6, MAX_SPEED = 18;
-  // Paddle face x-positions
-  const LEFT_FACE = 42, RIGHT_FACE = W - 42;
 
   room.gameLoop = setInterval(() => {
     if (!room.gameState.running) return;
     const gs = room.gameState;
     const b  = gs.ball;
 
-    const prevX = b.x;
     b.x += b.vx; b.y += b.vy;
 
-    // Top/bottom wall bounce — clamp to prevent sticking
-    if (b.y <= 0)        { b.vy = Math.abs(b.vy);  b.y = 0; }
-    if (b.y >= H - BS)   { b.vy = -Math.abs(b.vy); b.y = H - BS; }
+    if (b.y <= 0 || b.y >= H - BS) { b.vy *= -1; b.y = b.y <= 0 ? 0 : H - BS; }
 
-    // Sweep-based paddle collision — catches fast-moving ball that skips the zone
-    // Left paddle: ball moving left and crossed the paddle face this tick
-    if (b.vx < 0 && prevX > LEFT_FACE && b.x <= LEFT_FACE) {
-      const ballMid = b.y + BS / 2;
-      if (ballMid >= gs.paddles.left && ballMid <= gs.paddles.left + PH) {
-        b.x  = LEFT_FACE; // push ball back to face
-        b.vx = Math.min(Math.abs(b.vx) + INC, MAX_SPEED);
-        b.vy = ((ballMid - gs.paddles.left) / PH - 0.5) * 10;
-      }
+    if (b.x <= 42 && b.x >= 30 && b.y + BS >= gs.paddles.left && b.y <= gs.paddles.left + PH) {
+      b.vx = Math.min(Math.abs(b.vx) + INC, MAX_SPEED);
+      b.vy = ((b.y - gs.paddles.left) / PH - 0.5) * 10;
     }
-    // Right paddle: ball moving right and crossed the paddle face this tick
-    if (b.vx > 0 && prevX < RIGHT_FACE && b.x >= RIGHT_FACE) {
-      const ballMid = b.y + BS / 2;
-      if (ballMid >= gs.paddles.right && ballMid <= gs.paddles.right + PH) {
-        b.x  = RIGHT_FACE; // push ball back to face
-        b.vx = -Math.min(Math.abs(b.vx) + INC, MAX_SPEED);
-        b.vy = ((ballMid - gs.paddles.right) / PH - 0.5) * 10;
-      }
+    if (b.x >= W-42 && b.x <= W-30 && b.y + BS >= gs.paddles.right && b.y <= gs.paddles.right + PH) {
+      b.vx = -Math.min(Math.abs(b.vx) + INC, MAX_SPEED);
+      b.vy = ((b.y - gs.paddles.right) / PH - 0.5) * 10;
     }
-
     if (b.x < 0) {
       gs.scores.right++;
       if (gs.scores.right >= WIN) { endGame(roomId, "right"); return; }
