@@ -1299,6 +1299,19 @@ const CELL_W = W / 40, CELL_H = H / 20;
 
 // ── Pong render ───────────────────────────────────────────────────
 function drawPong(gs) {
+  ctx.save();
+
+  // Mirror the canvas for the "left" role player so everyone always sees:
+  //   their own paddle on the RIGHT, opponent paddle on the LEFT.
+  // The server uses x=0 (left) for the left player's goal and x=800 for the right
+  // player's goal. A left-role player's raw ball x increases toward the opponent —
+  // so without mirroring, the ball appears to move in the opposite direction to what
+  // you'd expect (toward "your" side of screen when it's actually heading away).
+  if (myRole === "left") {
+    ctx.translate(W, 0);
+    ctx.scale(-1, 1);
+  }
+
   ctx.fillStyle = "#0a0a0f";
   ctx.fillRect(0, 0, W, H);
   ctx.setLineDash([8,12]);
@@ -1307,17 +1320,17 @@ function drawPong(gs) {
   ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke();
   ctx.setLineDash([]);
 
-  // YOUR panel is always on the RIGHT, so draw YOUR paddle on the RIGHT
-  // Opponent panel is always on the LEFT, so their paddle is on the LEFT
-  // Use server-authoritative paddle positions for rendering — this keeps the visual
-  // paddle aligned with where collision actually happens on the server.
+  // After mirroring, server coordinates map correctly:
+  // role="right": no mirror — your paddle is at x=758 (right), opponent at x=30 (left). ✓
+  // role="left":  mirrored — your paddle at server x=30 now renders on the right. ✓
+  // Ball x coordinate is also mirrored automatically. ✓
   const myPaddleY   = myRole === "left" ? gs.paddles.left  : gs.paddles.right;
   const themPaddleY = myRole === "left" ? gs.paddles.right : gs.paddles.left;
 
-  // Opponent paddle — left side, pink
+  // Opponent paddle — drawn at left-side server position, appears on LEFT after transform
   ctx.fillStyle = "#ff3366";
   ctx.fillRect(30, themPaddleY, PADDLE_W, PADDLE_H);
-  // Your paddle — right side, green
+  // Your paddle — drawn at right-side server position, appears on RIGHT after transform
   ctx.fillStyle = "#00ff88";
   ctx.fillRect(W - 30 - PADDLE_W, myPaddleY, PADDLE_W, PADDLE_H);
 
@@ -1331,6 +1344,8 @@ function drawPong(gs) {
   ctx.fillRect(gs.ball.x, gs.ball.y, BALL_SIZE, BALL_SIZE);
   ctx.fillStyle = "rgba(255,255,255,0.07)";
   ctx.fillRect(gs.ball.x-4, gs.ball.y-4, BALL_SIZE+8, BALL_SIZE+8);
+
+  ctx.restore();
 }
 
 // ── Snake render ──────────────────────────────────────────────────
@@ -1598,9 +1613,10 @@ function updateScoreDisplay(scores) {
   const my   = myRole === "left" ? scores.left  : scores.right;
   const them = myRole === "left" ? scores.right : scores.left;
 
-  // Mobile score bar
-  document.getElementById("score-left").textContent  = my;
-  document.getElementById("score-right").textContent = them;
+  // Mobile score bar — after canvas mirror, YOUR side is always on the right of the screen.
+  // score-left = opponent side (left of screen), score-right = your side (right of screen).
+  document.getElementById("score-left").textContent  = them;
+  document.getElementById("score-right").textContent = my;
 
   // Desktop side panels
   document.getElementById("panel-score-you").textContent  = my;
