@@ -694,30 +694,34 @@ function startPongLoop(roomId) {
     if (b.y <= 0 || b.y >= H - BS) { b.vy *= -1; b.y = b.y <= 0 ? 0 : H - BS; }
 
     // Left paddle — ball moving left and crossing paddle face
-    if (b.vx < 0 && prevX >= PADDLE_X_L + 12 && b.x <= PADDLE_X_L + 12) {
+    // Use strict > on prevX so a ball already at the face doesn't re-trigger next tick
+    if (b.vx < 0 && prevX > PADDLE_X_L + 12 && b.x <= PADDLE_X_L + 12) {
       if (b.y + BS >= gs.paddles.left && b.y <= gs.paddles.left + PH) {
-        b.x = PADDLE_X_L + 12; // push ball out of paddle
+        b.x = PADDLE_X_L + 13; // push ball 1px clear of paddle face to prevent double-hit
         b.vx = Math.min(Math.abs(b.vx) + INC, MAX_SPEED);
         b.vy = ((b.y + BS/2 - (gs.paddles.left + PH/2)) / (PH/2)) * 8;
       }
     }
     // Right paddle — ball moving right and crossing paddle face
-    if (b.vx > 0 && prevX + BS <= PADDLE_X_R && b.x + BS >= PADDLE_X_R) {
+    // Use strict < on prevX+BS so a ball already at the face doesn't re-trigger next tick
+    if (b.vx > 0 && prevX + BS < PADDLE_X_R && b.x + BS >= PADDLE_X_R) {
       if (b.y + BS >= gs.paddles.right && b.y <= gs.paddles.right + PH) {
-        b.x = PADDLE_X_R - BS; // push ball out of paddle
+        b.x = PADDLE_X_R - BS - 1; // push ball 1px clear of paddle face to prevent double-hit
         b.vx = -Math.min(Math.abs(b.vx) + INC, MAX_SPEED);
         b.vy = ((b.y + BS/2 - (gs.paddles.right + PH/2)) / (PH/2)) * 8;
       }
     }
     if (b.x < 0) {
+      // Ball left the left side — right player scores; serve toward left (the conceding side)
       gs.scores.right++;
       if (gs.scores.right >= WIN) { endGame(roomId, "right"); return; }
-      gs.ball = { x:400, y:200, vx:7, vy:(Math.random()-0.5)*6 };
+      gs.ball = { x:400, y:200, vx:-7, vy:(Math.random()-0.5)*6 };
     }
     if (b.x > W) {
+      // Ball left the right side — left player scores; serve toward right (the conceding side)
       gs.scores.left++;
       if (gs.scores.left >= WIN) { endGame(roomId, "left"); return; }
-      gs.ball = { x:400, y:200, vx:-7, vy:(Math.random()-0.5)*6 };
+      gs.ball = { x:400, y:200, vx:7, vy:(Math.random()-0.5)*6 };
     }
     io.to(roomId).emit("game_state", { gameState: gs });
   }, 1000 / 30);
