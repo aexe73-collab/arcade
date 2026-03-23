@@ -980,7 +980,7 @@ body {
 
 /* Side video panels */
 .side-panel {
-  width: clamp(200px, 25vw, 400px);
+  width: clamp(160px, 20vw, 320px);
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
@@ -993,6 +993,7 @@ body {
   object-fit: cover;
 }
 
+/* panel-them is always LEFT, panel-you is always RIGHT */
 .panel-them { border-right: 4px solid var(--accent2); }
 .panel-you  { border-left:  4px solid var(--accent); }
 .panel-you video { transform: scaleX(-1); }
