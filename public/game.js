@@ -1138,15 +1138,24 @@ document.getElementById("pick-reaction").addEventListener("click", () => {
 function startCountdown(onComplete) {
   showScreen("screen-faceoff");
 
-  // Always force-assign streams on every countdown (first match + rematch)
+  // Always force-assign local stream immediately
   if (localStream) {
     const lv = document.getElementById("video-faceoff-local");
-    if (lv) lv.srcObject = localStream;
+    if (lv) { lv.srcObject = localStream; lv.play().catch(() => {}); }
   }
-  if (window._remoteStream) {
-    const rv = document.getElementById("video-faceoff-remote");
-    if (rv) rv.srcObject = window._remoteStream;
+  // Assign remote now if ready; otherwise poll during the countdown.
+  // ontrack can fire at any point during the 10s — we must not miss it.
+  const rv = document.getElementById("video-faceoff-remote");
+  if (window._remoteStream && rv) {
+    rv.srcObject = window._remoteStream;
+    rv.play().catch(() => {});
   }
+  const faceoffRemotePoller = setInterval(() => {
+    if (window._remoteStream && rv && !rv.srcObject) {
+      rv.srcObject = window._remoteStream;
+      rv.play().catch(() => {});
+    }
+  }, 250);
 
   let count = 10;
   const el = document.getElementById("countdown-number");
@@ -1157,6 +1166,7 @@ function startCountdown(onComplete) {
     count--;
     if (count <= 0) {
       clearInterval(tick);
+      clearInterval(faceoffRemotePoller);
       el.textContent = "GO!";
       el.style.color = "#ff3366";
       setTimeout(onComplete, 700);
@@ -1192,36 +1202,71 @@ const ICE_SERVERS = {
 
 // remote stream assigned directly in ontrack
 
+// Assign all remote video elements from a stream and force play
+function assignRemoteStream(s) {
+  window._remoteStream = s;
+  ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.srcObject = s; el.play().catch(() => {}); }
+  });
+}
+
 async function startPeerConnection(isInitiator) {
   peerConn = new RTCPeerConnection(ICE_SERVERS);
-  if (localStream) localStream.getTracks().forEach(t => peerConn.addTrack(t, localStream));
+
+  // Add local tracks now if camera is ready, otherwise wait for it and add then.
+  // This handles the case where the user hasn't granted camera permission yet when
+  // match_found fires — without tracks in the offer the opponent's ontrack never fires.
+  function addLocalTracks() {
+    if (!localStream) return;
+    const senders = peerConn.getSenders();
+    localStream.getTracks().forEach(track => {
+      if (!senders.find(s => s.track === track)) {
+        peerConn.addTrack(track, localStream);
+      }
+    });
+  }
+  addLocalTracks();
+
+  // If camera isn't ready yet, poll until it is and then renegotiate
+  if (!localStream) {
+    const waitForCam = setInterval(() => {
+      if (!localStream) return;
+      clearInterval(waitForCam);
+      addLocalTracks();
+      // Renegotiate so the opponent gets our video track
+      if (isInitiator && peerConn.signalingState === "stable") {
+        peerConn.createOffer().then(offer => {
+          return peerConn.setLocalDescription(offer);
+        }).then(() => {
+          socket.emit("webrtc_offer", { roomId, offer: peerConn.localDescription });
+        }).catch(() => {});
+      }
+    }, 300);
+    // Give up after 30s
+    setTimeout(() => clearInterval(waitForCam), 30000);
+  }
 
   peerConn.ontrack = (event) => {
     const s = event.streams[0];
-    window._remoteStream = s;
-    // Assign to ALL remote video elements immediately
-    ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.srcObject = s;
-        el.play().catch(() => {});
-      }
-    });
     console.log("[WebRTC] ontrack fired, stream tracks:", s.getTracks().length);
+    assignRemoteStream(s);
   };
 
   peerConn.oniceconnectionstatechange = () => {
     const state = peerConn.iceConnectionState;
     console.log("[WebRTC] ICE state:", state);
-    if ((state === "connected" || state === "completed") && window._remoteStream) {
-      // Re-assign and force play on all remote elements
-      ["video-remote","video-faceoff-remote","video-mobile-remote","video-postgame-remote"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-          if (!el.srcObject) el.srcObject = window._remoteStream;
-          el.play().catch(() => {});
-        }
-      });
+    // Re-assign on connect regardless of whether _remoteStream was set at ICE time —
+    // ontrack and oniceconnectionstatechange can fire in either order.
+    if (state === "connected" || state === "completed") {
+      if (window._remoteStream) {
+        assignRemoteStream(window._remoteStream);
+      } else if (peerConn) {
+        // ontrack hasn't fired yet — wait a moment and retry
+        setTimeout(() => {
+          if (window._remoteStream) assignRemoteStream(window._remoteStream);
+        }, 500);
+      }
     }
   };
 
@@ -1242,6 +1287,12 @@ async function sendOffer() {} // no-op, kept for compatibility
 const W = 800, H = 400;
 const PADDLE_W = 12, PADDLE_H = 80, BALL_SIZE = 10;
 const CELL_W = W / 40, CELL_H = H / 20;
+
+// ── Pong ball interpolation ───────────────────────────────────────
+// We render at ~60fps but the server sends state at 30fps.
+// Interpolate the ball forward using the last known velocity so it
+// never visually freezes or snaps through a paddle between ticks.
+let _ballInterp = { x: 400, y: 200, vx: 7, vy: 5, lastUpdate: 0 };
 
 // ── Pong render ───────────────────────────────────────────────────
 function drawPong(gs) {
@@ -1272,10 +1323,19 @@ function drawPong(gs) {
   ctx.setLineDash([]);
   ctx.strokeRect(1, 1, W - 2, H - 2);
 
+  // Interpolate ball position between server ticks (server runs at 30fps, we render at ~60fps).
+  // Cap extrapolation to one server tick (33ms) to avoid the ball visually overshooting on lag spikes.
+  const msSinceUpdate = Math.min(performance.now() - _ballInterp.lastUpdate, 33);
+  const secElapsed    = msSinceUpdate / 1000;
+  // Server runs the loop at 30fps — scale velocity (px/tick) to px/sec for interpolation
+  const TICK_RATE = 30;
+  const bx = _ballInterp.x + _ballInterp.vx * TICK_RATE * secElapsed;
+  const by = _ballInterp.y + _ballInterp.vy * TICK_RATE * secElapsed;
+
   ctx.fillStyle = "#ffffff";
-  ctx.fillRect(gs.ball.x, gs.ball.y, BALL_SIZE, BALL_SIZE);
+  ctx.fillRect(bx, by, BALL_SIZE, BALL_SIZE);
   ctx.fillStyle = "rgba(255,255,255,0.07)";
-  ctx.fillRect(gs.ball.x-4, gs.ball.y-4, BALL_SIZE+8, BALL_SIZE+8);
+  ctx.fillRect(bx-4, by-4, BALL_SIZE+8, BALL_SIZE+8);
 }
 
 // ── Snake render ──────────────────────────────────────────────────
@@ -1822,41 +1882,28 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
         if (el) { el.srcObject = localStream; el.play().catch(() => {}); }
       });
     }
-    // Helper: assign stream and force play
-    const assignRemote = (stream) => {
-      window._remoteStream = stream;
-      ["video-remote", "video-mobile-remote"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-          el.srcObject = stream;
-          el.play().catch(() => {});
-        }
-      });
-    };
+    // Assign remote stream — try immediately, then poll until it arrives.
+    // assignRemoteStream covers all remote video elements (game + faceoff + mobile + postgame).
     if (window._remoteStream) {
-      assignRemote(window._remoteStream);
+      assignRemoteStream(window._remoteStream);
     } else if (peerConn) {
-      // Try to get stream directly from peer connection receivers
-      const receivers = peerConn.getReceivers();
-      const videoReceiver = receivers.find(r => r.track && r.track.kind === "video");
-      if (videoReceiver) {
-        const s = new MediaStream([videoReceiver.track]);
-        assignRemote(s);
+      const rcv = peerConn.getReceivers().find(r => r.track && r.track.kind === "video");
+      if (rcv) {
+        assignRemoteStream(new MediaStream([rcv.track]));
       } else {
-        // Poll until stream arrives
         const waitForRemote = setInterval(() => {
           if (window._remoteStream) {
             clearInterval(waitForRemote);
-            assignRemote(window._remoteStream);
+            assignRemoteStream(window._remoteStream);
           } else if (peerConn) {
-            const rcv = peerConn.getReceivers().find(r => r.track && r.track.kind === "video");
-            if (rcv) {
+            const rcv2 = peerConn.getReceivers().find(r => r.track && r.track.kind === "video");
+            if (rcv2) {
               clearInterval(waitForRemote);
-              assignRemote(new MediaStream([rcv.track]));
+              assignRemoteStream(new MediaStream([rcv2.track]));
             }
           }
         }, 200);
-        setTimeout(() => clearInterval(waitForRemote), 20000);
+        setTimeout(() => clearInterval(waitForRemote), 30000);
       }
     }
 
@@ -1898,6 +1945,10 @@ socket.on("game_start", ({ gameState: gs }) => {
 socket.on("game_state", ({ gameState: gs }) => {
   gameState = gs;
   if (gs.scores) updateScoreDisplay(gs.scores);
+  // Sync interpolation state with every authoritative server update
+  if (gs.game === "pong" && gs.ball) {
+    _ballInterp = { ...gs.ball, lastUpdate: performance.now() };
+  }
 });
 
 socket.on("game_over", ({ winner, scores }) => {
