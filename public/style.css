@@ -996,7 +996,7 @@ body {
 
 /* Side video panels */
 .side-panel {
-  width: clamp(240px, 30vw, 480px);
+  width: clamp(300px, 35vw, 560px);
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
@@ -1093,11 +1093,7 @@ body {
 }
 
 .controls-hint {
-  text-align: center;
-  font-size: 11px;
-  color: var(--muted);
-  letter-spacing: 1px;
-  padding: 4px 0 8px;
+  display: none;
 }
 
 .hint-sep { color: var(--border); }
