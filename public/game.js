@@ -1351,6 +1351,25 @@ function setupGameUI(game) {
   if (bannerGame)      bannerGame.textContent      = gameName;
   if (bannerGameFixed) bannerGameFixed.textContent = gameName;
 
+  // Swap panel sides so YOUR camera is always adjacent to YOUR paddle
+  // myRole="left" → your paddle is LEFT → your panel should be LEFT
+  // myRole="right" → your paddle is RIGHT → your panel should be RIGHT
+  const gameArea = document.querySelector(".game-area");
+  const panelThem = document.querySelector(".panel-them");
+  const panelYou  = document.querySelector(".panel-you");
+  const canvasWrap = document.querySelector(".canvas-wrap");
+  if (gameArea && panelThem && panelYou && canvasWrap) {
+    if (myRole === "left") {
+      // YOU on left, THEM on right
+      gameArea.insertBefore(panelYou,  gameArea.firstChild);
+      gameArea.appendChild(panelThem);
+    } else {
+      // YOU on right, THEM on left (default HTML order)
+      gameArea.insertBefore(panelThem, gameArea.firstChild);
+      gameArea.appendChild(panelYou);
+    }
+  }
+
   if (game === "reaction") {
     canvas.style.display      = "none";
     reactionUI.style.display  = "flex";
@@ -1780,19 +1799,30 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
     setupGameUI(currentGame);
     showScreen("screen-game");
 
-    // Explicitly assign streams to all game screen video elements
-    // Fixes initial match where WebRTC may have fired before these elements were active
+    // Force-assign all streams every time game screen shows (handles first match + rematch)
     if (localStream) {
       ["video-local", "video-mobile-local"].forEach(id => {
         const el = document.getElementById(id);
-        if (el && el.srcObject !== localStream) el.srcObject = localStream;
+        if (el) el.srcObject = localStream;
       });
     }
     if (window._remoteStream) {
       ["video-remote", "video-mobile-remote"].forEach(id => {
         const el = document.getElementById(id);
-        if (el && el.srcObject !== window._remoteStream) el.srcObject = window._remoteStream;
+        if (el) el.srcObject = window._remoteStream;
       });
+    } else {
+      // No remote stream yet — retry when it arrives
+      const waitForRemote = setInterval(() => {
+        if (window._remoteStream) {
+          clearInterval(waitForRemote);
+          ["video-remote", "video-mobile-remote"].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.srcObject = window._remoteStream;
+          });
+        }
+      }, 300);
+      setTimeout(() => clearInterval(waitForRemote), 15000);
     }
 
     if (currentGame !== "fourdots" && currentGame !== "raid" && currentGame !== "reaction") {
