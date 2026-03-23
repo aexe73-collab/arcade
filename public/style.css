@@ -1064,7 +1064,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: stretch;
+  justify-content: center;
   background: var(--bg);
   gap: 0;
   min-width: 0;
@@ -1086,11 +1086,10 @@ body {
 #pong-canvas {
   display: block;
   width: 100%;
-  height: 100%;
-  max-width: 100%;
+  height: auto;
   max-height: 100%;
-  object-fit: contain;
   image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .controls-hint {
@@ -2019,6 +2018,9 @@ body {
 }
 
 .banner-url { display: none; }
+
+/* banner-game-fixed only used on mobile — hide on desktop */
+.banner-game-fixed { display: none; }
 
 /* ── Share card ────────────────────────────────────────── */
 .share-card {
