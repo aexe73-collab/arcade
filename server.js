@@ -621,8 +621,20 @@ io.on("connection", (socket) => {
       room.rematchCount = 0;
       room.readyCount   = 0;
       room.cameraReady  = 0;
-      if (room.gameLoop) clearInterval(room.gameLoop);
-      io.to(roomId).emit("go_to_picker");
+      if (room.gameLoop)      clearInterval(room.gameLoop);
+      if (room.turnTimer)     clearTimeout(room.turnTimer);
+      if (room.reactionTimer) clearTimeout(room.reactionTimer);
+      // Restart same game — reset state and re-emit match_found
+      const game = room.gameState.game;
+      const gameState = game === "snake"     ? createSnakeState()
+                      : game === "reaction"  ? createReactionState()
+                      : game === "raid"      ? createRaidState()
+                      : game === "fourdots"  ? createFourDotsState()
+                      : createPongState();
+      room.gameState = gameState;
+      // Tell each player their role again and restart
+      io.to(room.players[0]).emit("match_found", { roomId, role: "left",  game });
+      io.to(room.players[1]).emit("match_found", { roomId, role: "right", game });
     } else {
       socket.to(roomId).emit("opponent_wants_rematch");
     }
