@@ -987,24 +987,22 @@ body {
   letter-spacing: 2px;
 }
 
-/* Three-column game area */
+/* Three-column game area — CSS grid for reliable sizing */
 .game-area {
   flex: 1;
-  display: flex;
-  align-items: stretch;
-  overflow: hidden;
+  display: grid;
+  grid-template-columns: 28vw 1fr 28vw;
+  grid-template-rows: 1fr;
   min-height: 0;
+  overflow: hidden;
 }
 
-/* Side video panels — fixed ratio of screen width */
+/* Side video panels */
 .side-panel {
-  width: 28vw;
-  min-width: 220px;
-  max-width: 480px;
-  flex-shrink: 0;
   position: relative;
   overflow: hidden;
   background: var(--bg2);
+  min-width: 0;
 }
 
 .side-panel video {
@@ -1065,15 +1063,14 @@ body {
 
 /* Canvas centre column */
 .canvas-wrap {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   background: var(--bg);
-  gap: 0;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .desktop-score { display: none; }
@@ -1113,6 +1110,7 @@ body {
   .faceoff-centre    { flex-direction: row; min-width: unset; min-height: 64px; padding: 8px 16px; gap: 10px; }
   .faceoff-hint      { display: none; }
   .side-panel        { display: none; }
+  .game-area         { display: flex; flex-direction: column; }
   .desktop-score     { display: none; }
   .score-bar         { display: flex; }
   .canvas-wrap       { justify-content: flex-start; align-items: center; padding-top: 8px; }
