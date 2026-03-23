@@ -334,10 +334,44 @@ function updateLobbyOwnerUI() {
   }
 }
 
+// ── Weekly friend code generation ────────────────────────────────
+function getWeeklyCode() {
+  // Week number: days since a fixed epoch ÷ 7, Monday-anchored
+  const now  = new Date();
+  // Shift so week starts Monday (JS getDay: 0=Sun, 1=Mon...6=Sat)
+  const day  = (now.getUTCDay() + 6) % 7; // 0=Mon, 6=Sun
+  const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - day));
+  const weekNum = Math.floor(monday.getTime() / (7 * 24 * 60 * 60 * 1000));
+
+  // Seed: user ID (signed in) or device fingerprint (guest)
+  const seed = currentUser
+    ? currentUser.id + "_" + weekNum
+    : (sessionStorage.getItem("af_guest_seed") || (() => {
+        const s = Math.random().toString(36).substring(2, 10);
+        sessionStorage.setItem("af_guest_seed", s);
+        return s;
+      })()) + "_" + weekNum;
+
+  // Deterministic hash → 6 uppercase alphanum chars
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash + seed.charCodeAt(i)) >>> 0;
+  }
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no confusables (0,O,I,1)
+  let code = "";
+  let h = hash;
+  for (let i = 0; i < 6; i++) {
+    code += chars[h % chars.length];
+    h = Math.floor(h / chars.length) + (hash >>> (i * 4));
+    h = (h ^ (hash * 1234567)) >>> 0;
+  }
+  return code;
+}
+
 function enterFriendLobby(code) {
   if (!code) {
     const params = new URLSearchParams(window.location.search);
-    code = params.get("friend") || Math.random().toString(36).substring(2, 8).toUpperCase();
+    code = params.get("friend") || getWeeklyCode();
   }
   friendCode = code;
   // Creator is whoever has no ?friend= param when creating — tracked by server
