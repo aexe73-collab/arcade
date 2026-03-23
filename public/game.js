@@ -608,10 +608,9 @@ function stopCamera() {
   if (!localStream) return;
   localStream.getTracks().forEach(track => track.stop());
   localStream = null;
-  // Clear all video elements
+  // Only clear LOCAL video elements — never touch remote video
   ["video-local","video-faceoff-local","video-mobile-local",
-   "video-postgame-local","video-friend-local","video-friend-remote",
-   "video-remote"].forEach(id => {
+   "video-postgame-local","video-friend-local"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.srcObject = null;
   });
