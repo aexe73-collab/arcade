@@ -576,21 +576,7 @@
           <div class="controls-hint" id="controls-hint">
             <span>W / S &nbsp;&mdash;&nbsp; move paddle</span>
           </div>
-          <div class="pong-slider-wrap" id="pong-slider-wrap">
-            <div class="pong-slider-label">DRAG TO MOVE</div>
-            <div class="pong-slider-track" id="pong-slider-track">
-              <div class="pong-slider-thumb" id="pong-slider-thumb"></div>
-            </div>
-          </div>
-          <div class="mobile-footer">
-            <div class="mobile-footer-logo">ARCADE<span>FACE</span></div>
-            <div class="mobile-footer-balls">
-              <div class="mf-ball b1"></div>
-              <div class="mf-ball b2"></div>
-              <div class="mf-ball b3"></div>
-            </div>
-          </div>
-        </div>
+        </div><!-- end canvas-wrap -->
 
         <div class="side-panel panel-you">
           <video id="video-local" autoplay muted playsinline></video>
@@ -599,6 +585,14 @@
           <div class="panel-score" id="panel-score-you">0</div>
         </div>
 
+      </div><!-- end game-area -->
+
+      <!-- Pong slider — lives outside game-area so it spans full screen width -->
+      <div class="pong-slider-wrap" id="pong-slider-wrap">
+        <div class="pong-slider-label">DRAG TO MOVE</div>
+        <div class="pong-slider-track" id="pong-slider-track">
+          <div class="pong-slider-thumb" id="pong-slider-thumb"></div>
+        </div>
       </div>
     </div>
     <!-- Result flash overlay -->
