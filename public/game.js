@@ -1880,6 +1880,8 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
 
   // Only create a new peer connection on first match — reuse on rematch
   if (!isRematch || !peerConn || peerConn.connectionState === "closed" || peerConn.connectionState === "failed") {
+    // Clear stale remote stream — new peer connection means a fresh ontrack will fire
+    window._remoteStream = null;
     await startPeerConnection(role === "left");
   }
 
@@ -1895,6 +1897,23 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
     const el = document.getElementById(id);
     if (el) el.getContext("2d").clearRect(0, 0, el.width, el.height);
   });
+  // Reset scores and game name immediately — don't wait for setupGameUI.
+  // Prevents previous game's state bleeding through during the 10s countdown.
+  ["panel-score-you","panel-score-them"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = "0"; el.style.visibility = "hidden"; }
+  });
+  ["score-left","score-right"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = "0"; el.style.visibility = "hidden"; }
+  });
+  // Update game name label immediately so mobile banner is correct during countdown
+  const _gameName = game === "snake" ? "SNAKE" : game === "reaction" ? "REFLEX" : game === "raid" ? "RAID" : game === "fourdots" ? "4 DOTS" : "PONG";
+  const _bgf = document.getElementById("banner-game-fixed");
+  const _bg  = document.getElementById("banner-game");
+  if (_bgf) _bgf.textContent = _gameName;
+  if (_bg)  _bg.textContent  = _gameName;
+
   startCountdown(() => {
     setupGameUI(currentGame);
     showScreen("screen-game");
@@ -1907,11 +1926,11 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
         if (el) { el.srcObject = localStream; el.play().catch(() => {}); }
       });
     }
-    // Clear any stale srcObjects on remote elements before assignRemoteStream runs,
-    // so the srcObject !== s guard doesn't prevent a fresh assignment.
+    // _remoteStream was cleared when the new peer connection started, so if it's
+    // set here the new ontrack has already fired — assign it. Otherwise poll below.
     ["video-remote","video-mobile-remote"].forEach(id => {
       const el = document.getElementById(id);
-      if (el && el.srcObject !== window._remoteStream) el.srcObject = null;
+      if (el) el.srcObject = null; // always clear so assignRemoteStream definitely reassigns
     });
     // Assign remote stream — try immediately, then poll until it arrives.
     // assignRemoteStream covers all remote video elements (game + faceoff + mobile + postgame).
@@ -1994,7 +2013,10 @@ socket.on("webrtc_ice", async ({ candidate }) => {
 
 socket.on("game_start", ({ gameState: gs }) => {
   gameState = gs;
-  if (gs.scores) updateScoreDisplay(gs.scores);
+  // Only update score display for games that show scores
+  if (gs.scores && (gs.game === "pong" || gs.game === "snake" || gs.game === "reaction")) {
+    updateScoreDisplay(gs.scores);
+  }
   // Sync local paddle to server's initial position so we start in sync
   if (gs.game === "pong" && gs.paddles && myRole) {
     localPaddleY = myRole === "left" ? gs.paddles.left : gs.paddles.right;
@@ -2003,8 +2025,10 @@ socket.on("game_start", ({ gameState: gs }) => {
 
 socket.on("game_state", ({ gameState: gs }) => {
   gameState = gs;
-  if (gs.scores) updateScoreDisplay(gs.scores);
-
+  // Only update score display for games that show scores
+  if (gs.scores && (gs.game === "pong" || gs.game === "snake" || gs.game === "reaction")) {
+    updateScoreDisplay(gs.scores);
+  }
 });
 
 socket.on("game_over", ({ winner, scores }) => {
