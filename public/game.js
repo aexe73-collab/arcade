@@ -1597,16 +1597,19 @@ function updatePlayerLabels() {
   if (srEl) srEl.style.color = P2_COLOUR;
 
   // ── Desktop panel order ──
-  // P1 (role=left) should appear on the LEFT panel, P2 on the RIGHT.
-  // HTML has panel-them left and panel-you right by default (opponent left, you right).
-  // For P1: you = P1 should be left — add p1-view to swap order.
-  // For P2: you = P2 should be right — default order is already correct.
+  // P1 (role=left) should appear on the LEFT, P2 on the RIGHT.
+  // HTML defaults to opponent-left, you-right. For P1 that's wrong — swap with p1-view.
+  const isP1 = myRole === "left";
   const gameArea = document.querySelector(".game-area");
-  if (gameArea) gameArea.classList.toggle("p1-view", myRole === "left");
+  if (gameArea) gameArea.classList.toggle("p1-view", isP1);
+
+  // ── Faceoff countdown layout ──
+  const faceoffLayout = document.querySelector(".faceoff-layout");
+  if (faceoffLayout) faceoffLayout.classList.toggle("p1-view", isP1);
 
   // ── Postgame pip order ──
   const pgVideos = document.querySelector(".postgame-videos");
-  if (pgVideos) pgVideos.classList.toggle("p1-view", myRole === "left");
+  if (pgVideos) pgVideos.classList.toggle("p1-view", isP1);
 }
 
 function setupGameUI(game) {
