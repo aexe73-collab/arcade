@@ -1595,6 +1595,18 @@ function updatePlayerLabels() {
   const srEl = document.getElementById("score-right");
   if (slEl) slEl.style.color = P1_COLOUR;
   if (srEl) srEl.style.color = P2_COLOUR;
+
+  // ── Desktop panel order ──
+  // P1 (role=left) should appear on the LEFT panel, P2 on the RIGHT.
+  // HTML has panel-them left and panel-you right by default (opponent left, you right).
+  // For P1: you = P1 should be left — add p1-view to swap order.
+  // For P2: you = P2 should be right — default order is already correct.
+  const gameArea = document.querySelector(".game-area");
+  if (gameArea) gameArea.classList.toggle("p1-view", myRole === "left");
+
+  // ── Postgame pip order ──
+  const pgVideos = document.querySelector(".postgame-videos");
+  if (pgVideos) pgVideos.classList.toggle("p1-view", myRole === "left");
 }
 
 function setupGameUI(game) {
