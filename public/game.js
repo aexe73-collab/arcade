@@ -45,7 +45,14 @@ let playMode    = "random"; // random | friend | group
 
 // Rejoin room after socket reconnects
 socket.on("reconnect", () => {
-  if (roomId) socket.emit("rejoin_room", { roomId, role: myRole });
+  window._log && window._log("socket reconnected, roomId=" + roomId);
+  if (roomId) {
+    socket.emit("rejoin_room", { roomId, role: myRole });
+    // Restart render loop if we were mid-game
+    if (gameState && gameState.running && !animFrameId) {
+      startRenderLoop();
+    }
+  }
 });
 
 socket.on("disconnect", (reason) => {
