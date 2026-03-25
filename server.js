@@ -416,9 +416,21 @@ io.on("connection", (socket) => {
     if (!room) return;
     socket.join(roomId);
     console.log(`[rejoin] ${socket.id} rejoined ${roomId} as ${role}`);
-    // Update player reference in room
+    // Update player reference so future events reach the reconnected socket
     const idx = role === "left" ? 0 : 1;
     room.players[idx] = socket.id;
+    // Cancel any pending disconnect-destroy timer for this room
+    if (room._disconnectTimer) { clearTimeout(room._disconnectTimer); room._disconnectTimer = null; }
+    // Re-send current game state so the client catches up immediately
+    if (room.gameState) {
+      if (room.gameState.running) {
+        socket.emit("game_state", { gameState: room.gameState });
+      } else if (room.gameState.winner) {
+        // Game already ended while they were disconnected — send game_over
+        const scores = room.gameState.scores || { left: 0, right: 0 };
+        socket.emit("game_over", { winner: room.gameState.winner, scores });
+      }
+    }
   });
 
   // Both players camera ready — start countdown
