@@ -1611,10 +1611,7 @@ function setupGameUI(game) {
       if (!fdStyle) { fdStyle = document.createElement("style"); fdStyle.id = "fd-role-colours"; document.head.appendChild(fdStyle); }
       const myClass   = myRole; // "left" or "right"
       const themClass = myRole === "left" ? "right" : "left";
-      fdStyle.textContent = \`
-        .fourdots-cell.\${myClass}   { background: #ffffff; }
-        .fourdots-cell.\${themClass} { background: #e63946; }
-      \`;
+      fdStyle.textContent = `.fourdots-cell.${myClass}{background:#ffffff}.fourdots-cell.${themClass}{background:#e63946}`;
     })();
     buildFourDotsBoard();
     fdSetMyTurn(false);
