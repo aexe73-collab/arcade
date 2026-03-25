@@ -1118,6 +1118,8 @@ body {
   .score-bar         { display: flex; }
   .canvas-wrap       { justify-content: flex-start; align-items: center; padding-top: 8px; }
   .mobile-pips       { display: flex; gap: 8px; width: 100%; padding: 0 8px; }
+  .mobile-pips.p1-view .pip-you  { order: 1; }
+  .mobile-pips.p1-view .pip-them { order: 2; }
   .mobile-pip        { flex: 1; height: 160px; position: relative; overflow: hidden; background: var(--bg2); }
   .mobile-pip video  { width: 100%; height: 100%; object-fit: cover; }
   .mobile-pip.pip-you video { transform: scaleX(-1); }
@@ -2481,3 +2483,7 @@ body {
 .faceoff-layout.p1-view .faceoff-you    { order: 1; border-left:  none; border-right: 3px solid var(--you); }
 .faceoff-layout.p1-view .faceoff-centre { order: 2; }
 .faceoff-layout.p1-view .faceoff-them   { order: 3; border-right: none; border-left:  3px solid var(--them); }
+
+/* ── P1 perspective: swap mobile pip order so P1(you) is LEFT, P2(them) is RIGHT ── */
+.mobile-pips.p1-view .pip-you  { order: 1; }
+.mobile-pips.p1-view .pip-them { order: 2; }
