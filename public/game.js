@@ -7,6 +7,32 @@ const socket = io({
   timeout: 20000
 });
 
+// ── Mobile debug overlay ───────────────────────────────────────────
+// Tap 5 times in top-left corner to show/hide. Remove before launch.
+(function() {
+  const el = document.createElement("div");
+  el.id = "_dbg";
+  el.style.cssText = "display:none;position:fixed;top:0;left:0;right:0;max-height:40vh;overflow-y:auto;background:rgba(0,0,0,0.85);color:#00ff88;font:11px monospace;padding:8px;z-index:9999;white-space:pre-wrap;pointer-events:none";
+  document.body.appendChild(el);
+  let tapCount = 0, tapTimer = null;
+  document.addEventListener("touchstart", (e) => {
+    if (e.touches[0].clientX > 80 || e.touches[0].clientY > 80) return;
+    tapCount++;
+    clearTimeout(tapTimer);
+    tapTimer = setTimeout(() => { tapCount = 0; }, 800);
+    if (tapCount >= 5) {
+      el.style.display = el.style.display === "none" ? "block" : "none";
+      el.style.pointerEvents = el.style.display === "none" ? "none" : "auto";
+      tapCount = 0;
+    }
+  }, { passive: true });
+  window._log = (msg) => {
+    const t = new Date().toISOString().substr(11, 8);
+    el.textContent = t + " " + msg + "\n" + el.textContent;
+    console.log("[DBG]", msg);
+  };
+})();
+
 let myRole      = null;
 let roomId      = null;
 let gameState   = null;
@@ -23,6 +49,7 @@ socket.on("reconnect", () => {
 });
 
 socket.on("disconnect", (reason) => {
+  window._log && window._log("socket disconnected: " + reason);
 });
 
 const canvas = document.getElementById("pong-canvas");
@@ -2115,6 +2142,7 @@ socket.on("game_state", ({ gameState: gs }) => {
 });
 
 socket.on("game_over", ({ winner, scores }) => {
+  window._log && window._log("game_over received winner=" + winner + " myRole=" + myRole);
   stopRenderLoop();
   if (fdTimerInterval) clearInterval(fdTimerInterval);
 
@@ -2131,16 +2159,15 @@ socket.on("game_over", ({ winner, scores }) => {
     overlayText.textContent = isDraw ? "DRAW!" : iWon ? "YOU WIN!" : "YOU LOSE";
     overlayText.style.color = isDraw ? "var(--text)" : iWon ? "var(--accent)" : "var(--accent2)";
     overlay.style.display = "flex";
+    window._log && window._log("flash overlay shown: " + overlayText.textContent);
+  } else {
+    window._log && window._log("WARNING: overlay element missing overlay=" + !!overlay);
   }
 
-  // Capture game snapshot while still on game screen, then navigate to game-over screen.
-  // The showScreen call is separated from generateShareCard so a canvas/DOM error
-  // on mobile never prevents the end-game screen from appearing.
   setTimeout(() => {
-    // Generate share card — wrapped so any error is silent and non-blocking
-    try { generateShareCard(safeScores, winner); } catch(e) { console.warn("[shareCard]", e); }
+    window._log && window._log("setTimeout fired, navigating to gameover screen");
+    try { generateShareCard(safeScores, winner); } catch(e) { window._log && window._log("shareCard ERR: " + e.message); }
 
-    // Set up game-over screen content
     try {
       const badge = document.getElementById("result-badge");
       if (badge) {
@@ -2153,12 +2180,12 @@ socket.on("game_over", ({ winner, scores }) => {
       if (gthem) gthem.textContent = themScore;
       const rs = document.getElementById("rematch-status");
       if (rs) rs.textContent = "";
-    } catch(e) { console.warn("[gameoverDOM]", e); }
+    } catch(e) { window._log && window._log("gameoverDOM ERR: " + e.message); }
 
     if (overlay) overlay.style.display = "none";
 
-    // Navigate — this always runs even if anything above threw
     if (playMode === "friend" && friendCode) {
+      window._log && window._log("navigating to friend lobby");
       showScreen("screen-friend-lobby");
       try {
         document.getElementById("friend-lobby-status").textContent = "Game over — pick another!";
@@ -2173,7 +2200,9 @@ socket.on("game_over", ({ winner, scores }) => {
         }
       } catch(e) {}
     } else {
+      window._log && window._log("calling showScreen(screen-gameover)");
       showScreen("screen-gameover");
+      window._log && window._log("showScreen done, active screen: " + (document.querySelector(".screen.active")?.id || "none"));
     }
   }, 2500);
 });
@@ -2264,7 +2293,7 @@ socket.on("opponent_wants_rematch", () => {
   document.getElementById("rematch-status").textContent = "OPPONENT WANTS REMATCH...";
 });
 
-socket.on("opponent_left", () => { stopRenderLoop(); showOverlay("overlay-left"); });
+socket.on("opponent_left", () => { window._log && window._log("opponent_left received"); stopRenderLoop(); showOverlay("overlay-left"); });
 
 // ── Buttons ───────────────────────────────────────────────────────
 document.getElementById("btn-cancel-wait").addEventListener("click", () => {
