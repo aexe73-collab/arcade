@@ -2184,26 +2184,9 @@ socket.on("game_over", ({ winner, scores }) => {
 
     if (overlay) overlay.style.display = "none";
 
-    if (playMode === "friend" && friendCode) {
-      window._log && window._log("navigating to friend lobby");
-      showScreen("screen-friend-lobby");
-      try {
-        document.getElementById("friend-lobby-status").textContent = "Game over — pick another!";
-        document.getElementById("friend-pick-label").textContent = "Pick a game to start";
-        if (localStream) {
-          const lv = document.getElementById("video-friend-local");
-          if (lv) lv.srcObject = localStream;
-        }
-        if (window._remoteStream) {
-          const rv = document.getElementById("video-friend-remote");
-          if (rv) rv.srcObject = window._remoteStream;
-        }
-      } catch(e) {}
-    } else {
-      window._log && window._log("calling showScreen(screen-gameover)");
-      showScreen("screen-gameover");
-      window._log && window._log("showScreen done, active screen: " + (document.querySelector(".screen.active")?.id || "none"));
-    }
+    window._log && window._log("calling showScreen(screen-gameover)");
+    showScreen("screen-gameover");
+    window._log && window._log("showScreen done, active screen: " + (document.querySelector(".screen.active")?.id || "none"));
   }, 2500);
 });
 
