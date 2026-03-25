@@ -1551,11 +1551,7 @@ function updatePlayerLabels() {
   const foThem = document.querySelector(".faceoff-name.them");
   if (foYou)  foYou.textContent  = me;
   if (foThem) foThem.textContent = them;
-  // Gameover screen labels
-  const goYou  = document.querySelector(".gameover-score-block.you .gameover-score-label");
-  const goThem = document.querySelector(".gameover-score-block.them .gameover-score-label");
-  if (goYou)  goYou.textContent  = me;
-  if (goThem) goThem.textContent = them;
+  // Gameover screen labels are now static P1/P2 in HTML — no dynamic update needed
   // Postgame chat pips
   const ppYou  = document.querySelector(".postgame-pip.pip-you span");
   const ppThem = document.querySelector(".postgame-pip.pip-them span");
@@ -1566,11 +1562,16 @@ function updatePlayerLabels() {
   const flThem = document.querySelector(".friend-lobby-pip.pip-them span");
   if (flYou)  flYou.textContent  = me;
   if (flThem) flThem.textContent = them;
-  // Mobile pips — no text labels, but update border colours to absolute P1/P2
+  // Mobile pips — border colours absolute P1/P2
   const mpYou  = document.querySelector(".mobile-pip.pip-you");
   const mpThem = document.querySelector(".mobile-pip.pip-them");
   if (mpYou)  mpYou.style.borderColor  = myColourHex();
   if (mpThem) mpThem.style.borderColor = theirColourHex();
+  // Mobile score bar — P1 left always white, P2 right always red
+  const slEl = document.getElementById("score-left");
+  const srEl = document.getElementById("score-right");
+  if (slEl) slEl.style.color = P1_COLOUR;
+  if (srEl) srEl.style.color = P2_COLOUR;
   // Desktop panels — border colour
   const dpYou  = document.querySelector(".side-panel.panel-you");
   const dpThem = document.querySelector(".side-panel.panel-them");
@@ -1786,21 +1787,26 @@ socket.on("reaction_round_result", ({ winner, times, scores, round }) => {
 });
 
 function updateScoreDisplay(scores) {
-  const my   = myRole === "left" ? scores.left  : scores.right;
-  const them = myRole === "left" ? scores.right : scores.left;
+  // Always: P1(left role) on the left, P2(right role) on the right — same on both screens.
+  const p1Score = scores.left;
+  const p2Score = scores.right;
 
-  // Mobile score bar — after canvas mirror, YOUR side is always on the right of the screen.
-  // score-left = opponent side (left of screen), score-right = your side (right of screen).
-  document.getElementById("score-left").textContent  = them;
-  document.getElementById("score-right").textContent = my;
+  // Mobile score bar — P1 left, P2 right
+  document.getElementById("score-left").textContent  = p1Score;
+  document.getElementById("score-right").textContent = p2Score;
 
-  // Desktop side panels
-  document.getElementById("panel-score-you").textContent  = my;
-  document.getElementById("panel-score-them").textContent = them;
+  // Desktop side panels — panel-them is physical left, panel-you is physical right
+  // For P1 (role=left): panel-you is physically right but P1 is conceptually left — 
+  // however desktop panels are fixed: panel-them LEFT, panel-you RIGHT.
+  // We show my score in panel-you and their score in panel-them regardless.
+  const myScore   = myRole === "left" ? p1Score : p2Score;
+  const themScore = myRole === "left" ? p2Score : p1Score;
+  document.getElementById("panel-score-you").textContent  = myScore;
+  document.getElementById("panel-score-them").textContent = themScore;
 
-  // Top branded banner
-  document.getElementById("banner-score-you").textContent  = my;
-  document.getElementById("banner-score-them").textContent = them;
+  // Top branded banner — my score right, their score left (matches panel layout)
+  document.getElementById("banner-score-you").textContent  = myScore;
+  document.getElementById("banner-score-them").textContent = themScore;
 }
 
 // ── Share card generator ──────────────────────────────────────────
@@ -2252,14 +2258,16 @@ socket.on("game_over", ({ winner, scores }) => {
     try {
       const badge = document.getElementById("result-badge");
       if (badge) {
-        const winnerIsP1 = winner === "left";
-        badge.textContent = isDraw ? "DRAW!" : (winnerIsP1 ? "PLAYER 1 WINS!" : "PLAYER 2 WINS!");
-        badge.className   = "result-badge" + (!isDraw && !iWon ? " loss" : "");
+        badge.textContent = isDraw ? "DRAW!" : (winner === "left" ? "PLAYER 1 WINS!" : "PLAYER 2 WINS!");
+        badge.className   = isDraw ? "result-badge draw"
+                          : winner === "left" ? "result-badge"       // P1 wins = white
+                          : "result-badge p2wins";                    // P2 wins = red
       }
-      const gyou  = document.getElementById("gameover-score-you");
-      const gthem = document.getElementById("gameover-score-them");
-      if (gyou)  gyou.textContent  = myScore;
-      if (gthem) gthem.textContent = themScore;
+      // Absolute P1/P2 score elements — always P1 left, P2 right
+      const gp1 = document.getElementById("gameover-score-p1");
+      const gp2 = document.getElementById("gameover-score-p2");
+      if (gp1) gp1.textContent = safeScores.left;
+      if (gp2) gp2.textContent = safeScores.right;
       const rs = document.getElementById("rematch-status");
       if (rs) rs.textContent = "";
     } catch(e) { window._log && window._log("gameoverDOM ERR: " + e.message); }
