@@ -1539,44 +1539,62 @@ function stopRenderLoop() {
 // ── Game UI helpers ───────────────────────────────────────────────
 function updatePlayerLabels() {
   if (!myRole) return;
-  const me   = myLabel();
-  const them = theirLabel();
-  // Panel labels (desktop)
+  const me        = myLabel();
+  const them      = theirLabel();
+  const myCol     = myColourHex();    // my absolute colour (P1=white, P2=red)
+  const themCol   = theirColourHex(); // their absolute colour
+
+  // ── Desktop side panels ──
+  // panel-them is always physically LEFT, panel-you is always physically RIGHT.
+  // Colours and labels follow absolute identity.
   const panelYou  = document.querySelector(".panel-label.you");
   const panelThem = document.querySelector(".panel-label.them");
-  if (panelYou)  panelYou.textContent  = me;
-  if (panelThem) panelThem.textContent = them;
-  // Faceoff names
+  if (panelYou)  { panelYou.textContent  = me;   panelYou.style.color  = myCol; }
+  if (panelThem) { panelThem.textContent = them;  panelThem.style.color = themCol; }
+  const dpYou  = document.querySelector(".side-panel.panel-you");
+  const dpThem = document.querySelector(".side-panel.panel-them");
+  if (dpYou)  { dpYou.style.borderLeftColor  = myCol;   dpYou.style.borderRightColor  = ""; }
+  if (dpThem) { dpThem.style.borderRightColor = themCol; dpThem.style.borderLeftColor  = ""; }
+
+  // ── Faceoff screen ──
   const foYou  = document.querySelector(".faceoff-name.you");
   const foThem = document.querySelector(".faceoff-name.them");
-  if (foYou)  foYou.textContent  = me;
-  if (foThem) foThem.textContent = them;
-  // Gameover screen labels are now static P1/P2 in HTML — no dynamic update needed
-  // Postgame chat pips
-  const ppYou  = document.querySelector(".postgame-pip.pip-you span");
-  const ppThem = document.querySelector(".postgame-pip.pip-them span");
-  if (ppYou)  ppYou.textContent  = me;
-  if (ppThem) ppThem.textContent = them;
-  // Friend lobby pips
-  const flYou  = document.querySelector(".friend-lobby-pip.pip-you span");
-  const flThem = document.querySelector(".friend-lobby-pip.pip-them span");
-  if (flYou)  flYou.textContent  = me;
-  if (flThem) flThem.textContent = them;
-  // Mobile pips — border colours absolute P1/P2
+  if (foYou)  { foYou.textContent  = me;   foYou.style.color  = myCol; }
+  if (foThem) { foThem.textContent = them;  foThem.style.color = themCol; }
+  const fpYou  = document.querySelector(".faceoff-panel.faceoff-you");
+  const fpThem = document.querySelector(".faceoff-panel.faceoff-them");
+  if (fpYou)  fpYou.style.borderColor  = myCol;
+  if (fpThem) fpThem.style.borderColor = themCol;
+
+  // ── Mobile game pips ──
+  // pip-them = remote (opponent), pip-you = local (me). Set absolute colours.
   const mpYou  = document.querySelector(".mobile-pip.pip-you");
   const mpThem = document.querySelector(".mobile-pip.pip-them");
-  if (mpYou)  mpYou.style.borderColor  = myColourHex();
-  if (mpThem) mpThem.style.borderColor = theirColourHex();
-  // Mobile score bar — P1 left always white, P2 right always red
+  if (mpYou)  mpYou.style.borderColor  = myCol;
+  if (mpThem) mpThem.style.borderColor = themCol;
+
+  // ── Postgame chat pips ──
+  // pip-them = remote (opponent), pip-you = local (me).
+  const ppYou  = document.querySelector(".postgame-pip.pip-you");
+  const ppThem = document.querySelector(".postgame-pip.pip-them");
+  if (ppYou)  { ppYou.style.borderColor  = myCol;
+                const s = ppYou.querySelector("span");  if (s) { s.textContent = me;   s.style.color = myCol; } }
+  if (ppThem) { ppThem.style.borderColor = themCol;
+                const s = ppThem.querySelector("span"); if (s) { s.textContent = them;  s.style.color = themCol; } }
+
+  // ── Friend lobby pips ──
+  const flYou  = document.querySelector(".friend-lobby-pip.pip-you");
+  const flThem = document.querySelector(".friend-lobby-pip.pip-them");
+  if (flYou)  { flYou.style.borderColor  = myCol;
+                const s = flYou.querySelector("span");  if (s) { s.textContent = me;   s.style.color = myCol; } }
+  if (flThem) { flThem.style.borderColor = themCol;
+                const s = flThem.querySelector("span"); if (s) { s.textContent = them;  s.style.color = themCol; } }
+
+  // ── Mobile score bar ── P1 always white (left), P2 always red (right)
   const slEl = document.getElementById("score-left");
   const srEl = document.getElementById("score-right");
   if (slEl) slEl.style.color = P1_COLOUR;
   if (srEl) srEl.style.color = P2_COLOUR;
-  // Desktop panels — border colour
-  const dpYou  = document.querySelector(".side-panel.panel-you");
-  const dpThem = document.querySelector(".side-panel.panel-them");
-  if (dpYou)  dpYou.style.borderColor  = myColourHex();
-  if (dpThem) dpThem.style.borderColor = theirColourHex();
 }
 
 function setupGameUI(game) {
@@ -2275,6 +2293,7 @@ socket.on("game_over", ({ winner, scores }) => {
     if (overlay) overlay.style.display = "none";
 
     window._log && window._log("calling showScreen(screen-gameover)");
+      updatePlayerLabels(); // ensure P1/P2 colours correct on postgame pips
     showScreen("screen-gameover");
     window._log && window._log("showScreen done, active screen: " + (document.querySelector(".screen.active")?.id || "none"));
   }, 2500);
