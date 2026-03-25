@@ -912,6 +912,13 @@ function raidPlaceShip(x, y) {
 function raidFire(x, y) {
   if (!raidState.myTurn) return;
   if (raidState.myShots.some(s => s.x === x && s.y === y)) return;
+  // Optimistic update — lock out further clicks immediately, don't wait for server round trip.
+  // This prevents fast double-clicks firing two shots or jamming the grid.
+  raidState.myTurn = false;
+  const cell = getRaidCell("raid-enemy-grid", x, y);
+  if (cell) cell.classList.add("no-click");
+  const lbl = document.getElementById("raid-turn-label");
+  if (lbl) { lbl.textContent = "THEIR TURN"; lbl.className = "raid-turn-label their-turn"; }
   socket.emit("raid_fire", { roomId, role: myRole, x, y });
 }
 
