@@ -1607,6 +1607,10 @@ function updatePlayerLabels() {
   const faceoffLayout = document.querySelector(".faceoff-layout");
   if (faceoffLayout) faceoffLayout.classList.toggle("p1-view", isP1);
 
+  // ── Mobile game pips ──
+  const mobilePips = document.querySelector(".mobile-pips");
+  if (mobilePips) mobilePips.classList.toggle("p1-view", isP1);
+
   // ── Postgame pip order ──
   const pgVideos = document.querySelector(".postgame-videos");
   if (pgVideos) pgVideos.classList.toggle("p1-view", isP1);
