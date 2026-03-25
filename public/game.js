@@ -635,17 +635,29 @@ function hideOverlay(id) { document.getElementById(id).classList.add("hidden"); 
 // ── Camera ────────────────────────────────────────────────────────
 async function getCamera() {
   if (localStream) return true; // already running
-  try {
-    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    ["video-local","video-faceoff-local","video-mobile-local","video-postgame-local","video-friend-local"].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.srcObject = localStream;
-    });
-    return true;
-  } catch (e) {
-    console.warn("Camera unavailable:", e.message);
-    return false;
+  // Try video+audio first, fall back to video-only, then audio-only.
+  // This prevents a single denied permission killing the whole stream.
+  const attempts = [
+    { video: true, audio: true },
+    { video: true, audio: false },
+    { video: false, audio: true },
+  ];
+  for (const constraints of attempts) {
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia(constraints);
+      // Assign to all local video elements immediately
+      ["video-local","video-faceoff-local","video-mobile-local","video-postgame-local","video-friend-local"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.srcObject = localStream; el.play().catch(() => {}); }
+      });
+      console.log("[CAM] acquired:", constraints);
+      return true;
+    } catch (e) {
+      console.warn("[CAM] attempt failed:", JSON.stringify(constraints), e.message);
+    }
   }
+  console.warn("[CAM] all attempts failed — playing without camera");
+  return false;
 }
 
 // ── Camera permission helper ──────────────────────────────────────
@@ -1135,52 +1147,109 @@ document.getElementById("pick-reaction").addEventListener("click", () => {
 });
 
 // ── Countdown ─────────────────────────────────────────────────────
-function startCountdown(onComplete) {
+function startCountdown(onComplete, isRematch, onCameraReady) {
   showScreen("screen-faceoff");
 
-  // Always force-assign local stream immediately
-  if (localStream) {
-    const lv = document.getElementById("video-faceoff-local");
-    if (lv) { lv.srcObject = localStream; lv.play().catch(() => {}); }
-  }
-  // Assign remote now if ready; otherwise poll during the countdown.
-  // ontrack can fire at any point during the 10s — we must not miss it.
-  const rv = document.getElementById("video-faceoff-remote");
-  if (window._remoteStream && rv) {
-    rv.srcObject = window._remoteStream;
-    rv.play().catch(() => {});
-  }
-  const faceoffRemotePoller = setInterval(() => {
-    if (window._remoteStream && rv) {
-      // Always reassign — a stale srcObject from a previous game won't auto-update
-      if (rv.srcObject !== window._remoteStream) {
-        rv.srcObject = window._remoteStream;
-      }
-      if (rv.paused) rv.play().catch(() => {});
+  const el   = document.getElementById("countdown-number");
+  const hint = document.querySelector(".faceoff-hint");
+  const lv   = document.getElementById("video-faceoff-local");
+  const rv   = document.getElementById("video-faceoff-remote");
+
+  // Assign local stream immediately if available
+  function tryAssignLocal() {
+    if (localStream && lv && lv.srcObject !== localStream) {
+      lv.srcObject = localStream;
+      lv.play().catch(() => {});
     }
+  }
+  // Assign remote stream if available
+  function tryAssignRemote() {
+    if (window._remoteStream && rv && rv.srcObject !== window._remoteStream) {
+      rv.srcObject = window._remoteStream;
+      rv.play().catch(() => {});
+    }
+    if (rv && rv.srcObject && rv.paused) rv.play().catch(() => {});
+  }
+
+  tryAssignLocal();
+  tryAssignRemote();
+
+  // Poll continuously so neither stream is missed whenever it arrives
+  const streamPoller = setInterval(() => {
+    tryAssignLocal();
+    tryAssignRemote();
   }, 250);
 
-  let count = 10;
-  const el = document.getElementById("countdown-number");
-  el.textContent = count;
-  el.style.color = "#00ff88";
-
-  const tick = setInterval(() => {
-    count--;
-    if (count <= 0) {
-      clearInterval(tick);
-      clearInterval(faceoffRemotePoller);
-      el.textContent = "GO!";
-      el.style.color = "#ff3366";
-      setTimeout(onComplete, 700);
-    } else {
-      el.textContent = count;
-      el.style.animation = "none";
-      el.offsetHeight;
-      el.style.animation = "count-pulse 0.9s ease-out";
-      el.style.color = count <= 3 ? "#ff3366" : "#00ff88";
+  function runCountdown() {
+    if (hint) {
+      hint.innerHTML = "Say hi. Trash talk.<br>Game starts in&hellip;";
     }
-  }, 1000);
+    let count = 10;
+    el.textContent = count;
+    el.style.color = "#00ff88";
+    el.style.fontSize = "";
+
+    const tick = setInterval(() => {
+      count--;
+      if (count <= 0) {
+        clearInterval(tick);
+        clearInterval(streamPoller);
+        el.textContent = "GO!";
+        el.style.color = "#ff3366";
+        setTimeout(onComplete, 700);
+      } else {
+        el.textContent = count;
+        el.style.animation = "none";
+        el.offsetHeight; // force reflow to restart animation
+        el.style.animation = "count-pulse 0.9s ease-out";
+        el.style.color = count <= 3 ? "#ff3366" : "#00ff88";
+      }
+    }, 1000);
+  }
+
+  if (isRematch) {
+    // Rematch — camera already running, peer connection reused — go straight to countdown
+    runCountdown();
+    return;
+  }
+
+  // First game — show init message while cameras connect, then start countdown
+  el.textContent = "...";
+  el.style.color = "var(--muted)";
+  el.style.fontSize = "clamp(18px, 4vw, 32px)";
+  if (hint) hint.innerHTML = "Connecting cameras&hellip;";
+
+  // Dot-animation for the init phase
+  let dots = 0;
+  const dotTimer = setInterval(() => {
+    dots = (dots + 1) % 4;
+    el.textContent = ".".repeat(dots + 1);
+  }, 400);
+
+  // Wait until local stream is ready (camera permission granted), then start countdown.
+  // Remote stream arrives on its own time via ontrack — the countdown itself provides
+  // the window for it to appear. 10s is plenty.
+  const initPoller = setInterval(() => {
+    if (!localStream) return; // still waiting for camera permission
+    clearInterval(initPoller);
+    clearInterval(dotTimer);
+    tryAssignLocal();
+    // Now camera is ready — send WebRTC offer if we're the initiator
+    if (onCameraReady) onCameraReady();
+    runCountdown();
+  }, 200);
+
+  // Safety valve — if camera never arrives after 12s, start anyway so the game isn't blocked
+  setTimeout(() => {
+    clearInterval(initPoller);
+    clearInterval(dotTimer);
+    const cdEl = document.getElementById("countdown-number");
+    // Only fire if countdown hasn't started yet (still showing dots)
+    if (cdEl && !/^\d+$|^GO/.test(cdEl.textContent)) {
+      if (onCameraReady) onCameraReady();
+      runCountdown();
+    }
+  }, 12000);
 }
 
 // ── WebRTC ────────────────────────────────────────────────────────
@@ -1223,62 +1292,51 @@ function assignRemoteStream(s) {
   });
 }
 
+// Wait for camera with a timeout — resolves true if camera arrives, false if timeout
+function waitForCamera(timeoutMs) {
+  if (localStream) return Promise.resolve(true);
+  return new Promise(resolve => {
+    const poll = setInterval(() => {
+      if (localStream) { clearInterval(poll); clearTimeout(timer); resolve(true); }
+    }, 200);
+    const timer = setTimeout(() => { clearInterval(poll); resolve(false); }, timeoutMs);
+  });
+}
+
 async function startPeerConnection(isInitiator) {
   peerConn = new RTCPeerConnection(ICE_SERVERS);
 
-  // Add local tracks now if camera is ready, otherwise wait for it and add then.
-  // This handles the case where the user hasn't granted camera permission yet when
-  // match_found fires — without tracks in the offer the opponent's ontrack never fires.
+  // Add all local tracks, deduplicating against existing senders
   function addLocalTracks() {
     if (!localStream) return;
     const senders = peerConn.getSenders();
     localStream.getTracks().forEach(track => {
-      if (!senders.find(s => s.track === track)) {
-        peerConn.addTrack(track, localStream);
-      }
+      if (!senders.find(s => s.track === track)) peerConn.addTrack(track, localStream);
     });
-  }
-  addLocalTracks();
-
-  // If camera isn't ready yet, poll until it is and then renegotiate
-  if (!localStream) {
-    const waitForCam = setInterval(() => {
-      if (!localStream) return;
-      clearInterval(waitForCam);
-      addLocalTracks();
-      // Renegotiate so the opponent gets our video track
-      if (isInitiator && peerConn.signalingState === "stable") {
-        peerConn.createOffer().then(offer => {
-          return peerConn.setLocalDescription(offer);
-        }).then(() => {
-          socket.emit("webrtc_offer", { roomId, offer: peerConn.localDescription });
-        }).catch(() => {});
-      }
-    }, 300);
-    // Give up after 30s
-    setTimeout(() => clearInterval(waitForCam), 30000);
   }
 
   peerConn.ontrack = (event) => {
     const s = event.streams[0];
-    console.log("[WebRTC] ontrack fired, stream tracks:", s.getTracks().length);
+    console.log("[WebRTC] ontrack fired, tracks:", s.getTracks().length);
     assignRemoteStream(s);
   };
 
   peerConn.oniceconnectionstatechange = () => {
     const state = peerConn.iceConnectionState;
     console.log("[WebRTC] ICE state:", state);
-    // Re-assign on connect regardless of whether _remoteStream was set at ICE time —
-    // ontrack and oniceconnectionstatechange can fire in either order.
     if (state === "connected" || state === "completed") {
       if (window._remoteStream) {
         assignRemoteStream(window._remoteStream);
-      } else if (peerConn) {
-        // ontrack hasn't fired yet — wait a moment and retry
+      } else {
+        // ontrack may fire after ICE — give it a moment
         setTimeout(() => {
           if (window._remoteStream) assignRemoteStream(window._remoteStream);
-        }, 500);
+        }, 800);
       }
+    }
+    // On failure, log clearly for debugging
+    if (state === "failed" || state === "disconnected") {
+      console.warn("[WebRTC] ICE", state, "— TURN server may be unreachable");
     }
   };
 
@@ -1287,9 +1345,12 @@ async function startPeerConnection(isInitiator) {
   };
 
   if (isInitiator) {
-    const offer = await peerConn.createOffer();
-    await peerConn.setLocalDescription(offer);
-    socket.emit("webrtc_offer", { roomId, offer });
+    // Camera wait happens in the countdown init phase (visible to user).
+    // Add tracks if camera is already ready, otherwise tracks get added when
+    // the offer is sent from the countdown init phase after camera is ready.
+    addLocalTracks();
+  } else {
+    addLocalTracks();
   }
 }
 
@@ -1852,21 +1913,46 @@ sliderTrack.addEventListener("touchmove", (e) => {
   pongSliderMove(e.touches[0].clientY);
 }, { passive: false });
 
-// ── Video watchdog — restart any stalled video elements ───────────
+// ── Video watchdog — restart stalled videos and recover dead remote streams ──
 setInterval(() => {
-  ["video-remote", "video-local", "video-mobile-remote", "video-mobile-local",
-   "video-faceoff-remote", "video-faceoff-local"].forEach(id => {
+  // Local video elements
+  ["video-local", "video-mobile-local", "video-faceoff-local"].forEach(id => {
     const el = document.getElementById(id);
     if (!el || !el.srcObject) return;
-    // Skip ended streams — srcObject is dead, reassigning would just flicker
-    const tracks = el.srcObject.getTracks();
-    if (tracks.length > 0 && tracks.every(t => t.readyState === "ended")) return;
-    if (el.paused) {
-      el.play().catch(() => {});
-      delete el.dataset.pendingPlay;
+    if (el.paused) el.play().catch(() => {});
+  });
+
+  // Remote video elements — also attempt to reassign if stream went dead
+  ["video-remote", "video-mobile-remote", "video-faceoff-remote", "video-postgame-remote"].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    if (el.srcObject) {
+      const tracks = el.srcObject.getTracks();
+      const allEnded = tracks.length > 0 && tracks.every(t => t.readyState === "ended");
+      if (allEnded) {
+        // Stream is dead — try to reassign from _remoteStream or peer receivers
+        el.srcObject = null;
+        if (window._remoteStream) {
+          const newTracks = window._remoteStream.getTracks();
+          if (newTracks.some(t => t.readyState === "live")) {
+            el.srcObject = window._remoteStream;
+            el.play().catch(() => {});
+          }
+        }
+      } else if (el.paused) {
+        el.play().catch(() => {});
+      }
+    } else if (window._remoteStream) {
+      // Element has no srcObject but we have a stream — assign it
+      const tracks = window._remoteStream.getTracks();
+      if (tracks.some(t => t.readyState === "live")) {
+        el.srcObject = window._remoteStream;
+        el.play().catch(() => {});
+      }
     }
   });
-}, 1000);
+}, 1500);
 
 // ── Socket events ─────────────────────────────────────────────────
 socket.on("waiting", () => { /* screen already shown */ });
@@ -1879,10 +1965,25 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
   clearChat();
 
   // Only create a new peer connection on first match — reuse on rematch
+  let _sendOffer = null; // set below if we're the initiator on a fresh connection
   if (!isRematch || !peerConn || peerConn.connectionState === "closed" || peerConn.connectionState === "failed") {
     // Clear stale remote stream — new peer connection means a fresh ontrack will fire
     window._remoteStream = null;
     await startPeerConnection(role === "left");
+    // If we're the initiator, defer the offer until camera is ready (done in countdown init)
+    if (role === "left") {
+      _sendOffer = async () => {
+        const senders = peerConn.getSenders();
+        if (localStream) {
+          localStream.getTracks().forEach(track => {
+            if (!senders.find(s => s.track === track)) peerConn.addTrack(track, localStream);
+          });
+        }
+        const offer = await peerConn.createOffer();
+        await peerConn.setLocalDescription(offer);
+        socket.emit("webrtc_offer", { roomId, offer });
+      };
+    }
   }
 
   // Show my avatar on my panel
@@ -1961,22 +2062,23 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
       startRenderLoop();
     }
     socket.emit("player_ready", { roomId });
-  });
+  }, isRematch, _sendOffer);
 });
 
 
 socket.on("webrtc_offer", async ({ offer }) => {
   if (!peerConn) await startPeerConnection(false);
 
-  // Add our local tracks before answering so the initiator's ontrack fires.
-  // If camera isn't ready yet, add tracks and renegotiate once it arrives.
+  // Wait up to 8s for camera before answering — ensures tracks are included.
+  // The initiator waited too, so both sides have tracks in the negotiation.
+  await waitForCamera(8000);
+
   function addTracksForAnswer() {
-    if (!localStream) return false;
+    if (!localStream) return;
     const senders = peerConn.getSenders();
     localStream.getTracks().forEach(track => {
       if (!senders.find(s => s.track === track)) peerConn.addTrack(track, localStream);
     });
-    return true;
   }
   addTracksForAnswer();
 
@@ -1984,22 +2086,6 @@ socket.on("webrtc_offer", async ({ offer }) => {
   const answer = await peerConn.createAnswer();
   await peerConn.setLocalDescription(answer);
   socket.emit("webrtc_answer", { roomId, answer });
-
-  // If camera wasn't ready, renegotiate as soon as it is
-  if (!localStream) {
-    const waitForCamAnswer = setInterval(() => {
-      if (!localStream) return;
-      clearInterval(waitForCamAnswer);
-      addTracksForAnswer();
-      if (peerConn.signalingState === "stable") {
-        peerConn.createOffer()
-          .then(o => peerConn.setLocalDescription(o))
-          .then(() => socket.emit("webrtc_offer", { roomId, offer: peerConn.localDescription }))
-          .catch(() => {});
-      }
-    }, 300);
-    setTimeout(() => clearInterval(waitForCamAnswer), 30000);
-  }
 });
 
 socket.on("webrtc_answer", async ({ answer }) => {
