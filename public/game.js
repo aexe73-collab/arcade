@@ -1704,9 +1704,11 @@ function updateScoreDisplay(scores) {
 // ── Share card generator ──────────────────────────────────────────
 function generateShareCard(scores, winner) {
   const sc  = document.getElementById("share-canvas");
+  if (!sc) return;
   sc.width  = 800;
   sc.height = 680;
   const ctx = sc.getContext("2d");
+  if (!ctx) return;
   const W = 800, H = 680;
 
   ctx.fillStyle = "#0a0a0f";
@@ -2131,40 +2133,45 @@ socket.on("game_over", ({ winner, scores }) => {
     overlay.style.display = "flex";
   }
 
-  // Capture game snapshot while still on game screen
+  // Capture game snapshot while still on game screen, then navigate to game-over screen.
+  // The showScreen call is separated from generateShareCard so a canvas/DOM error
+  // on mobile never prevents the end-game screen from appearing.
   setTimeout(() => {
-    // Generate share card while game screen still visible (captures final state)
-    generateShareCard(safeScores, winner);
+    // Generate share card — wrapped so any error is silent and non-blocking
+    try { generateShareCard(safeScores, winner); } catch(e) { console.warn("[shareCard]", e); }
 
-    // Now set up game-over screen
-    const badge = document.getElementById("result-badge");
-    if (isDraw) {
-      badge.textContent = "DRAW!";
-      badge.className   = "result-badge";
-    } else {
-      badge.textContent = iWon ? "YOU WIN!" : "YOU LOSE";
-      badge.className   = "result-badge" + (iWon ? "" : " loss");
-    }
-    document.getElementById("gameover-score-you").textContent  = myScore;
-    document.getElementById("gameover-score-them").textContent = themScore;
-    document.getElementById("rematch-status").textContent = "";
+    // Set up game-over screen content
+    try {
+      const badge = document.getElementById("result-badge");
+      if (badge) {
+        badge.textContent = isDraw ? "DRAW!" : iWon ? "YOU WIN!" : "YOU LOSE";
+        badge.className   = "result-badge" + (!isDraw && !iWon ? " loss" : "");
+      }
+      const gyou  = document.getElementById("gameover-score-you");
+      const gthem = document.getElementById("gameover-score-them");
+      if (gyou)  gyou.textContent  = myScore;
+      if (gthem) gthem.textContent = themScore;
+      const rs = document.getElementById("rematch-status");
+      if (rs) rs.textContent = "";
+    } catch(e) { console.warn("[gameoverDOM]", e); }
 
     if (overlay) overlay.style.display = "none";
 
+    // Navigate — this always runs even if anything above threw
     if (playMode === "friend" && friendCode) {
-      // Friend mode — return to lobby, not game-over screen
       showScreen("screen-friend-lobby");
-      document.getElementById("friend-lobby-status").textContent = "Game over — pick another!";
-      document.getElementById("friend-pick-label").textContent = "Pick a game to start";
-      // Reassign friend lobby videos
-      if (localStream) {
-        const lv = document.getElementById("video-friend-local");
-        if (lv) lv.srcObject = localStream;
-      }
-      if (window._remoteStream) {
-        const rv = document.getElementById("video-friend-remote");
-        if (rv) rv.srcObject = window._remoteStream;
-      }
+      try {
+        document.getElementById("friend-lobby-status").textContent = "Game over — pick another!";
+        document.getElementById("friend-pick-label").textContent = "Pick a game to start";
+        if (localStream) {
+          const lv = document.getElementById("video-friend-local");
+          if (lv) lv.srcObject = localStream;
+        }
+        if (window._remoteStream) {
+          const rv = document.getElementById("video-friend-remote");
+          if (rv) rv.srcObject = window._remoteStream;
+        }
+      } catch(e) {}
     } else {
       showScreen("screen-gameover");
     }
