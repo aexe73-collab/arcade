@@ -1273,6 +1273,7 @@ const ICE_SERVERS = {
 };
 
 // remote stream assigned directly in ontrack
+let _waitForRemoteInterval = null; // tracked so it can be cancelled between games
 
 // Assign all remote video elements from a stream and force play.
 // On iOS Safari, autoplay of non-muted video is restricted — we call play() explicitly
@@ -2027,35 +2028,29 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
         if (el) { el.srcObject = localStream; el.play().catch(() => {}); }
       });
     }
-    // _remoteStream was cleared when the new peer connection started, so if it's
-    // set here the new ontrack has already fired — assign it. Otherwise poll below.
+    // Clear remote video elements — ontrack fires assignRemoteStream which covers all of them.
+    // The video watchdog also retries every 1.5s as a safety net.
     ["video-remote","video-mobile-remote"].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.srcObject = null; // always clear so assignRemoteStream definitely reassigns
+      if (el) el.srcObject = null;
     });
-    // Assign remote stream — try immediately, then poll until it arrives.
-    // assignRemoteStream covers all remote video elements (game + faceoff + mobile + postgame).
+    // If ontrack already fired during the countdown, _remoteStream is set — assign now.
     if (window._remoteStream) {
       assignRemoteStream(window._remoteStream);
-    } else if (peerConn) {
-      const rcv = peerConn.getReceivers().find(r => r.track && r.track.kind === "video");
-      if (rcv) {
-        assignRemoteStream(new MediaStream([rcv.track]));
-      } else {
-        const waitForRemote = setInterval(() => {
-          if (window._remoteStream) {
-            clearInterval(waitForRemote);
-            assignRemoteStream(window._remoteStream);
-          } else if (peerConn) {
-            const rcv2 = peerConn.getReceivers().find(r => r.track && r.track.kind === "video");
-            if (rcv2) {
-              clearInterval(waitForRemote);
-              assignRemoteStream(new MediaStream([rcv2.track]));
-            }
-          }
-        }, 200);
-        setTimeout(() => clearInterval(waitForRemote), 30000);
-      }
+    } else {
+      // Poll briefly in case ontrack fires just after game screen opens
+      if (_waitForRemoteInterval) clearInterval(_waitForRemoteInterval);
+      _waitForRemoteInterval = setInterval(() => {
+        if (window._remoteStream) {
+          clearInterval(_waitForRemoteInterval);
+          _waitForRemoteInterval = null;
+          assignRemoteStream(window._remoteStream);
+        }
+      }, 200);
+      // Give up after 15s — watchdog will handle recovery after that
+      setTimeout(() => {
+        if (_waitForRemoteInterval) { clearInterval(_waitForRemoteInterval); _waitForRemoteInterval = null; }
+      }, 15000);
     }
 
     if (currentGame !== "fourdots" && currentGame !== "raid" && currentGame !== "reaction") {
@@ -2267,6 +2262,7 @@ socket.on("opponent_left", () => { stopRenderLoop(); showOverlay("overlay-left")
 // ── Buttons ───────────────────────────────────────────────────────
 document.getElementById("btn-cancel-wait").addEventListener("click", () => {
   stopRenderLoop();
+  if (_waitForRemoteInterval) { clearInterval(_waitForRemoteInterval); _waitForRemoteInterval = null; }
   window._remoteStream = null;
   socket.disconnect(); socket.connect();
   showScreen("screen-picker");
@@ -2278,6 +2274,7 @@ document.getElementById("btn-rematch").addEventListener("click", () => {
 });
 
 document.getElementById("btn-next-match").addEventListener("click", () => {
+  if (_waitForRemoteInterval) { clearInterval(_waitForRemoteInterval); _waitForRemoteInterval = null; }
   if (peerConn) { peerConn.close(); peerConn = null; }
   window._remoteStream = null;
   roomId = null; myRole = null; gameState = null;
@@ -2285,6 +2282,7 @@ document.getElementById("btn-next-match").addEventListener("click", () => {
 });
 
 document.getElementById("btn-home").addEventListener("click", () => {
+  if (_waitForRemoteInterval) { clearInterval(_waitForRemoteInterval); _waitForRemoteInterval = null; }
   if (peerConn) { peerConn.close(); peerConn = null; }
   window._remoteStream = null;
   roomId = null; myRole = null; gameState = null;
@@ -2294,6 +2292,7 @@ document.getElementById("btn-home").addEventListener("click", () => {
 
 document.getElementById("btn-left-home").addEventListener("click", () => {
   hideOverlay("overlay-left");
+  if (_waitForRemoteInterval) { clearInterval(_waitForRemoteInterval); _waitForRemoteInterval = null; }
   if (peerConn) { peerConn.close(); peerConn = null; }
   window._remoteStream = null;
   roomId = null; myRole = null; gameState = null;
