@@ -1532,8 +1532,8 @@ body {
   position: relative;
 }
 
-.fourdots-cell.left  { background: var(--accent2); }
-.fourdots-cell.right { background: var(--accent); }
+.fourdots-cell.left  { background: #ffffff; } /* Player 1 = white */
+.fourdots-cell.right { background: #e63946; } /* Player 2 = red */
 .fourdots-cell.win   { animation: dot-win 0.4s ease-out forwards; }
 
 @keyframes dot-win {
