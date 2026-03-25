@@ -2466,3 +2466,13 @@ body {
   .video-pip { width: 100px; height: 75px; }
   .score-bar  { padding: 8px 12px; }
 }
+
+/* ── P1 perspective: swap panel order so P1 always appears on the left ── */
+.game-area.p1-view .panel-them { order: 3; border-right: none; border-left:  4px solid var(--them); }
+.game-area.p1-view .canvas-wrap { order: 2; }
+.game-area.p1-view .panel-you  { order: 1; border-left: none;  border-right: 4px solid var(--you); }
+/* local video stays mirrored (selfie effect) regardless of panel position */
+
+/* P1 view: swap postgame pip order */
+.postgame-videos.p1-view .pip-you  { order: 1; border-left:  2px solid var(--you);  border-right: none; }
+.postgame-videos.p1-view .pip-them { order: 2; border-right: 2px solid var(--them); border-left:  none; }
