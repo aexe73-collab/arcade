@@ -2477,7 +2477,7 @@ body {
 .postgame-videos.p1-view .pip-you  { order: 1; border-left:  2px solid var(--you);  border-right: none; }
 .postgame-videos.p1-view .pip-them { order: 2; border-right: 2px solid var(--them); border-left:  none; }
 
-/* ── P1 perspective: swap faceoff panel order so P1 always appears on the right... ──
-   Actually P1 should be on the LEFT. faceoff-you=right by default for P1 — swap. */
-.faceoff-layout.p1-view .faceoff-them { order: 2; border-right: none; border-left:  3px solid var(--them); }
-.faceoff-layout.p1-view .faceoff-you  { order: 1; border-left:  none; border-right: 3px solid var(--you); }
+/* ── P1 perspective: swap faceoff panel order so P1(you) is LEFT, P2(them) is RIGHT ── */
+.faceoff-layout.p1-view .faceoff-you    { order: 1; border-left:  none; border-right: 3px solid var(--you); }
+.faceoff-layout.p1-view .faceoff-centre { order: 2; }
+.faceoff-layout.p1-view .faceoff-them   { order: 3; border-right: none; border-left:  3px solid var(--them); }
