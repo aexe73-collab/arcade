@@ -1555,6 +1555,11 @@ function updatePlayerLabels() {
   const dpThem = document.querySelector(".side-panel.panel-them");
   if (dpYou)  { dpYou.style.borderLeftColor  = myCol;   dpYou.style.borderRightColor  = ""; }
   if (dpThem) { dpThem.style.borderRightColor = themCol; dpThem.style.borderLeftColor  = ""; }
+  // Set panel score colours absolutely — immune to CSS caching
+  const psYou  = document.getElementById("panel-score-you");
+  const psThem = document.getElementById("panel-score-them");
+  if (psYou)  psYou.style.color  = myCol;
+  if (psThem) psThem.style.color = themCol;
 
   // ── Faceoff screen ──
   const foYou  = document.querySelector(".faceoff-name.you");
