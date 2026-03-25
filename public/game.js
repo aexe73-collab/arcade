@@ -1425,11 +1425,11 @@ function drawPong(gs) {
   const myPaddleY   = myRole === "left" ? gs.paddles.left  : gs.paddles.right;
   const themPaddleY = myRole === "left" ? gs.paddles.right : gs.paddles.left;
 
-  // Opponent paddle — left side, pink
-  ctx.fillStyle = "#ff3366";
+  // Opponent paddle — left side, red
+  ctx.fillStyle = "#e63946";
   ctx.fillRect(30, themPaddleY, PADDLE_W, PADDLE_H);
-  // Your paddle — right side, green
-  ctx.fillStyle = "#00ff88";
+  // Your paddle — right side, white
+  ctx.fillStyle = "#ffffff";
   ctx.fillRect(W - 30 - PADDLE_W, myPaddleY, PADDLE_W, PADDLE_H);
 
   // Court border
@@ -1465,9 +1465,9 @@ function drawSnake(gs) {
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(gs.food.x*CELL_W+2, gs.food.y*CELL_H+2, CELL_W-4, CELL_H-4);
 
-  // Snakes — my snake is always green, opponent is pink
-  const myColour   = "#00ff88";
-  const themColour = "#ff3366";
+  // Snakes — you=white, opponent=red
+  const myColour   = "#ffffff";
+  const themColour = "#e63946";
 
   const myRole_    = myRole;
   const otherRole  = myRole_ === "left" ? "right" : "left";
@@ -1488,7 +1488,7 @@ function drawSnake(gs) {
 
   // Death flash
   if (!gs.snakes[myRole_].alive) {
-    ctx.fillStyle = "rgba(255,51,102,0.12)";
+    ctx.fillStyle = "rgba(230,57,70,0.12)";
     ctx.fillRect(0, 0, W, H);
   }
 }
@@ -1604,6 +1604,18 @@ function setupGameUI(game) {
     document.getElementById("panel-score-them").style.visibility = "hidden";
     document.getElementById("score-left").style.visibility  = "hidden";
     document.getElementById("score-right").style.visibility = "hidden";
+    // Inject role-aware dot colours: your dots=white, opponent's=red
+    // Server labels cells as "left"/"right"; map your role to white, theirs to red.
+    (function() {
+      let fdStyle = document.getElementById("fd-role-colours");
+      if (!fdStyle) { fdStyle = document.createElement("style"); fdStyle.id = "fd-role-colours"; document.head.appendChild(fdStyle); }
+      const myClass   = myRole; // "left" or "right"
+      const themClass = myRole === "left" ? "right" : "left";
+      fdStyle.textContent = \`
+        .fourdots-cell.\${myClass}   { background: #ffffff; }
+        .fourdots-cell.\${themClass} { background: #e63946; }
+      \`;
+    })();
     buildFourDotsBoard();
     fdSetMyTurn(false);
   } else {
@@ -1759,8 +1771,8 @@ function generateShareCard(scores, winner) {
 
   ctx.fillStyle = "#0a0a0f";
   ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = "#ff3366"; ctx.fillRect(0, 0, W, 5);
-  ctx.fillStyle = "#00ff88"; ctx.fillRect(0, H - 5, W, 5);
+  ctx.fillStyle = "#e63946"; ctx.fillRect(0, 0, W, 5);
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, H - 5, W, 5);
 
   // Faces
   const vidThem = document.getElementById("video-remote");
@@ -1780,23 +1792,23 @@ function generateShareCard(scores, winner) {
       ctx.drawImage(vidYou, 0, 0, faceW, faceH); ctx.restore();
     }
   } catch(e) {}
-  ctx.strokeStyle = "#ff3366"; ctx.lineWidth = 3;
+  ctx.strokeStyle = "#e63946"; ctx.lineWidth = 3;
   ctx.strokeRect(20, faceY, faceW, faceH);
-  ctx.strokeStyle = "#00ff88";
+  ctx.strokeStyle = "#ffffff";
   ctx.strokeRect(W - 20 - faceW, faceY, faceW, faceH);
   ctx.font = "bold 10px 'Courier New', monospace"; ctx.textAlign = "center";
-  ctx.fillStyle = "#ff3366"; ctx.fillText("OPPONENT", 20 + faceW / 2, faceY + faceH + 16);
-  ctx.fillStyle = "#00ff88"; ctx.fillText("YOU", W - 20 - faceW / 2, faceY + faceH + 16);
+  ctx.fillStyle = "#e63946"; ctx.fillText("OPPONENT", 20 + faceW / 2, faceY + faceH + 16);
+  ctx.fillStyle = "#ffffff"; ctx.fillText("YOU", W - 20 - faceW / 2, faceY + faceH + 16);
 
   // Score
   const myScore   = myRole === "left" ? scores.left  : scores.right;
   const themScore = myRole === "left" ? scores.right : scores.left;
   const resultText   = winner === "draw" ? "DRAW" : winner === myRole ? "WIN" : "LOSS";
-  const resultColour = resultText === "WIN" ? "#00ff88" : resultText === "LOSS" ? "#ff3366" : "#ffffff";
+  const resultColour = resultText === "WIN" ? "#ffffff" : resultText === "LOSS" ? "#e63946" : "#e8e8f0";
   ctx.font = "bold 54px 'Courier New', monospace"; ctx.textAlign = "center";
-  ctx.fillStyle = "#ff3366"; ctx.fillText(themScore, W / 2 - 42, faceY + faceH / 2 + 16);
+  ctx.fillStyle = "#e63946"; ctx.fillText(themScore, W / 2 - 42, faceY + faceH / 2 + 16);
   ctx.fillStyle = "#2a2a3e"; ctx.fillText(":", W / 2, faceY + faceH / 2 + 16);
-  ctx.fillStyle = "#00ff88"; ctx.fillText(myScore,   W / 2 + 42, faceY + faceH / 2 + 16);
+  ctx.fillStyle = "#ffffff"; ctx.fillText(myScore,   W / 2 + 42, faceY + faceH / 2 + 16);
   ctx.font = "bold 20px 'Courier New', monospace";
   ctx.fillStyle = resultColour; ctx.fillText(resultText, W / 2, faceY + faceH / 2 + 44);
   ctx.font = "10px 'Courier New', monospace"; ctx.fillStyle = "#6666aa";
@@ -1821,7 +1833,7 @@ function generateShareCard(scores, winner) {
       const by = snapY + 18 + (snapH - 18 - cs * rows) / 2;
       ctx.fillStyle = "#1a1a26"; ctx.fillRect(bx - 4, by - 4, cs * cols + 8, cs * rows + 8);
       for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-        ctx.fillStyle = board[r][c] === "left" ? "#ff3366" : board[r][c] === "right" ? "#00ff88" : "#0a0a0f";
+        ctx.fillStyle = board[r][c] === "left" ? "#e63946" : board[r][c] === "right" ? "#ffffff" : "#0a0a0f";
         ctx.beginPath(); ctx.arc(bx + c * cs + cs / 2, by + r * cs + cs / 2, cs / 2 - 2, 0, Math.PI * 2); ctx.fill();
       }
     } else if (currentGame === "raid" && gameState && gameState.boards) {
@@ -1830,12 +1842,12 @@ function generateShareCard(scores, winner) {
       ["left","right"].forEach((side, i) => {
         const board = gameState.boards[side]; if (!board) return;
         const gx = snapX + 10 + i * (snapW / 2), gy = snapY + 20;
-        ctx.font = "8px 'Courier New', monospace"; ctx.fillStyle = side === "left" ? "#ff3366" : "#00ff88"; ctx.textAlign = "center";
+        ctx.font = "8px 'Courier New', monospace"; ctx.fillStyle = side === "left" ? "#e63946" : "#ffffff"; ctx.textAlign = "center";
         ctx.fillText(side === "left" ? "OPPONENT" : "YOU", gx + (gs2 * cs) / 2, gy - 4);
         for (let r = 0; r < gs2; r++) for (let c = 0; c < gs2; c++) {
           const isHit = board.shots?.some(s => s.x === c && s.y === r && s.hit);
           const isShot = board.shots?.some(s => s.x === c && s.y === r);
-          ctx.fillStyle = isHit ? "#ff3366" : isShot ? "#2a2a3e" : "#1a1a26";
+          ctx.fillStyle = isHit ? "#e63946" : isShot ? "#2a2a3e" : "#1a1a26";
           ctx.fillRect(gx + c * cs + 1, gy + r * cs + 1, cs - 2, cs - 2);
         }
       });
