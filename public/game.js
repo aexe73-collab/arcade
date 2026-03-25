@@ -35,6 +35,15 @@ const socket = io({
 
 let myRole      = null;
 let roomId      = null;
+// Absolute player identity — P1=left=white, P2=right=red. Same on both devices.
+function p1Label() { return "PLAYER 1"; }
+function p2Label() { return "PLAYER 2"; }
+function myLabel()   { return myRole === "left" ? p1Label() : p2Label(); }
+function theirLabel(){ return myRole === "left" ? p2Label() : p1Label(); }
+const P1_COLOUR = "#ffffff"; // white
+const P2_COLOUR = "#e63946"; // red
+function myColourHex()   { return myRole === "left" ? P1_COLOUR : P2_COLOUR; }
+function theirColourHex(){ return myRole === "left" ? P2_COLOUR : P1_COLOUR; }
 let gameState   = null;
 let currentGame = null;
 let localStream = null;
@@ -918,7 +927,7 @@ function raidFire(x, y) {
   const cell = getRaidCell("raid-enemy-grid", x, y);
   if (cell) cell.classList.add("no-click");
   const lbl = document.getElementById("raid-turn-label");
-  if (lbl) { lbl.textContent = "THEIR TURN"; lbl.className = "raid-turn-label their-turn"; }
+  if (lbl) { lbl.textContent = theirLabel() + " — FIRE!"; lbl.className = "raid-turn-label their-turn"; }
   socket.emit("raid_fire", { roomId, role: myRole, x, y });
 }
 
@@ -989,7 +998,7 @@ socket.on("raid_combat_start", ({ turn }) => {
   raidUpdateMyGrid();
   raidState.myTurn = turn === myRole;
   const label = document.getElementById("raid-turn-label");
-  label.textContent = raidState.myTurn ? "YOUR TURN — FIRE!" : "THEIR TURN";
+  label.textContent = raidState.myTurn ? myLabel() + " — FIRE!" : theirLabel() + " — FIRE!";
   label.className = "raid-turn-label" + (raidState.myTurn ? "" : " their-turn");
   raidStartTimer(15);
 });
@@ -1028,7 +1037,7 @@ socket.on("raid_shot_result", ({ role, x, y, hit, sunk, targetSunk }) => {
 socket.on("raid_turn", ({ turn }) => {
   raidState.myTurn = turn === myRole;
   const label = document.getElementById("raid-turn-label");
-  label.textContent = raidState.myTurn ? "YOUR TURN — FIRE!" : "THEIR TURN";
+  label.textContent = raidState.myTurn ? myLabel() + " — FIRE!" : theirLabel() + " — FIRE!";
   label.className = "raid-turn-label" + (raidState.myTurn ? "" : " their-turn");
   raidStartTimer(15);
 });
@@ -1037,11 +1046,11 @@ socket.on("raid_timeout", ({ role }) => {
   if (raidState.timerInterval) clearInterval(raidState.timerInterval);
   const label = document.getElementById("raid-turn-label");
   if (role === myRole) {
-    label.textContent = "TIME UP — YOU LOSE!";
-    label.style.color = "var(--accent2)";
+    label.textContent = "TIME UP — " + myLabel() + " LOSES!";
+    label.style.color = P2_COLOUR;
   } else {
-    label.textContent = "TIME UP — YOU WIN!";
-    label.style.color = "var(--accent)";
+    label.textContent = "TIME UP — " + theirLabel() + " LOSES!";
+    label.style.color = P1_COLOUR;
   }
 });
 
@@ -1123,7 +1132,7 @@ function fdRenderBoard(board) {
 function fdSetMyTurn(isMyTurn) {
   const label   = document.getElementById("fourdots-turn-label");
   const colBtns = document.querySelectorAll(".fourdots-col-btn");
-  label.textContent = isMyTurn ? "YOUR TURN — DROP!" : "THEIR TURN";
+  label.textContent = isMyTurn ? myLabel() + " — DROP!" : theirLabel() + " — DROP!";
   label.className   = "fourdots-turn-label" + (isMyTurn ? "" : " their-turn");
   colBtns.forEach(btn => {
     btn.classList.toggle("disabled", !isMyTurn);
@@ -1418,19 +1427,24 @@ function drawPong(gs) {
   ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke();
   ctx.setLineDash([]);
 
-  // The canvas always draws YOU on the RIGHT and OPPONENT on the LEFT.
-  // Server coordinates: left player's goal is x=0, right player's goal is x=800.
-  //
-  // Paddle Y: already correctly mapped per role (your Y from your role's paddle).
-  const myPaddleY   = myRole === "left" ? gs.paddles.left  : gs.paddles.right;
-  const themPaddleY = myRole === "left" ? gs.paddles.right : gs.paddles.left;
+  // Canvas: P1(left role) paddle always at x=30 in white, P2(right role) at x=758 in red.
+  // Ball X is remapped for left-role players so it appears to travel correctly.
+  // Both players see the same absolute layout: P1 white on left, P2 red on right.
 
-  // Opponent paddle — left side, red
-  ctx.fillStyle = "#e63946";
-  ctx.fillRect(30, themPaddleY, PADDLE_W, PADDLE_H);
-  // Your paddle — right side, white
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(W - 30 - PADDLE_W, myPaddleY, PADDLE_W, PADDLE_H);
+  // Left paddle = Player 1 = white. Right paddle = Player 2 = red.
+  // Absolute — same on both screens.
+  const leftPaddleY  = gs.paddles.left;
+  const rightPaddleY = gs.paddles.right;
+  // For role="left" player the canvas is mirrored, so draw at raw server positions.
+  // The ctx.scale(-1,1) transform (for left role) handles the visual flip automatically.
+  // But we removed the canvas transform — so we manually place:
+  // If role=left: my paddle is left(server x=30), drawn on right of canvas after bx remap
+  // Actually paddles don't need X remap — only ball X is remapped.
+  // So always: draw left paddle at x=30 (white), right paddle at x=758 (red).
+  ctx.fillStyle = P1_COLOUR; // white = Player 1 = left role
+  ctx.fillRect(30, leftPaddleY, PADDLE_W, PADDLE_H);
+  ctx.fillStyle = P2_COLOUR; // red = Player 2 = right role
+  ctx.fillRect(W - 30 - PADDLE_W, rightPaddleY, PADDLE_W, PADDLE_H);
 
   // Court border
   ctx.strokeStyle = "rgba(255,255,255,0.5)";
@@ -1465,29 +1479,24 @@ function drawSnake(gs) {
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(gs.food.x*CELL_W+2, gs.food.y*CELL_H+2, CELL_W-4, CELL_H-4);
 
-  // Snakes — you=white, opponent=red
-  const myColour   = "#ffffff";
-  const themColour = "#e63946";
-
-  const myRole_    = myRole;
-  const otherRole  = myRole_ === "left" ? "right" : "left";
-
-  gs.snakes[myRole_].body.forEach((seg, i) => {
-    ctx.fillStyle = gs.snakes[myRole_].alive
-      ? (i === 0 ? myColour : myColour + "99")
+  // Snakes — P1(left)=white, P2(right)=red. Absolute, same on both screens.
+  gs.snakes.left.body.forEach((seg, i) => {
+    ctx.fillStyle = gs.snakes.left.alive
+      ? (i === 0 ? P1_COLOUR : P1_COLOUR + "99")
       : "#333";
     ctx.fillRect(seg.x*CELL_W+1, seg.y*CELL_H+1, CELL_W-2, CELL_H-2);
   });
 
-  gs.snakes[otherRole].body.forEach((seg, i) => {
-    ctx.fillStyle = gs.snakes[otherRole].alive
-      ? (i === 0 ? themColour : themColour + "99")
+  gs.snakes.right.body.forEach((seg, i) => {
+    ctx.fillStyle = gs.snakes.right.alive
+      ? (i === 0 ? P2_COLOUR : P2_COLOUR + "99")
       : "#333";
     ctx.fillRect(seg.x*CELL_W+1, seg.y*CELL_H+1, CELL_W-2, CELL_H-2);
   });
 
-  // Death flash
-  if (!gs.snakes[myRole_].alive) {
+  // Death flash — whichever snake died
+  const myRoleSnake = myRole || "left";
+  if (!gs.snakes[myRoleSnake].alive) {
     ctx.fillStyle = "rgba(230,57,70,0.12)";
     ctx.fillRect(0, 0, W, H);
   }
@@ -1528,6 +1537,47 @@ function stopRenderLoop() {
 }
 
 // ── Game UI helpers ───────────────────────────────────────────────
+function updatePlayerLabels() {
+  if (!myRole) return;
+  const me   = myLabel();
+  const them = theirLabel();
+  // Panel labels (desktop)
+  const panelYou  = document.querySelector(".panel-label.you");
+  const panelThem = document.querySelector(".panel-label.them");
+  if (panelYou)  panelYou.textContent  = me;
+  if (panelThem) panelThem.textContent = them;
+  // Faceoff names
+  const foYou  = document.querySelector(".faceoff-name.you");
+  const foThem = document.querySelector(".faceoff-name.them");
+  if (foYou)  foYou.textContent  = me;
+  if (foThem) foThem.textContent = them;
+  // Gameover screen labels
+  const goYou  = document.querySelector(".gameover-score-block.you .gameover-score-label");
+  const goThem = document.querySelector(".gameover-score-block.them .gameover-score-label");
+  if (goYou)  goYou.textContent  = me;
+  if (goThem) goThem.textContent = them;
+  // Postgame chat pips
+  const ppYou  = document.querySelector(".postgame-pip.pip-you span");
+  const ppThem = document.querySelector(".postgame-pip.pip-them span");
+  if (ppYou)  ppYou.textContent  = me;
+  if (ppThem) ppThem.textContent = them;
+  // Friend lobby pips
+  const flYou  = document.querySelector(".friend-lobby-pip.pip-you span");
+  const flThem = document.querySelector(".friend-lobby-pip.pip-them span");
+  if (flYou)  flYou.textContent  = me;
+  if (flThem) flThem.textContent = them;
+  // Mobile pips — no text labels, but update border colours to absolute P1/P2
+  const mpYou  = document.querySelector(".mobile-pip.pip-you");
+  const mpThem = document.querySelector(".mobile-pip.pip-them");
+  if (mpYou)  mpYou.style.borderColor  = myColourHex();
+  if (mpThem) mpThem.style.borderColor = theirColourHex();
+  // Desktop panels — border colour
+  const dpYou  = document.querySelector(".side-panel.panel-you");
+  const dpThem = document.querySelector(".side-panel.panel-them");
+  if (dpYou)  dpYou.style.borderColor  = myColourHex();
+  if (dpThem) dpThem.style.borderColor = theirColourHex();
+}
+
 function setupGameUI(game) {
   const hint           = document.getElementById("controls-hint");
   const dpad           = document.getElementById("dpad");
@@ -1604,15 +1654,7 @@ function setupGameUI(game) {
     document.getElementById("panel-score-them").style.visibility = "hidden";
     document.getElementById("score-left").style.visibility  = "hidden";
     document.getElementById("score-right").style.visibility = "hidden";
-    // Inject role-aware dot colours: your dots=white, opponent's=red
-    // Server labels cells as "left"/"right"; map your role to white, theirs to red.
-    (function() {
-      let fdStyle = document.getElementById("fd-role-colours");
-      if (!fdStyle) { fdStyle = document.createElement("style"); fdStyle.id = "fd-role-colours"; document.head.appendChild(fdStyle); }
-      const myClass   = myRole; // "left" or "right"
-      const themClass = myRole === "left" ? "right" : "left";
-      fdStyle.textContent = `.fourdots-cell.${myClass}{background:#ffffff}.fourdots-cell.${themClass}{background:#e63946}`;
-    })();
+    // 4 Dots colours: P1(left)=white, P2(right)=red. Fixed in CSS — no dynamic injection needed.
     buildFourDotsBoard();
     fdSetMyTurn(false);
   } else {
@@ -1667,6 +1709,11 @@ function updateReactionScores(scores) {
   document.getElementById("reaction-score-them").textContent = them;
   document.getElementById("banner-score-you").textContent    = my;
   document.getElementById("banner-score-them").textContent   = them;
+  // Update P1/P2 labels on reaction score blocks
+  const ylbl = document.querySelector(".reaction-score-label.you");
+  const tlbl = document.querySelector(".reaction-score-label.them");
+  if (ylbl) ylbl.textContent = myLabel();
+  if (tlbl) tlbl.textContent = theirLabel();
 }
 
 // Circle is the tap target
@@ -1794,8 +1841,8 @@ function generateShareCard(scores, winner) {
   ctx.strokeStyle = "#ffffff";
   ctx.strokeRect(W - 20 - faceW, faceY, faceW, faceH);
   ctx.font = "bold 10px 'Courier New', monospace"; ctx.textAlign = "center";
-  ctx.fillStyle = "#e63946"; ctx.fillText("OPPONENT", 20 + faceW / 2, faceY + faceH + 16);
-  ctx.fillStyle = "#ffffff"; ctx.fillText("YOU", W - 20 - faceW / 2, faceY + faceH + 16);
+  ctx.fillStyle = "#e63946"; ctx.fillText(theirLabel(), 20 + faceW / 2, faceY + faceH + 16);
+  ctx.fillStyle = "#ffffff"; ctx.fillText(myLabel(), W - 20 - faceW / 2, faceY + faceH + 16);
 
   // Score
   const myScore   = myRole === "left" ? scores.left  : scores.right;
@@ -1840,7 +1887,7 @@ function generateShareCard(scores, winner) {
         const board = gameState.boards[side]; if (!board) return;
         const gx = snapX + 10 + i * (snapW / 2), gy = snapY + 20;
         ctx.font = "8px 'Courier New', monospace"; ctx.fillStyle = side === "left" ? "#e63946" : "#ffffff"; ctx.textAlign = "center";
-        ctx.fillText(side === "left" ? "OPPONENT" : "YOU", gx + (gs2 * cs) / 2, gy - 4);
+        ctx.fillText(side === "left" ? (myRole === "right" ? myLabel() : theirLabel()) : (myRole === "left" ? myLabel() : theirLabel()), gx + (gs2 * cs) / 2, gy - 4);
         for (let r = 0; r < gs2; r++) for (let c = 0; c < gs2; c++) {
           const isHit = board.shots?.some(s => s.x === c && s.y === r && s.hit);
           const isShot = board.shots?.some(s => s.x === c && s.y === r);
@@ -2021,6 +2068,8 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
   myRole      = role;
   currentGame = game;
   clearChat();
+  // Update all P1/P2 labels and colours now that role is known
+  updatePlayerLabels();
   // Ensure camera is running — may have been stopped by game-over screen
   getCamera();
 
@@ -2186,8 +2235,10 @@ socket.on("game_over", ({ winner, scores }) => {
   const overlay = document.getElementById("result-flash-overlay");
   const overlayText = document.getElementById("result-flash-text");
   if (overlay && overlayText) {
-    overlayText.textContent = isDraw ? "DRAW!" : iWon ? "YOU WIN!" : "YOU LOSE";
-    overlayText.style.color = isDraw ? "var(--text)" : iWon ? "var(--accent)" : "var(--accent2)";
+    const winnerLabel = winner === "left" ? "PLAYER 1 WINS!" : winner === "right" ? "PLAYER 2 WINS!" : "DRAW!";
+    const winnerColour = winner === "left" ? P1_COLOUR : winner === "right" ? P2_COLOUR : "var(--text)";
+    overlayText.textContent = isDraw ? "DRAW!" : winnerLabel;
+    overlayText.style.color = isDraw ? "var(--text)" : winnerColour;
     overlay.style.display = "flex";
     window._log && window._log("flash overlay shown: " + overlayText.textContent);
   } else {
@@ -2201,7 +2252,8 @@ socket.on("game_over", ({ winner, scores }) => {
     try {
       const badge = document.getElementById("result-badge");
       if (badge) {
-        badge.textContent = isDraw ? "DRAW!" : iWon ? "YOU WIN!" : "YOU LOSE";
+        const winnerIsP1 = winner === "left";
+        badge.textContent = isDraw ? "DRAW!" : (winnerIsP1 ? "PLAYER 1 WINS!" : "PLAYER 2 WINS!");
         badge.className   = "result-badge" + (!isDraw && !iWon ? " loss" : "");
       }
       const gyou  = document.getElementById("gameover-score-you");
@@ -2232,7 +2284,7 @@ function appendChatMsg(who, text) {
   if (empty) empty.remove();
   const msg = document.createElement("div");
   msg.className = "postgame-msg";
-  msg.innerHTML = `<span class="postgame-msg-who ${who}">${who === "you" ? "YOU" : "THEM"}</span><span class="postgame-msg-text">${text.replace(/</g,"&lt;")}</span>`;
+  msg.innerHTML = `<span class="postgame-msg-who ${who}">${who === "you" ? myLabel() : theirLabel()}</span><span class="postgame-msg-text">${text.replace(/</g,"&lt;")}</span>`;
   box.appendChild(msg);
   box.scrollTop = box.scrollHeight;
 }
@@ -2303,7 +2355,7 @@ socket.on("go_to_picker", () => {
 });
 
 socket.on("opponent_wants_rematch", () => {
-  document.getElementById("rematch-status").textContent = "OPPONENT WANTS REMATCH...";
+  document.getElementById("rematch-status").textContent = theirLabel() + " WANTS REMATCH...";
 });
 
 socket.on("opponent_left", () => { window._log && window._log("opponent_left received"); stopRenderLoop(); showOverlay("overlay-left"); });
@@ -2318,7 +2370,7 @@ document.getElementById("btn-cancel-wait").addEventListener("click", () => {
 });
 
 document.getElementById("btn-rematch").addEventListener("click", () => {
-  document.getElementById("rematch-status").textContent = "WAITING FOR OPPONENT...";
+  document.getElementById("rematch-status").textContent = "WAITING FOR " + theirLabel() + "...";
   socket.emit("request_rematch", { roomId });
 });
 
