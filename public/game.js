@@ -732,6 +732,7 @@ document.getElementById("pick-pong").addEventListener("click", () => {
   document.getElementById("waiting-sub").textContent = "Finding a Pong match\u2026";
   socket.emit("find_match", { game: "pong" });
   showScreen("screen-waiting");
+  getCamera(); // restart camera if stopped by game-over screen
 });
 
 document.getElementById("pick-snake").addEventListener("click", () => {
@@ -739,6 +740,7 @@ document.getElementById("pick-snake").addEventListener("click", () => {
   document.getElementById("waiting-sub").textContent = "Finding a Snake match\u2026";
   socket.emit("find_match", { game: "snake" });
   showScreen("screen-waiting");
+  getCamera(); // restart camera if stopped by game-over screen
 });
 
 document.getElementById("pick-raid").addEventListener("click", () => {
@@ -746,6 +748,7 @@ document.getElementById("pick-raid").addEventListener("click", () => {
   document.getElementById("waiting-sub").textContent = "Finding a Raid match\u2026";
   socket.emit("find_match", { game: "raid" });
   showScreen("screen-waiting");
+  getCamera(); // restart camera if stopped by game-over screen
 });
 
 // ── Sound effects ─────────────────────────────────────────────────
@@ -1062,6 +1065,7 @@ document.getElementById("pick-fourdots").addEventListener("click", () => {
   document.getElementById("waiting-sub").textContent = "Finding a 4 Dots match\u2026";
   socket.emit("find_match", { game: "fourdots" });
   showScreen("screen-waiting");
+  getCamera(); // restart camera if stopped by game-over screen
 });
 
 // ── 4 Dots game logic ─────────────────────────────────────────────
@@ -1178,6 +1182,7 @@ document.getElementById("pick-reaction").addEventListener("click", () => {
   document.getElementById("waiting-sub").textContent = "Finding a Reflex match\u2026";
   socket.emit("find_match", { game: "reaction" });
   showScreen("screen-waiting");
+  getCamera(); // restart camera if stopped by game-over screen
 });
 
 // ── Countdown ─────────────────────────────────────────────────────
@@ -2000,6 +2005,8 @@ socket.on("match_found", async ({ roomId: rid, role, game }) => {
   myRole      = role;
   currentGame = game;
   clearChat();
+  // Ensure camera is running — may have been stopped by game-over screen
+  getCamera();
 
   // Only create a new peer connection on first match — reuse on rematch
   let _sendOffer = null; // set below if we're the initiator on a fresh connection
